@@ -9,12 +9,13 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-@Document(indexName = "syllabus")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(indexName = "syllabuses") // Tên index trong Elastic (giống tên bảng)
 public class SyllabusDocument {
+
     @Id
     private Long id;
 
