@@ -21,13 +21,9 @@ public class RedisConfig {
 
         // 1. Tạo ObjectMapper tùy chỉnh
         ObjectMapper mapper = new ObjectMapper();
-        // --> Dòng quan trọng: Đăng ký module để xử lý LocalDateTime
         mapper.registerModule(new JavaTimeModule());
-        // (Tùy chọn) Tắt tính năng viết ngày tháng dưới dạng timestamp (số) để nhìn cho đẹp (dạng chuỗi 2025-...)
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // --> Quan trọng: Cấu hình để Redis lưu cả thông tin Class (VD: com.smd.Syllabus) vào JSON
-        // Nếu thiếu dòng này, khi lấy ra bạn sẽ bị lỗi ClassCastException (LinkedHashMap cannot be cast to Syllabus)
         mapper.activateDefaultTyping(
                 mapper.getPolymorphicTypeValidator(),
                 ObjectMapper.DefaultTyping.NON_FINAL,

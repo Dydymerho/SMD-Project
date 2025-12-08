@@ -20,13 +20,11 @@ public class SyllabusController {
         return ResponseEntity.ok(syllabusService.createSyllabus(syllabus));
     }
 
-    // API mới: Lấy chi tiết (Sẽ test Redis ở đây)
     @GetMapping("/{id}")
     public ResponseEntity<Syllabus> getDetail(@PathVariable Long id) {
         return ResponseEntity.ok(syllabusService.getSyllabusById(id));
     }
 
-    // API mới: Tìm kiếm (Sẽ test Elasticsearch ở đây)
     @GetMapping("/search")
     public ResponseEntity<List<SyllabusDocument>> search(@RequestParam String keyword) {
         // URL dạng: /api/v1/syllabuses/search?keyword=Java
