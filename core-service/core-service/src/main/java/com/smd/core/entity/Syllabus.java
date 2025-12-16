@@ -15,24 +15,35 @@ public class Syllabus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name="subjectCode", unique=true, nullable=false)
+    @Column(name = "subject_code", unique = true, nullable = false, length = 50)
     private String subjectCode;
 
-    @Column(name="subjectName", nullable=false)
+    @Column(name = "subject_name", nullable = false, length = 255)
     private String subjectName;
 
-    @Column(columnDefinition="TEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    private int credits;// tin chi
-    private String status; //draft, approved, published
+    @Column(nullable = false)
+    private int credits; // tin chi
 
-    @Column(name="created_at")
-    private LocalDateTime created_at;
+    @Column(length = 20)
+    private String status; // draft, approved, published
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        created_at = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
-

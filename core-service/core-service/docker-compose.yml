@@ -1,17 +1,19 @@
 version: "3.8"
 
 services:
-  # 1. MySQL Database
-  mysqldb:
-    image: mysql:8.0
-    container_name: smd_mysql
+  # 1. PostgreSQL Database (Thay thế MySQL)
+  postgresdb:
+    # Sử dụng image pgvector để hỗ trợ AI sau này, hoặc dùng 'postgres:16' nếu chỉ cần cơ bản
+    image: pgvector/pgvector:pg16
+    container_name: smd_postgres
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: smd_db
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: smd_db
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - smd_net
 
@@ -38,7 +40,7 @@ services:
       - smd_net
 
 volumes:
-  mysql_data:
+  postgres_data:
 
 networks:
   smd_net:
