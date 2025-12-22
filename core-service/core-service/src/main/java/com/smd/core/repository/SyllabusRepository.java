@@ -7,5 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SyllabusRepository extends JpaRepository<Syllabus, Long> {
     
-    boolean existsBySubjectCode(String subjectCode);
+    // Check duplicate syllabus by course, academic year, and version
+    boolean existsByCourse_CourseIdAndAcademicYearAndVersionNo(Long courseId, String academicYear, Integer versionNo);
 }

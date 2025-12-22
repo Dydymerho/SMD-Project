@@ -17,7 +17,7 @@ import java.util.List;
 public class SyllabusService {
 
     @Autowired
-    private SyllabusRepository mysqlRepo; 
+    private SyllabusRepository syllabusRepo; 
 
     @Autowired
     private SyllabusSearchRepository elasticRepo; 
@@ -27,24 +27,38 @@ public class SyllabusService {
 
     // 1. tao moi
     public Syllabus createSyllabus(Syllabus newSyllabus) {
-        // luu vao sql
-        if (mysqlRepo.existsBySubjectCode(newSyllabus.getSubjectCode())) {
-            throw new DuplicateResourceException("Syllabus", "subjectCode", newSyllabus.getSubjectCode());
+        // Check duplicate syllabus (same course, academic year, and version)
+        if (newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null && newSyllabus.getVersionNo() != null) {
+            boolean exists = syllabusRepo.existsByCourse_CourseIdAndAcademicYearAndVersionNo(
+                    newSyllabus.getCourse().getCourseId(),
+                    newSyllabus.getAcademicYear(),
+                    newSyllabus.getVersionNo()
+            );
+            if (exists) {
+                throw new DuplicateResourceException(
+                        "Syllabus", 
+                        "course_academicYear_version", 
+                        newSyllabus.getCourse().getCourseCode() + "_" + newSyllabus.getAcademicYear() + "_v" + newSyllabus.getVersionNo()
+                );
+            }
         }
-        newSyllabus.setStatus("DRAFT");
-        Syllabus saved = mysqlRepo.save(newSyllabus);
+        
+        // Save to PostgreSQL
+        Syllabus saved = syllabusRepo.save(newSyllabus);
+        
+        // Sync to Elasticsearch for full-text search
+        if (saved.getCourse() != null) {
+            SyllabusDocument doc = SyllabusDocument.builder()
+                    .id(saved.getSyllabusId())
+                    .subjectCode(saved.getCourse().getCourseCode())
+                    .subjectName(saved.getCourse().getCourseName())
+                    .description(saved.getCourse().getCourseName() + " - " + saved.getAcademicYear())
+                    .build();
+            elasticRepo.save(doc);
+        }
 
-        // dong bo sang elasticsearch
-        SyllabusDocument doc = SyllabusDocument.builder()
-                .id(saved.getId())
-                .subjectCode(saved.getSubjectCode())
-                .subjectName(saved.getSubjectName())
-                .description(saved.getDescription())
-                .build();
-        elasticRepo.save(doc);
-
-        // xoa cache cu (neu co)
-        String key = "syllabus:" + saved.getId();
+        // Clear cache
+        String key = "syllabus:" + saved.getSyllabusId();
         redisTemplate.delete(key);
 
         return saved;
@@ -61,14 +75,14 @@ public class SyllabusService {
             return cached;
         }
 
-        // neu khong co, tim trong MySQL
-        System.out.println("--> Lấy từ MYSQL");
-        Syllabus fromDb = mysqlRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "id", id));
+        // neu khong co, tim trong PostgreSQL
+        System.out.println("--> Lấy từ PostgreSQL");
+        Syllabus fromDb = syllabusRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", id));
 
         // luu nguoc vao Redis (Lan sau se nhanh) - Het han sau 10 phut
         redisTemplate.opsForValue().set(key, fromDb, Duration.ofMinutes(10));
-
+        
         return fromDb;
     }
 
@@ -80,6 +94,6 @@ public class SyllabusService {
     }
     
     public List<Syllabus> getAllSyllabuses() {
-        return mysqlRepo.findAll();
+        return syllabusRepo.findAll();
     }
 }
