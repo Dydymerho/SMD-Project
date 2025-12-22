@@ -3,9 +3,10 @@ package com.smd.core.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "syllabuses")
+@Table(name = "syllabus")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,37 +14,82 @@ import java.time.LocalDateTime;
 public class Syllabus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "syllabus_id")
+    private Long syllabusId;
 
-    @Column(name = "subject_code", unique = true, nullable = false, length = 50)
-    private String subjectCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = false)
+    @ToString.Exclude
+    private Course course;
 
-    @Column(name = "subject_name", nullable = false, length = 255)
-    private String subjectName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lecturer_id", nullable = false)
+    @ToString.Exclude
+    private User lecturer;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "academic_year", nullable = false)
+    private String academicYear;
 
-    @Column(nullable = false)
-    private int credits; // tin chi
+    @Column(name = "version_no", nullable = false)
+    private Integer versionNo;
 
-    @Column(length = 20)
-    private String status; // draft, approved, published
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_status", nullable = false)
+    private SyllabusStatus currentStatus;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "program_id")
+    @ToString.Exclude
+    private Program program;
+
+    // Relationships
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<Material> materials;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<SessionPlan> sessionPlans;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<Assessment> assessments;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<CLO> clos;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<ReviewComment> reviewComments;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<SyllabusWorkflowHistory> workflowHistories;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<AITask> aiTasks;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        if (currentStatus == null) {
+            currentStatus = SyllabusStatus.DRAFT;
+        }
+        if (versionNo == null) {
+            versionNo = 1;
+        }
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    public enum SyllabusStatus {
+        DRAFT,
+        IN_REVIEW,
+        APPROVED,
+        PUBLISHED,
+        ARCHIVED
     }
 }
