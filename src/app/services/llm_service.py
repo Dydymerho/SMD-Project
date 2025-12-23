@@ -1,3 +1,4 @@
+import os
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -9,9 +10,16 @@ OLLAMA_MODEL = "llama3"
 
 class LLMService:
     def __init__(self):
+        # --- SỬA ĐOẠN NÀY ---
+        # Ưu tiên lấy từ Docker gửi vào. Nếu không có thì mới dùng localhost
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        # --------------------
+        
+        print(f"🤖 Đang kết nối AI tại: {base_url}") # In ra để debug xem nó trỏ đi đâu
+
         self.llm = OllamaLLM(
-            base_url=OLLAMA_BASE_URL,
-            model=OLLAMA_MODEL,
+            base_url=base_url,
+            model="llama3", # Hoặc model bạn đang dùng
             temperature=0.2
         )
 

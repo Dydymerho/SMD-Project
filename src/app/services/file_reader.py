@@ -1,5 +1,6 @@
 import os
 import shutil
+import platform
 import pytesseract
 from pdf2image import convert_from_path
 from fastapi import UploadFile
@@ -7,13 +8,18 @@ from docx import Document
 from pypdf import PdfReader 
 
 # --- CẤU HÌNH ĐƯỜNG DẪN ---
-PATH_TO_TESSERACT = r'D:\AI SMD\tesseract.exe'
-PATH_TO_TESSDATA = r'D:\AI SMD\tessdata'
-PATH_TO_POPPLER = r'D:\AI SMD\poppler-24.02.0\Library\bin' 
-
-# Config Tesseract
-pytesseract.pytesseract.tesseract_cmd = PATH_TO_TESSERACT
-os.environ['TESSDATA_PREFIX'] = PATH_TO_TESSDATA
+if platform.system() == "Windows":
+    # Cấu hình cho máy Windows của bạn
+    PATH_TO_TESSERACT = r'D:\AI SMD\tesseract.exe'
+    PATH_TO_TESSDATA = r'D:\AI SMD\tessdata'
+    PATH_TO_POPPLER = r'D:\AI SMD\poppler-24.02.0\Library\bin'
+    
+    pytesseract.pytesseract.tesseract_cmd = PATH_TO_TESSERACT
+    os.environ['TESSDATA_PREFIX'] = PATH_TO_TESSDATA
+else:
+    # Cấu hình cho Docker (Linux) - Không cần set path vì đã cài trong hệ thống
+    PATH_TO_POPPLER = None 
+    # Linux tự tìm thấy tesseract, không cần set tesseract_cmd
 
 TEMP_DIR = "temp_uploads"
 os.makedirs(TEMP_DIR, exist_ok=True)
