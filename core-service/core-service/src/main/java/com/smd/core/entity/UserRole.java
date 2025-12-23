@@ -12,22 +12,16 @@ import lombok.*;
 public class UserRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long id;
+    @Column(name = "user_role_id")
+    private Long userRoleId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "role_id", nullable = false)
     @ToString.Exclude
     private Role role;
-
-    @Column(name = "user_id", nullable = false)
-    private Long userIdFk;
-
-    @Column(name = "role_id", nullable = false)
-    private Long roleIdFk;
 }
