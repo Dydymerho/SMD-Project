@@ -12,24 +12,18 @@ import lombok.*;
 public class CLOPLOMapping {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "clo_id")
-    private Long id;
+    @Column(name = "mapping_id")
+    private Long mappingId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clo_id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "clo_id", nullable = false)
     @ToString.Exclude
     private CLO clo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plo_id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "plo_id", nullable = false)
     @ToString.Exclude
     private PLO plo;
-
-    @Column(name = "clo_id", nullable = false)
-    private Long cloIdFk;
-
-    @Column(name = "plo_id", nullable = false)
-    private Long ploIdFk;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "mapping_level", nullable = false)
