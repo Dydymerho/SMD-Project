@@ -3,16 +3,21 @@ import { View, TextInput, StyleSheet } from 'react-native'
 
 type Props = {
     value: string
-    onChange: (text: string) => void
+    onChangeText: (text: string) => void
+    placeholder?: string  // Thêm prop optional
 }
 
-export default function SearchInput({ value, onChange }: Props) {
+export default function SearchInput({
+    value,
+    onChangeText,
+    placeholder = "Tìm theo tên hoặc mã môn" // Giá trị mặc định
+}: Props) {
     return (
         <View style={styles.container}>
             <TextInput
-                placeholder="Tìm theo tên hoặc mã môn"
+                placeholder={placeholder}  // Sử dụng prop
                 value={value}
-                onChangeText={onChange}
+                onChangeText={onChangeText}
                 style={styles.input}
             />
         </View>

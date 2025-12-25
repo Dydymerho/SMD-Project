@@ -1,41 +1,23 @@
 import React, { useMemo, useState } from 'react'
 import { View, FlatList, Text } from 'react-native'
-
 import SearchInput from './components/SearchInput'
 import FilterRow from './components/FilterRow'
 import CourseItem from './components/CourseItem'
-
+import { SUBJECTS } from '../../mock/Subject'
 import { styles } from './Searchstyles'
-import { Course } from './types'
-
-const MOCK_DATA: Course[] = [
-    {
-        id: '1',
-        code: 'SE101',
-        name: 'Software Engineering',
-        major: 'CNTT',
-        semester: 'HK1',
-        year: 2025,
-        published: true,
-    },
-    {
-        id: '2',
-        code: 'SE201',
-        name: 'Advanced SE',
-        major: 'CNTT',
-        semester: 'HK2',
-        year: 2025,
-        published: true,
-    },
-]
 
 export default function SearchScreen() {
     const [keyword, setKeyword] = useState('')
     const [major, setMajor] = useState('ALL')
     const [semester, setSemester] = useState('ALL')
 
+    // Published courses only 
+    const publishedSubjects = SUBJECTS.filter(subject => {
+        return subject.published === true
+    })
+
     const filteredCourses = useMemo(() => {
-        return MOCK_DATA.filter(course => {
+        return publishedSubjects.filter(course => {
             const matchKeyword =
                 course.code.toLowerCase().includes(keyword.toLowerCase()) ||
                 course.name.toLowerCase().includes(keyword.toLowerCase())
@@ -48,29 +30,38 @@ export default function SearchScreen() {
 
             return matchKeyword && matchMajor && matchSemester
         })
-    }, [keyword, major, semester])
+    }, [keyword, major, semester, publishedSubjects])
+
+    // Only major list 
+    const uniqueMajors = Array.from(
+        new Set(publishedSubjects.map(course => course.major))
+    )
+
+    // Only semester list
+    const uniqueSemesters = Array.from(
+        new Set(publishedSubjects.map(course => course.semester))
+    )
 
     return (
         <View style={styles.container}>
             <SearchInput
                 value={keyword}
-                onChange={setKeyword}
+                onChangeText={setKeyword}  // ✅ Đã sửa thành onChangeText
+                placeholder="Tìm kiếm môn học..."
             />
 
             <FilterRow
                 major={major}
                 semester={semester}
-                onMajorChange={() =>
-                    setMajor(prev => (prev === 'CNTT' ? 'ALL' : 'CNTT'))
-                }
-                onSemesterChange={() =>
-                    setSemester(prev => (prev === 'HK1' ? 'ALL' : 'HK1'))
-                }
+                majorOptions={['ALL', ...uniqueMajors]}
+                semesterOptions={['ALL', ...uniqueSemesters]}
+                onMajorChange={setMajor}
+                onSemesterChange={setSemester}
             />
 
             <FlatList
                 data={filteredCourses}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.code}
                 renderItem={({ item }) => (
                     <CourseItem course={item} />
                 )}

@@ -6,7 +6,7 @@ import SearchScreen from '../screens/Search/SearchScreen'
 // import ProfileScreen from '../screens/Profile/ProfileScreen'
 import Header from '../screens/Home/components/Header'
 import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen'
-
+import HomeStack from './HomeStack'
 export type TabParamList = {
     Home: undefined
     Search: undefined
@@ -60,7 +60,7 @@ export default function BottomTabNavigator() {
                 },
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Home" component={HomeStack} />
             <Tab.Screen name="Search" component={SearchScreen} />
             <Tab.Screen name="Profile" component={HomeScreen} />
             <Tab.Screen name="Setting" component={SubjectDetailScreen} />

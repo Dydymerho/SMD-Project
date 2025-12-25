@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from "react";
 import {
     View,
     Text,
@@ -10,13 +10,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import styles from './Home.styles';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { SUBJECTS } from '../../mock/Subject';
-
 // Hoặc: import Icon from 'react-native-vector-icons/Ionicons';
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
-    // const [major, setMajor] = useState('ALL');
-    // const [code, setCode] = useState('');
 
     return (
         <SafeAreaView style={styles.safe} edges={['top']}>
@@ -44,13 +40,15 @@ export default function HomeScreen() {
                 </View>
                 {/* Suggestions */}
                 <Section title="Các khóa học của bạn">
-                    {SUBJECTS.map(subject => (
-                        <CourseItem
-                            key={subject.code}
-                            code={subject.code}
-                            name={subject.name}
-                        />
-                    ))}
+                    <CourseItem code="CT101" name="Cấu trúc dữ liệu" />
+                    <CourseItem code="IT203" name="Lập trình Web" />
+                    <CourseItem code="OOP236" name="Java" />
+                    <CourseItem code="SAD205" name="Phân tích thiết kế hệ thống" />
+                    <CourseItem code="NET301" name="Mạng máy tính" />
+                    <CourseItem code="OS401" name="Hệ điều hành" />
+                    <CourseItem code="AI501" name="Trí tuệ nhân tạo" />
+                    <CourseItem code="SE301" name="Kỹ thuật phần mềm" />
+                    <CourseItem code="MB401" name="Lập trình di động" />
                 </Section>
             </ScrollView>
         </SafeAreaView>

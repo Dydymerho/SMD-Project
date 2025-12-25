@@ -1,4 +1,6 @@
 import { StyleSheet } from 'react-native';
+import { SearchBar } from 'react-native-screens';
+import { Icon } from 'react-native-vector-icons/Icon';
 
 const styles = StyleSheet.create({
     safe: {
@@ -29,12 +31,27 @@ const styles = StyleSheet.create({
     },
 
     icon: {
-        fontSize: 18,
-        color: '#fff',
+        fontSize: 30,
+        color: '#999',
     },
 
     container: {
         padding: 20,
+    },
+
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        marginVertical: 12,
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    SearchBar: {
+        flex: 1,
+        paddingRight: 8,
     },
 
     greeting: {
@@ -47,16 +64,6 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 16,
         fontSize: 16,
-    },
-
-    search: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 14,
-        marginBottom: 24,
-        elevation: 2,
     },
 
     section: {

@@ -1,67 +1,77 @@
 import React from 'react'
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
+import FilterButton from './FilterButton'
 
-type Props = {
+type FilterRowProps = {
     major: string
     semester: string
-    onMajorChange: () => void
-    onSemesterChange: () => void
+    majorOptions: string[]
+    semesterOptions: string[]
+    onMajorChange: (major: string) => void
+    onSemesterChange: (semester: string) => void
 }
 
 export default function FilterRow({
     major,
     semester,
+    majorOptions,
+    semesterOptions,
     onMajorChange,
     onSemesterChange,
-}: Props) {
+}: FilterRowProps) {
     return (
-        <View style={styles.row}>
-            <FilterButton
-                label="Ngành"
-                value={major}
-                onPress={onMajorChange}
-            />
-            <FilterButton
-                label="Học kỳ"
-                value={semester}
-                onPress={onSemesterChange}
-            />
+        <View style={styles.container}>
+            {/* Major Filter Section */}
+            <View style={styles.filterSection}>
+                <Text style={styles.sectionLabel}>Ngành:</Text>
+                <View style={styles.buttonRow}>
+                    {majorOptions.map(option => (
+                        <FilterButton
+                            key={option}
+                            label={option === 'ALL' ? 'Tất cả' : option}
+                            value={option}
+                            isActive={major === option}
+                            onPress={onMajorChange}
+                        />
+                    ))}
+                </View>
+            </View>
+
+            {/* Semester Filter Section */}
+            <View style={styles.filterSection}>
+                <Text style={styles.sectionLabel}>Học kỳ:</Text>
+                <View style={styles.buttonRow}>
+                    {semesterOptions.map(option => (
+                        <FilterButton
+                            key={option}
+                            label={option === 'ALL' ? 'Tất cả' : option}
+                            value={option}
+                            isActive={semester === option}
+                            onPress={onSemesterChange}
+                        />
+                    ))}
+                </View>
+            </View>
         </View>
     )
 }
 
-function FilterButton({
-    label,
-    value,
-    onPress,
-}: {
-    label: string
-    value: string
-    onPress: () => void
-}) {
-    return (
-        <TouchableOpacity style={styles.button} onPress={onPress}>
-            <Text style={styles.text}>
-                {label}: {value}
-            </Text>
-        </TouchableOpacity>
-    )
-}
-
 const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        gap: 12,
+    container: {
         marginBottom: 16,
     },
-    button: {
-        backgroundColor: '#E5EDFF',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
+    filterSection: {
+        marginBottom: 12,
     },
-    text: {
-        color: '#1D4ED8',
+    sectionLabel: {
+        fontSize: 14,
         fontWeight: '600',
+        marginBottom: 8,
+        color: '#333',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
     },
 })
