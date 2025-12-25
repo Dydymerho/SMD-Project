@@ -2,7 +2,6 @@ import React from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     TextInput,
     ScrollView,
     TouchableOpacity,
@@ -18,11 +17,12 @@ export default function HomeScreen() {
 
             {/* CONTENT */}
             <ScrollView
+            
                 contentContainerStyle={styles.container}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Greeting */}
-                <Text style={styles.greeting}>Xin chào 👋</Text>
+                <Text style={styles.greeting}>Xin chào Tiến👋</Text>
                 <Text style={styles.subText}>Bạn đang học học kỳ 5</Text>
 
                 {/* Search */}

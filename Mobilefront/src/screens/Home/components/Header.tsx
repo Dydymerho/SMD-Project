@@ -1,53 +1,112 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react'
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation, NavigationProp } from '@react-navigation/native'
 
-type Props = {
-    title: string;
-};
 
-export default function Header({ title }: Props) {
-    const insets = useSafeAreaInsets();
+type HeaderProps = {
+    title: string
+    showRightIcon?: boolean
+    onRightPress?: () => void
+}                    
 
+export default function Header({
+    title,
+    showRightIcon = false,
+    onRightPress,
+}: HeaderProps) {
+    const insets = useSafeAreaInsets()
+    const navigation = useNavigation<NavigationProp<any>>()
+    const canGoBack = navigation.canGoBack()
     return (
         <View
             style={[
-                styles.header,
+                styles.container,
                 { paddingTop: insets.top + 12 },
             ]}
         >
-            <Text style={styles.title}>{title}</Text>
+            {/* LEFT */}
+            <View style={styles.side}>
+                {canGoBack ? (
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        hitSlop={10}
+                    >
+                        <Text style={styles.backIcon}>←</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <View />
+                )}
+            </View>
 
-            <View style={styles.icons}>
-                <Text style={styles.icon}>🔔</Text>
-                <Text style={styles.icon}>📩</Text>
+            {/* CENTER */}
+            <View style={styles.center}>
+                <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                >
+                    {title}
+                </Text>
+            </View>
+
+            {/* RIGHT */}
+            <View style={styles.side}>
+                {showRightIcon ? (
+                    <TouchableOpacity
+                        onPress={onRightPress}
+                        hitSlop={10}
+                    >
+                        <Text style={styles.rightIcon}>🔔</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <View />
+                )}
             </View>
         </View>
-    );
+    )
 }
-
 const styles = StyleSheet.create({
-    header: {
+    container: {
         backgroundColor: '#2D5BFF',
-        paddingHorizontal: 20,
-        paddingBottom: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 14,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         borderBottomLeftRadius: 18,
         borderBottomRightRadius: 18,
     },
+
+    side: {
+        width: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    center: {
+        flex: 1,
+        alignItems: 'center',
+    },
+
     title: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 18,
         fontWeight: '700',
     },
-    icons: {
-        flexDirection: 'row',
-        gap: 12,
+
+    backIcon: {
+        color: '#FFFFFF',
+        fontSize: 22,
+        fontWeight: '700',
     },
-    icon: {
+
+    rightIcon: {
+        color: '#FFFFFF',
         fontSize: 18,
-        color: '#fff',
     },
-});
+})
+
