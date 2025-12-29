@@ -14,7 +14,7 @@ WORKDIR /app
 
 # 4. Copy file thư viện và cài đặt
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # 5. COPY TOÀN BỘ CODE TỪ FOLDER 'src' VÀO TRONG '/app'
 # (Lúc này main.py sẽ nằm ngay tại /app/main.py)
