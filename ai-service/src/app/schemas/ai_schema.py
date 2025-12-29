@@ -1,24 +1,28 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Any
 
-# --- 1. MODEL CHO API TÓM TẮT (Cái bạn đang thiếu) ---
 class SummaryResponse(BaseModel):
     summary: str
 
-# --- 2. MODEL CHO API CHECK CLO-PLO ---
 class CloPloCheckRequest(BaseModel):
     clo_text: str
     plo_text: str
 
 class CloPloCheckResponse(BaseModel):
-    score: int          # Điểm số tương thích (0-100)
-    reasoning: str      # Giải thích
-    is_aligned: bool    # Đạt hay không
+    score: int
+    reasoning: str
+    is_aligned: bool
 
-# --- 3. MODEL CHO API SO SÁNH (DIFF) ---
 class DiffRequest(BaseModel):
     old_content: str
     new_content: str
 
+# Model trả về chi tiết (dùng để document, thực tế trả về qua Task Worker)
+class HighlightItem(BaseModel):
+    type: str # 'added', 'removed', 'unchanged'
+    content: str
+
 class DiffResponse(BaseModel):
-    changes_analysis: str
+    similarity_percent: float
+    ai_analysis: str
+    highlight_data: List[HighlightItem]
