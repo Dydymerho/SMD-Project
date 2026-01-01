@@ -3,6 +3,8 @@ package com.smd.core.config;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,12 +26,21 @@ public class RedisConfig {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType("com.smd.core.entity")     // Entities
+                .allowIfSubType("com.smd.core.dto")        // DTOs
+                .allowIfSubType("com.smd.core.document")   // Elasticsearch docs
+                .allowIfSubType("java.time")                // LocalDateTime, etc.
+                .allowIfSubType("java.util")                // List, Map, etc.
+                .allowIfSubType("java.lang")                // String, Integer, etc.
+                .build();
+
         mapper.activateDefaultTyping(
-                mapper.getPolymorphicTypeValidator(),
+                ptv, 
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY
         );
-
+        
         // 2. Gắn ObjectMapper vào Serializer
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
 

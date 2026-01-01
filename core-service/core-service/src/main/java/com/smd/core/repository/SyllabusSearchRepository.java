@@ -10,7 +10,7 @@ import java.util.List;
 public interface SyllabusSearchRepository extends ElasticsearchRepository<SyllabusDocument, Long> {
     
     // Tìm kiếm giáo trình mà Tên hoặc Mã hoặc Mô tả chứa từ khóa
-    List<SyllabusDocument> findBySubjectNameContainingOrSubjectCodeContainingOrDescriptionContaining(
-            String name, String code, String desc
+    List<SyllabusDocument> findBySubjectNameContainingOrSubjectCodeContainingOrFullTextContaining(
+            String name, String code, String fullText
     );
 }

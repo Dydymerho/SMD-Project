@@ -26,7 +26,7 @@ public class SyllabusController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<SyllabusDocument>> search(@RequestParam String keyword) {
+    public ResponseEntity<List<Syllabus>> search(@RequestParam String keyword) {
         // URL dạng: /api/v1/syllabuses/search?keyword=Java
         return ResponseEntity.ok(syllabusService.search(keyword));
     }
@@ -34,5 +34,16 @@ public class SyllabusController {
     @GetMapping
     public ResponseEntity<List<Syllabus>> getAll() {
         return ResponseEntity.ok(syllabusService.getAllSyllabuses());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Syllabus> update(@PathVariable long id, @RequestBody Syllabus syllabus){
+        return ResponseEntity.ok(syllabusService.updateSyllabus(id, syllabus));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable long id){
+        syllabusService.deleteSyllabus(id);
+        return ResponseEntity.noContent().build();
     }
 }

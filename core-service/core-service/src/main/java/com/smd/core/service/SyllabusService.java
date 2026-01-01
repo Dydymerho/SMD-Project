@@ -9,9 +9,11 @@ import com.smd.core.repository.SyllabusSearchRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SyllabusService {
@@ -25,9 +27,9 @@ public class SyllabusService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate; 
 
-    // 1. tao moi
+    // 1. CREATE
     public Syllabus createSyllabus(Syllabus newSyllabus) {
-        // Check duplicate syllabus (same course, academic year, and version)
+        // Check duplicate
         if (newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null && newSyllabus.getVersionNo() != null) {
             boolean exists = syllabusRepo.existsByCourse_CourseIdAndAcademicYearAndVersionNo(
                     newSyllabus.getCourse().getCourseId(),
@@ -46,16 +48,8 @@ public class SyllabusService {
         // Save to PostgreSQL
         Syllabus saved = syllabusRepo.save(newSyllabus);
         
-        // Sync to Elasticsearch for full-text search
-        if (saved.getCourse() != null) {
-            SyllabusDocument doc = SyllabusDocument.builder()
-                    .id(saved.getSyllabusId())
-                    .subjectCode(saved.getCourse().getCourseCode())
-                    .subjectName(saved.getCourse().getCourseName())
-                    .description(saved.getCourse().getCourseName() + " - " + saved.getAcademicYear())
-                    .build();
-            elasticRepo.save(doc);
-        }
+        // Sync to Elasticsearch
+        syncToElasticsearch(saved);
 
         // Clear cache
         String key = "syllabus:" + saved.getSyllabusId();
@@ -64,36 +58,163 @@ public class SyllabusService {
         return saved;
     }
 
-    // 2. LẤY CHI TIẾT (uu tien doc redis)
+    // 2. READ BY ID (with Redis cache)
     public Syllabus getSyllabusById(Long id) {
         String key = "syllabus:" + id;
 
-        // tim trong redis truoc
+        // Check Redis cache first
         Syllabus cached = (Syllabus) redisTemplate.opsForValue().get(key);
         if (cached != null) {
-            System.out.println("--> Lấy từ REDIS");
+            System.out.println("--> [CACHE HIT] Lấy từ Redis");
             return cached;
         }
 
-        // neu khong co, tim trong PostgreSQL
-        System.out.println("--> Lấy từ PostgreSQL");
+        // Cache miss → Query PostgreSQL
+        System.out.println("--> [CACHE MISS] Lấy từ PostgreSQL");
         Syllabus fromDb = syllabusRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", id));
 
-        // luu nguoc vao Redis (Lan sau se nhanh) - Het han sau 10 phut
+        // Save to Redis cache (TTL: 10 minutes)
         redisTemplate.opsForValue().set(key, fromDb, Duration.ofMinutes(10));
         
         return fromDb;
     }
 
-    // 3. TÌM KIẾM (Dùng Elasticsearch)
-    public List<SyllabusDocument> search(String keyword) {
-        return elasticRepo.findBySubjectNameContainingOrSubjectCodeContainingOrDescriptionContaining(
-                keyword, keyword, keyword
-        );
+    // 3. SEARCH (Elasticsearch) - TRẢ ĐẦY ĐỦ THÔNG TIN
+    public List<Syllabus> search(String keyword) {
+        // Bước 1: Search trong Elasticsearch → Lấy IDs
+        List<SyllabusDocument> documents = elasticRepo
+                .findBySubjectNameContainingOrSubjectCodeContainingOrFullTextContaining(
+                    keyword, keyword, keyword
+                );
+        
+        if (documents.isEmpty()) {
+            return List.of(); // Không tìm thấy gì
+        }
+
+        // Bước 2: Extract IDs từ search results
+        List<Long> ids = documents.stream()
+                .map(SyllabusDocument::getId)
+                .collect(Collectors.toList());
+        
+        // Bước 3: Query PostgreSQL để lấy FULL thông tin (với relationships)
+        List<Syllabus> fullResults = syllabusRepo.findAllById(ids);
+        
+        System.out.println("--> [SEARCH] Tìm thấy " + fullResults.size() + " kết quả cho keyword: " + keyword);
+        
+        return fullResults;
     }
     
+    // 4. READ ALL
     public List<Syllabus> getAllSyllabuses() {
         return syllabusRepo.findAll();
+    }
+
+    // 5. UPDATE
+    @Transactional
+    public Syllabus updateSyllabus(Long id, Syllabus syllabusDetails) {
+        Syllabus existing = syllabusRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", id));
+        
+        // Update fields
+        if (syllabusDetails.getCourse() != null) {
+            existing.setCourse(syllabusDetails.getCourse());
+        }
+        if (syllabusDetails.getLecturer() != null) {
+            existing.setLecturer(syllabusDetails.getLecturer());
+        }
+        if (syllabusDetails.getProgram() != null) {
+            existing.setProgram(syllabusDetails.getProgram());
+        }
+        if (syllabusDetails.getAcademicYear() != null) {
+            existing.setAcademicYear(syllabusDetails.getAcademicYear());
+        }
+        if (syllabusDetails.getVersionNo() != null) {
+            existing.setVersionNo(syllabusDetails.getVersionNo());
+        }
+        if (syllabusDetails.getCurrentStatus() != null) {
+            existing.setCurrentStatus(syllabusDetails.getCurrentStatus());
+        }
+        
+        // Save to PostgreSQL
+        Syllabus updated = syllabusRepo.save(existing);
+        
+        // Update Elasticsearch
+        syncToElasticsearch(updated);
+        
+        // Clear cache
+        String key = "syllabus:" + id;
+        redisTemplate.delete(key);
+        
+        System.out.println("--> [UPDATE] Đã cập nhật Syllabus ID: " + id);
+        return updated;
+    }
+
+    // 6. DELETE
+    @Transactional
+    public void deleteSyllabus(Long id) {
+        if (!syllabusRepo.existsById(id)) {
+            throw new ResourceNotFoundException("Syllabus", "syllabusId", id);
+        }
+        
+        // Delete from PostgreSQL
+        syllabusRepo.deleteById(id);
+        
+        // Delete from Elasticsearch
+        elasticRepo.deleteById(id);
+        
+        // Delete from Redis cache
+        String key = "syllabus:" + id;
+        redisTemplate.delete(key);
+        
+        System.out.println("--> [DELETE] Đã xóa Syllabus ID: " + id);
+    }
+
+    // ========== HELPER METHODS ==========
+
+    /**
+     * Sync Syllabus to Elasticsearch
+     */
+    private void syncToElasticsearch(Syllabus syllabus) {
+        if (syllabus.getCourse() != null) {
+            SyllabusDocument doc = SyllabusDocument.builder()
+                    .id(syllabus.getSyllabusId())
+                    .subjectCode(syllabus.getCourse().getCourseCode())
+                    .subjectName(syllabus.getCourse().getCourseName())
+                    .fullText(buildFullText(syllabus))
+                    .build();
+            elasticRepo.save(doc);
+            System.out.println("--> [ELASTICSEARCH] Đã sync Syllabus ID: " + syllabus.getSyllabusId());
+        }
+    }
+
+    /**
+     * Build comprehensive search text
+     */
+    private String buildFullText(Syllabus s) {
+        StringBuilder text = new StringBuilder();
+        
+        // Course info
+        if (s.getCourse() != null) {
+            text.append(s.getCourse().getCourseCode()).append(" ");
+            text.append(s.getCourse().getCourseName()).append(" ");
+        }
+        
+        // Academic year
+        if (s.getAcademicYear() != null) {
+            text.append(s.getAcademicYear()).append(" ");
+        }
+        
+        // Program
+        if (s.getProgram() != null) {
+            text.append(s.getProgram().getProgramName()).append(" ");
+        }
+        
+        // Lecturer
+        if (s.getLecturer() != null) {
+            text.append(s.getLecturer().getFullName()).append(" ");
+        }
+        
+        return text.toString().trim();
     }
 }
