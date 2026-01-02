@@ -26,5 +26,5 @@ public class SyllabusDocument {
     private String subjectName;
 
     @Field(type = FieldType.Text, analyzer = "standard")
-    private String description;
+    private String fullText;
 }
