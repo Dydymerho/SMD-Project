@@ -7,6 +7,7 @@ import SearchScreen from '../screens/Search/SearchScreen'
 import Header from '../screens/Home/components/Header'
 import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen'
 import HomeStack from './HomeStack'
+
 export type TabParamList = {
     Home: undefined
     Search: undefined

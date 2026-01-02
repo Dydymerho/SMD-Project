@@ -11,10 +11,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import styles from './Home.styles';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SUBJECTS } from '../../mock/Subject';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../../navigation/HomeStack';
 
 // Hoặc: import Icon from 'react-native-vector-icons/Ionicons';
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     // const [major, setMajor] = useState('ALL');
     // const [code, setCode] = useState('');
 
@@ -47,8 +51,13 @@ export default function HomeScreen() {
                     {SUBJECTS.map(subject => (
                         <CourseItem
                             key={subject.code}
+                            onPress={() =>
+                                navigation.navigate('SubjectDetail', { code: subject.code, name: subject.name })
+                            }
                             code={subject.code}
                             name={subject.name}
+                            highlight={subject.code === 'OOP236'}
+
                         />
                     ))}
                 </Section>
@@ -78,13 +87,15 @@ function CourseItem({
     code,
     name,
     highlight,
+    onPress,
 }: {
     code: string;
     name: string;
     highlight?: boolean;
+    onPress?: () => void;
 }) {
     return (
-        <TouchableOpacity style={styles.courseItem}>
+        <TouchableOpacity style={styles.courseItem} onPress={onPress}>
             <Text
                 style={[
                     styles.courseCode,

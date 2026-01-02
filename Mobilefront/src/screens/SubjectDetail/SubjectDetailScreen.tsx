@@ -6,60 +6,42 @@ import {
     ScrollView,
     TouchableOpacity,
     Alert,
-
 } from 'react-native'
 import { RouteProp, useRoute } from '@react-navigation/native'
+import { SYLLABUS_CONTENT } from '../../mock/Syllabus'
 
-/* ===== PROPS ===== */
-
-interface ActionTagProps {
-    label: string
-    onPress?: () => void
-}
-
-interface SectionProps {
-    title: string
-    children: React.ReactNode
-}
-
-interface InfoRowProps {
-    label: string
-    value: string
-}
-
-interface BulletProps {
-    text: string
-}
+/* ===== TYPES ===== */
 
 type RouteParams = {
     SubjectDetail: {
         code: string
-        name: string
+        name?: string
     }
 }
+
 /* ===== SMALL COMPONENTS ===== */
 
-const ActionTag: React.FC<ActionTagProps> = ({ label, onPress }) => (
+const ActionTag = ({ label, onPress }: { label: string; onPress?: () => void }) => (
     <TouchableOpacity style={styles.tag} onPress={onPress}>
         <Text style={styles.tagText}>{label}</Text>
     </TouchableOpacity>
 )
 
-const Section: React.FC<SectionProps> = ({ title, children }) => (
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={styles.section}>
         <Text style={styles.sectionTitle}>{title}</Text>
         {children}
     </View>
 )
 
-const InfoRow: React.FC<InfoRowProps> = ({ label, value }) => (
+const InfoRow = ({ label, value }: { label: string; value?: string }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        <Text style={styles.infoValue}>{value || '—'}</Text>
     </View>
 )
 
-const Bullet: React.FC<BulletProps> = ({ text }) => (
+const Bullet = ({ text }: { text: string }) => (
     <Text style={styles.bullet}>• {text}</Text>
 )
 
@@ -67,61 +49,142 @@ const Bullet: React.FC<BulletProps> = ({ text }) => (
 
 export default function SubjectDetailScreen() {
     const route = useRoute<RouteProp<RouteParams, 'SubjectDetail'>>()
-    const { code, name } = route.params;
+    const { code, name } = route.params
+
+    const syllabus = SYLLABUS_CONTENT.find(item => item.code === code)
+
+    if (!syllabus) {
+        return (
+            <View style={styles.container}>
+                <Text>Không tìm thấy thông tin môn học</Text>
+            </View>
+        )
+    }
+
     return (
         <ScrollView
             style={styles.container}
             contentContainerStyle={{ paddingBottom: 40 }}
         >
-            {/* HEADER */}
+            {/* ===== HEADER ===== */}
             <View style={styles.header}>
-                <Text style={styles.title}>{code}</Text>
-                <Text style={styles.subtitle}>{name}</Text>
+                <Text style={styles.title}>{syllabus.code}</Text>
+                <Text style={styles.subtitle}>{name || syllabus.name}</Text>
 
                 <View style={styles.headerActions}>
-                    <ActionTag label="Theo dõi" onPress={() => Alert.alert('đã theo dõi')} />
+                    <ActionTag
+                        label="Theo dõi"
+                        onPress={() => Alert.alert('Đã theo dõi')}
+                    />
                     <ActionTag label="Thông báo" />
                 </View>
             </View>
 
-            {/* AI SUMMARY */}
-            <Section title="AI Summary">
-                <Text style={styles.paragraph}>
-                    Khóa học cung cấp kiến thức nền tảng về phát triển
-                    phần mềm, quy trình SE, UML và các phương pháp
-                    quản lý dự án phần mềm.
-                </Text>
+            {/* ===== COURSE DESCRIPTION ===== */}
+            <Section title="Mô tả khóa học">
+                <Text>{syllabus.description || syllabus.content}</Text>
             </Section>
 
-            {/* COURSE INFO */}
+            {/* ===== COURSE INFO ===== */}
             <Section title="Thông tin khóa học">
-                <InfoRow label="Tín chỉ" value="3" />
-                <InfoRow label="Môn học cần hoàn thành trước đó" value="None" />
+                <InfoRow label="Khoa" value={syllabus.department} />
+                <InfoRow label="Tín chỉ" value={String(syllabus.credits)} />
+                <InfoRow
+                    label="Môn học tiên quyết"
+                    value={
+                        syllabus.prerequisites && syllabus.prerequisites.length > 0
+                            ? syllabus.prerequisites.join(', ')
+                            : 'Không'
+                    }
+                />
             </Section>
 
-            {/* CLO LIST */}
+            {/* ===== AI SUMMARY ===== */}
+            <Section title="AI Summary">
+                <Text>{syllabus.aiSummary}</Text>
+            </Section>
+
+            {/* ===== CLO LIST ===== */}
             <Section title="Chuẩn đầu ra khóa học (CLOs)">
-                <Bullet text="CLO1 – Hiểu quy trình Software Engineering" />
-                <Bullet text="CLO2 – Áp dụng UML trong phân tích & thiết kế" />
+                {syllabus.clos?.map((clo, index) => (
+                    <Bullet key={index} text={clo} />
+                ))}
             </Section>
 
-            {/* CLO → PLO */}
+            {/* ===== CLO → PLO ===== */}
             <Section title="Liên kết CLO → PLO">
-                <Text style={styles.mapping}>
-                    CLO1 → PLO1, PLO3
-                </Text>
+                {syllabus.cloPloLinks?.map((item, index) => (
+                    <Text key={index} style={styles.mapping}>
+                        {item.clo} → {item.plos.join(', ')}
+                    </Text>
+                ))}
             </Section>
 
-            {/* SUBJECT RELATIONSHIP */}
-            <Section title="Subject Relationship">
-                <TouchableOpacity style={styles.linkBtn}>
-                    <Text style={styles.linkText}>View Tree →</Text>
-                </TouchableOpacity>
+            {/* ===== SUBJECT RELATIONSHIP ===== */}
+            <Section title="Cây quan hệ môn học">
+                <Text style={styles.treeTitle}>Môn tiên quyết</Text>
+                {Array.isArray(syllabus.prerequisites) && syllabus.prerequisites.length > 0 ? (
+                    syllabus.prerequisites.map((code: string) => (
+                        <TouchableOpacity key={code}>
+                            <Text style={styles.linkText}>• {code}</Text>
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    <Text style={styles.linkText}>Không có</Text>
+                )}
+
+                <Text style={styles.treeTitle}>Môn tiếp theo</Text>
+                {syllabus.subjectRelationship && syllabus.subjectRelationship.type === 'tree' && Array.isArray(syllabus.subjectRelationship.value) && syllabus.subjectRelationship.value.length > 0 ? (
+                    syllabus.subjectRelationship.value
+                        .filter((code: string) => code !== syllabus.code && !(syllabus.prerequisites || []).includes(code))
+                        .map((code: string) => (
+                            <TouchableOpacity key={code}>
+                                <Text style={styles.linkText}>• {code}</Text>
+                            </TouchableOpacity>
+                        ))
+                ) : (
+                    <Text style={styles.linkText}>Không có</Text>
+                )}
             </Section>
 
-            {/* REPORT */}
+            {/* ===== TEACHING PLAN ===== */}
+            {syllabus.teachingPlan && (
+                <Section title="Kế hoạch giảng dạy">
+                    {syllabus.teachingPlan.map((item, index) => (
+                        <View key={index} style={styles.teachingPlanRow}>
+                            <Text style={styles.week}>Tuần {item.week}</Text>
+                            <Text style={styles.topic}>{item.topic}</Text>
+                            <Text style={styles.method}>{item.method}</Text>
+                        </View>
+                    ))}
+                </Section>
+            )}
+
+            {/* ===== ASSESSMENT ===== */}
+            {syllabus.assessments && (
+                <Section title="Phương pháp đánh giá">
+                    {syllabus.assessments.map((item, index) => (
+                        <Text key={index} style={styles.bullet}>
+                            • {item.type}: {item.weight}%
+                        </Text>
+                    ))}
+                </Section>
+            )}
+
+            {/* ===== MATERIALS ===== */}
+            {syllabus.materials && (
+                <Section title="Tài liệu học tập">
+                    {syllabus.materials.map((item, index) => (
+                        <Text key={index} style={styles.bullet}>
+                            • {item.name} – {item.author} ({item.type})
+                        </Text>
+                    ))}
+                </Section>
+            )}
+
+            {/* ===== REPORT ===== */}
             <TouchableOpacity style={styles.reportBtn}>
-                <Text style={styles.reportText}>🚨 Report an issue</Text>
+                <Text style={styles.reportText}>🚨 Báo cáo vấn đề</Text>
             </TouchableOpacity>
         </ScrollView>
     )

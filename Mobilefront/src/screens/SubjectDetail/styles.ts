@@ -1,3 +1,4 @@
+
 import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -20,7 +21,12 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '800',
     },
-
+    treeTitle: {
+        fontWeight: '700',
+        fontSize: 15,
+        color: '#2563EB',
+        marginBottom: 8,
+    },
     subtitle: {
         color: '#E0E7FF',
         marginTop: 4,
@@ -73,7 +79,7 @@ const styles = StyleSheet.create({
 
     infoLabel: {
         fontWeight: '600',
-        width: 100,
+        width: 180,
     },
 
     infoValue: {
@@ -113,6 +119,30 @@ const styles = StyleSheet.create({
     reportText: {
         color: '#B91C1C',
         fontWeight: '700',
+    },
+
+    /* TEACHING PLAN */
+    teachingPlanRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+    },
+    week: {
+        width: 40,
+        fontWeight: '600',
+        color: '#2563EB',
+    },
+    topic: {
+        flex: 1,
+        color: '#374151',
+        marginLeft: 8,
+    },
+    method: {
+        width: 100,
+        color: '#6B7280',
+        textAlign: 'right',
     },
 });
 
