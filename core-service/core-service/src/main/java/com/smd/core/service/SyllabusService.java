@@ -28,7 +28,14 @@ public class SyllabusService {
     private RedisTemplate<String, Object> redisTemplate; 
 
     // 1. CREATE
+    @Transactional
     public Syllabus createSyllabus(Syllabus newSyllabus) {
+        System.out.println("\n==> [CREATE] Bat dau tao Syllabus...");
+        System.out.println("    Course ID: " + (newSyllabus.getCourse() != null ? newSyllabus.getCourse().getCourseId() : "null"));
+        System.out.println("    Lecturer ID: " + (newSyllabus.getLecturer() != null ? newSyllabus.getLecturer().getUserId() : "null"));
+        System.out.println("    Academic Year: " + newSyllabus.getAcademicYear());
+        System.out.println("    Version: " + newSyllabus.getVersionNo());
+        
         // Check duplicate
         if (newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null && newSyllabus.getVersionNo() != null) {
             boolean exists = syllabusRepo.existsByCourse_CourseIdAndAcademicYearAndVersionNo(
@@ -37,6 +44,7 @@ public class SyllabusService {
                     newSyllabus.getVersionNo()
             );
             if (exists) {
+                System.err.println("==> [CREATE ERROR] Syllabus da ton tai!");
                 throw new DuplicateResourceException(
                         "Syllabus", 
                         "course_academicYear_version", 
@@ -45,69 +53,106 @@ public class SyllabusService {
             }
         }
         
-        // Save to PostgreSQL
-        Syllabus saved = syllabusRepo.save(newSyllabus);
+        // Save to PostgreSQL - THIS IS THE CRITICAL PART
+        System.out.println("==> [CREATE] Saving to PostgreSQL...");
+        Syllabus saved = syllabusRepo.saveAndFlush(newSyllabus);
+        System.out.println("==> [CREATE SUCCESS] Syllabus ID: " + saved.getSyllabusId() + " da luu vao PostgreSQL!");
         
-        // Sync to Elasticsearch
-        syncToElasticsearch(saved);
+        // Sync to Elasticsearch (async, don't fail if error)
+        try {
+            syncToElasticsearch(saved);
+        } catch (Exception e) {
+            System.err.println("==> [CREATE WARNING] Elasticsearch sync failed: " + e.getMessage());
+        }
 
         // Clear cache
-        String key = "syllabus:" + saved.getSyllabusId();
-        redisTemplate.delete(key);
+        try {
+            String key = "syllabus:" + saved.getSyllabusId();
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            System.err.println("==> [CREATE WARNING] Redis cache clear failed: " + e.getMessage());
+        }
 
         return saved;
     }
 
     // 2. READ BY ID (with Redis cache)
+    @Transactional(readOnly = true)
     public Syllabus getSyllabusById(Long id) {
+        System.out.println("\n==> [READ] Lay Syllabus ID: " + id);
         String key = "syllabus:" + id;
 
         // Check Redis cache first
-        Syllabus cached = (Syllabus) redisTemplate.opsForValue().get(key);
-        if (cached != null) {
-            System.out.println("--> [CACHE HIT] Lấy từ Redis");
-            return cached;
+        try {
+            Syllabus cached = (Syllabus) redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                System.out.println("==> [CACHE HIT] Lay tu Redis");
+                return cached;
+            }
+        } catch (Exception e) {
+            System.err.println("==> [CACHE ERROR] Redis error: " + e.getMessage());
         }
 
         // Cache miss → Query PostgreSQL
-        System.out.println("--> [CACHE MISS] Lấy từ PostgreSQL");
+        System.out.println("==> [CACHE MISS] Query PostgreSQL...");
         Syllabus fromDb = syllabusRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", id));
+                .orElseThrow(() -> {
+                    System.err.println("==> [READ ERROR] Khong tim thay Syllabus ID: " + id);
+                    return new ResourceNotFoundException("Syllabus", "syllabusId", id);
+                });
+
+        System.out.println("==> [READ SUCCESS] Tim thay Syllabus: " + fromDb.getAcademicYear());
 
         // Save to Redis cache (TTL: 10 minutes)
-        redisTemplate.opsForValue().set(key, fromDb, Duration.ofMinutes(10));
+        try {
+            redisTemplate.opsForValue().set(key, fromDb, Duration.ofMinutes(10));
+        } catch (Exception e) {
+            System.err.println("==> [CACHE ERROR] Khong the luu vao Redis: " + e.getMessage());
+        }
         
         return fromDb;
     }
 
     // 3. SEARCH (Elasticsearch) - TRẢ ĐẦY ĐỦ THÔNG TIN
     public List<Syllabus> search(String keyword) {
-        // Bước 1: Search trong Elasticsearch → Lấy IDs
-        List<SyllabusDocument> documents = elasticRepo
-                .findBySubjectNameContainingOrSubjectCodeContainingOrFullTextContaining(
-                    keyword, keyword, keyword
-                );
-        
-        if (documents.isEmpty()) {
-            return List.of(); // Không tìm thấy gì
-        }
+        try {
+            // Bước 1: Search trong Elasticsearch → Lấy IDs
+            List<SyllabusDocument> documents = elasticRepo
+                    .findBySubjectNameContainingOrSubjectCodeContainingOrFullTextContaining(
+                        keyword, keyword, keyword
+                    );
+            
+            if (documents.isEmpty()) {
+                System.out.println("--> [SEARCH] Không tìm thấy trong Elasticsearch, fallback PostgreSQL");
+                // Fallback: Search trực tiếp trong PostgreSQL
+                return syllabusRepo.findByAcademicYearContaining(keyword);
+            }
 
-        // Bước 2: Extract IDs từ search results
-        List<Long> ids = documents.stream()
-                .map(SyllabusDocument::getId)
-                .collect(Collectors.toList());
-        
-        // Bước 3: Query PostgreSQL để lấy FULL thông tin (với relationships)
-        List<Syllabus> fullResults = syllabusRepo.findAllById(ids);
-        
-        System.out.println("--> [SEARCH] Tìm thấy " + fullResults.size() + " kết quả cho keyword: " + keyword);
-        
-        return fullResults;
+            // Bước 2: Extract IDs từ search results
+            List<Long> ids = documents.stream()
+                    .map(SyllabusDocument::getId)
+                    .collect(Collectors.toList());
+            
+            // Bước 3: Query PostgreSQL để lấy FULL thông tin (với relationships)
+            List<Syllabus> fullResults = syllabusRepo.findAllById(ids);
+            
+            System.out.println("--> [SEARCH] Tìm thấy " + fullResults.size() + "/" + ids.size() + " kết quả cho keyword: " + keyword);
+            
+            return fullResults;
+        } catch (Exception e) {
+            // Nếu Elasticsearch lỗi, fallback sang PostgreSQL
+            System.err.println("--> [SEARCH ERROR] Elasticsearch error, fallback: " + e.getMessage());
+            return syllabusRepo.findByAcademicYearContaining(keyword);
+        }
     }
     
     // 4. READ ALL
+    @Transactional(readOnly = true)
     public List<Syllabus> getAllSyllabuses() {
-        return syllabusRepo.findAll();
+        System.out.println("\n==> [READ ALL] Lay danh sach tat ca Syllabuses...");
+        List<Syllabus> all = syllabusRepo.findAll();
+        System.out.println("==> [READ ALL] Tim thay " + all.size() + " Syllabus(es) trong database");
+        return all;
     }
 
     // 5. UPDATE
@@ -176,16 +221,54 @@ public class SyllabusService {
      * Sync Syllabus to Elasticsearch
      */
     private void syncToElasticsearch(Syllabus syllabus) {
-        if (syllabus.getCourse() != null) {
-            SyllabusDocument doc = SyllabusDocument.builder()
-                    .id(syllabus.getSyllabusId())
-                    .subjectCode(syllabus.getCourse().getCourseCode())
-                    .subjectName(syllabus.getCourse().getCourseName())
-                    .fullText(buildFullText(syllabus))
-                    .build();
-            elasticRepo.save(doc);
-            System.out.println("--> [ELASTICSEARCH] Đã sync Syllabus ID: " + syllabus.getSyllabusId());
+        try {
+            if (syllabus.getCourse() != null) {
+                SyllabusDocument doc = SyllabusDocument.builder()
+                        .id(syllabus.getSyllabusId())
+                        .subjectCode(syllabus.getCourse().getCourseCode())
+                        .subjectName(syllabus.getCourse().getCourseName())
+                        .fullText(buildFullText(syllabus))
+                        .build();
+                elasticRepo.save(doc);
+                System.out.println("--> [ELASTICSEARCH] Đã sync Syllabus ID: " + syllabus.getSyllabusId());
+            }
+        } catch (Exception e) {
+            System.err.println("--> [ELASTICSEARCH ERROR] Không thể sync ID: " + syllabus.getSyllabusId() + " - " + e.getMessage());
+            // Don't fail the entire operation if Elasticsearch sync fails
         }
+    }
+    
+    /**
+     * Reindex all syllabuses from PostgreSQL to Elasticsearch
+     */
+    @Transactional(readOnly = true)
+    public void reindexAllToElasticsearch() {
+        System.out.println("--> [REINDEX] Bắt đầu reindex toàn bộ Syllabus...");
+        
+        // Delete old index
+        try {
+            elasticRepo.deleteAll();
+            System.out.println("--> [REINDEX] Đã xóa index cũ");
+        } catch (Exception e) {
+            System.err.println("--> [REINDEX WARNING] Không thể xóa index cũ: " + e.getMessage());
+        }
+        
+        // Get all from PostgreSQL
+        List<Syllabus> allSyllabuses = syllabusRepo.findAll();
+        System.out.println("--> [REINDEX] Tìm thấy " + allSyllabuses.size() + " syllabus trong PostgreSQL");
+        
+        // Sync to Elasticsearch
+        int successCount = 0;
+        for (Syllabus syllabus : allSyllabuses) {
+            try {
+                syncToElasticsearch(syllabus);
+                successCount++;
+            } catch (Exception e) {
+                System.err.println("--> [REINDEX ERROR] Lỗi sync ID " + syllabus.getSyllabusId() + ": " + e.getMessage());
+            }
+        }
+        
+        System.out.println("--> [REINDEX] Hoàn thành! Đã sync " + successCount + "/" + allSyllabuses.size() + " syllabus");
     }
 
     /**

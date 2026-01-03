@@ -46,4 +46,10 @@ public class SyllabusController {
         syllabusService.deleteSyllabus(id);
         return ResponseEntity.noContent().build();
     }
+    
+    @PostMapping("/reindex")
+    public ResponseEntity<String> reindex() {
+        syllabusService.reindexAllToElasticsearch();
+        return ResponseEntity.ok("Reindex completed successfully");
+    }
 }
