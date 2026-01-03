@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "session_plan")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
