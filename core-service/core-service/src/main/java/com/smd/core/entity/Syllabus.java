@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -7,24 +8,28 @@ import java.util.List;
 
 @Entity
 @Table(name = "syllabus")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Syllabus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "syllabus_id")
     private Long syllabusId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "course_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"syllabuses", "prerequisiteRelations", "relatedToRelations", "department"})
     private Course course;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "lecturer_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"syllabuses", "password", "department", "reviewComments"})
     private User lecturer;
 
     @Column(name = "academic_year", nullable = false)
@@ -40,9 +45,10 @@ public class Syllabus {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "program_id")
     @ToString.Exclude
+    @JsonIgnoreProperties({"syllabuses", "plos", "department"})
     private Program program;
 
     // Relationships

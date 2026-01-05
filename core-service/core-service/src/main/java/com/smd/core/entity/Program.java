@@ -6,7 +6,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "program")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

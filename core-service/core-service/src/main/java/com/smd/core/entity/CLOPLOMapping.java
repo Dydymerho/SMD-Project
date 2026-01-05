@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "clo_plo_mapping")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "course_relation")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

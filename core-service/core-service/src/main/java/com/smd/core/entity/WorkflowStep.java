@@ -6,7 +6,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "workflow_step")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
