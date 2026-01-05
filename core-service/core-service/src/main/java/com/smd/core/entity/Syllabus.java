@@ -45,6 +45,15 @@ public class Syllabus {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "pdf_file_path", length = 500)
+    private String pdfFilePath;
+
+    @Column(name = "pdf_file_name")
+    private String pdfFileName;
+
+    @Column(name = "pdf_uploaded_at")
+    private LocalDateTime pdfUploadedAt;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "program_id")
     @ToString.Exclude

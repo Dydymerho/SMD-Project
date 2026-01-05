@@ -1,18 +1,31 @@
 package com.smd.core.service;
 
 import com.smd.core.document.SyllabusDocument;
+import com.smd.core.dto.SyllabusUploadResponse;
 import com.smd.core.entity.Syllabus;
+import com.smd.core.entity.User;
 import com.smd.core.exception.DuplicateResourceException;
+import com.smd.core.exception.InvalidDataException;
 import com.smd.core.exception.ResourceNotFoundException;
 import com.smd.core.repository.SyllabusRepository;
 import com.smd.core.repository.SyllabusSearchRepository;
+import com.smd.core.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +38,13 @@ public class SyllabusService {
     private SyllabusSearchRepository elasticRepo; 
 
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate; 
+    private RedisTemplate<String, Object> redisTemplate;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Value("${file.upload.path:uploads/syllabus/pdf}")
+    private String uploadPath; 
 
     // 1. CREATE
     @Transactional
@@ -299,5 +318,263 @@ public class SyllabusService {
         }
         
         return text.toString().trim();
+    }
+    
+    // ==================== PDF UPLOAD METHODS ====================
+    
+    /**
+     * Check if user has permission to upload/delete PDF for a syllabus
+     * Permission rules:
+     * 1. Lecturer who owns the syllabus
+     * 2. Admin (any user with ADMIN role)
+     * 3. Department Head (user with DEPARTMENT_HEAD role in the same department as the syllabus's course)
+     */
+    private boolean hasPermissionToManagePdf(Syllabus syllabus, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElse(null);
+        
+        if (user == null) {
+            return false;
+        }
+        
+        // Rule 1: Lecturer owns the syllabus
+        if (syllabus.getLecturer() != null && 
+            syllabus.getLecturer().getUsername().equals(username)) {
+            return true;
+        }
+        
+        // Rule 2: User is Admin
+        if (user.getUserRoles() != null) {
+            boolean isAdmin = user.getUserRoles().stream()
+                .anyMatch(ur -> ur.getRole() != null && 
+                               "ADMIN".equalsIgnoreCase(ur.getRole().getRoleName()));
+            if (isAdmin) {
+                System.out.println("==> [PERMISSION] User is ADMIN - access granted");
+                return true;
+            }
+            
+            // Rule 3: User is Department Head in the same department
+            boolean isDeptHead = user.getUserRoles().stream()
+                .anyMatch(ur -> ur.getRole() != null && 
+                               "DEPARTMENT_HEAD".equalsIgnoreCase(ur.getRole().getRoleName()));
+            
+            if (isDeptHead && user.getDepartment() != null && 
+                syllabus.getCourse() != null && syllabus.getCourse().getDepartment() != null) {
+                boolean sameDepartment = user.getDepartment().getDepartmentId()
+                    .equals(syllabus.getCourse().getDepartment().getDepartmentId());
+                if (sameDepartment) {
+                    System.out.println("==> [PERMISSION] User is DEPARTMENT_HEAD in same department - access granted");
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Upload PDF file for a syllabus
+     */
+    @Transactional
+    public SyllabusUploadResponse uploadPdf(Long syllabusId, MultipartFile file, String username) {
+        System.out.println("\n==> [UPLOAD PDF] Starting PDF upload for syllabusId: " + syllabusId);
+        
+        // Validate file
+        if (file == null || file.isEmpty()) {
+            throw new InvalidDataException("File is empty");
+        }
+        
+        // Check file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equals("application/pdf")) {
+            throw new InvalidDataException("Only PDF files are allowed. Current type: " + contentType);
+        }
+        
+        // Check file size (10MB)
+        long maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.getSize() > maxSize) {
+            throw new InvalidDataException("File size exceeds maximum allowed size of 10MB");
+        }
+        
+        // Get syllabus
+        Syllabus syllabus = syllabusRepo.findById(syllabusId)
+            .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId));
+
+        // Check permission using enhanced permission system
+        if (!hasPermissionToManagePdf(syllabus, username)) {
+            throw new InvalidDataException("You don't have permission to upload PDF for this syllabus. Only the lecturer, admin, or department head can upload.");
+        }
+
+        try {
+            // Create upload directory if not exists
+            Path uploadDir = Paths.get(uploadPath);
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+                System.out.println("==> Created upload directory: " + uploadDir.toAbsolutePath());
+            }
+
+            // Generate unique filename
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = ".pdf";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String newFilename = syllabusId + "_" + UUID.randomUUID().toString() + fileExtension;
+            
+            // Save file
+            Path filePath = uploadDir.resolve(newFilename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("==> File saved to: " + filePath.toAbsolutePath());
+
+            // Delete old file if exists
+            if (syllabus.getPdfFilePath() != null) {
+                try {
+                    Path oldFile = Paths.get(syllabus.getPdfFilePath());
+                    Files.deleteIfExists(oldFile);
+                    System.out.println("==> Deleted old file: " + oldFile);
+                } catch (IOException e) {
+                    System.err.println("==> Warning: Could not delete old file: " + e.getMessage());
+                }
+            }
+
+            // Update syllabus
+            syllabus.setPdfFilePath(filePath.toString());
+            syllabus.setPdfFileName(originalFilename);
+            syllabus.setPdfUploadedAt(LocalDateTime.now());
+            syllabusRepo.save(syllabus);
+            
+            // Clear cache
+            try {
+                String key = "syllabus:" + syllabusId;
+                redisTemplate.delete(key);
+            } catch (Exception e) {
+                System.err.println("==> [UPLOAD PDF WARNING] Redis cache clear failed: " + e.getMessage());
+            }
+
+            System.out.println("==> [UPLOAD PDF] Completed successfully");
+            
+            return SyllabusUploadResponse.builder()
+                .syllabusId(syllabusId)
+                .fileName(originalFilename)
+                .filePath(filePath.toString())
+                .fileSize(file.getSize())
+                .uploadedAt(syllabus.getPdfUploadedAt())
+                .message("PDF uploaded successfully")
+                .build();
+
+        } catch (IOException e) {
+            System.err.println("==> [UPLOAD PDF ERROR] " + e.getMessage());
+            throw new RuntimeException("Failed to upload file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Download PDF file of a syllabus
+     */
+    public byte[] downloadPdf(Long syllabusId) {
+        System.out.println("\n==> [DOWNLOAD PDF] Starting PDF download for syllabusId: " + syllabusId);
+        
+        Syllabus syllabus = syllabusRepo.findById(syllabusId)
+            .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId));
+
+        if (syllabus.getPdfFilePath() == null) {
+            throw new ResourceNotFoundException("PDF file not found for syllabus ID: " + syllabusId);
+        }
+
+        try {
+            Path filePath = Paths.get(syllabus.getPdfFilePath());
+            if (!Files.exists(filePath)) {
+                throw new ResourceNotFoundException("PDF file does not exist at path: " + filePath);
+            }
+            
+            byte[] content = Files.readAllBytes(filePath);
+            System.out.println("==> [DOWNLOAD PDF] Completed successfully. Size: " + content.length + " bytes");
+            return content;
+        } catch (IOException e) {
+            System.err.println("==> [DOWNLOAD PDF ERROR] " + e.getMessage());
+            throw new RuntimeException("Failed to download file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete PDF file of a syllabus
+     */
+    @Transactional
+    public void deletePdf(Long syllabusId, String username) {
+        System.out.println("\n==> [DELETE PDF] Starting PDF deletion for syllabusId: " + syllabusId);
+        
+        Syllabus syllabus = syllabusRepo.findById(syllabusId)
+            .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId));
+
+        // Check permission using enhanced permission system
+        if (!hasPermissionToManagePdf(syllabus, username)) {
+            throw new InvalidDataException("You don't have permission to delete PDF for this syllabus. Only the lecturer, admin, or department head can delete.");
+        }
+
+        if (syllabus.getPdfFilePath() == null) {
+            throw new ResourceNotFoundException("PDF file not found for syllabus ID: " + syllabusId);
+        }
+
+        try {
+            Path filePath = Paths.get(syllabus.getPdfFilePath());
+            Files.deleteIfExists(filePath);
+            System.out.println("==> Deleted file: " + filePath);
+            
+            // Update syllabus
+            syllabus.setPdfFilePath(null);
+            syllabus.setPdfFileName(null);
+            syllabus.setPdfUploadedAt(null);
+            syllabusRepo.save(syllabus);
+            
+            // Clear cache
+            try {
+                String key = "syllabus:" + syllabusId;
+                redisTemplate.delete(key);
+            } catch (Exception e) {
+                System.err.println("==> [DELETE PDF WARNING] Redis cache clear failed: " + e.getMessage());
+            }
+            
+            System.out.println("==> [DELETE PDF] Completed successfully");
+        } catch (IOException e) {
+            System.err.println("==> [DELETE PDF ERROR] " + e.getMessage());
+            throw new RuntimeException("Failed to delete file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get PDF information of a syllabus
+     */
+    public SyllabusUploadResponse getPdfInfo(Long syllabusId) {
+        System.out.println("\n==> [GET PDF INFO] Getting PDF info for syllabusId: " + syllabusId);
+        
+        Syllabus syllabus = syllabusRepo.findById(syllabusId)
+            .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId));
+
+        if (syllabus.getPdfFilePath() == null) {
+            return SyllabusUploadResponse.builder()
+                .syllabusId(syllabusId)
+                .message("No PDF uploaded for this syllabus")
+                .build();
+        }
+
+        // Get file size if file exists
+        Long fileSize = null;
+        try {
+            Path filePath = Paths.get(syllabus.getPdfFilePath());
+            if (Files.exists(filePath)) {
+                fileSize = Files.size(filePath);
+            }
+        } catch (IOException e) {
+            System.err.println("==> Warning: Could not get file size: " + e.getMessage());
+        }
+
+        return SyllabusUploadResponse.builder()
+            .syllabusId(syllabusId)
+            .fileName(syllabus.getPdfFileName())
+            .filePath(syllabus.getPdfFilePath())
+            .fileSize(fileSize)
+            .uploadedAt(syllabus.getPdfUploadedAt())
+            .message("PDF information retrieved successfully")
+            .build();
     }
 }
