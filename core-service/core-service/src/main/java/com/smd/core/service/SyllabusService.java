@@ -46,7 +46,7 @@ public class SyllabusService {
     @Value("${file.upload.path:uploads/syllabus/pdf}")
     private String uploadPath; 
 
-    // 1. CREATE
+    // 1. CREATE WITH AUTO-VERSIONING
     @Transactional
     public Syllabus createSyllabus(Syllabus newSyllabus) {
         System.out.println("\n==> [CREATE] Bat dau tao Syllabus...");
@@ -54,6 +54,16 @@ public class SyllabusService {
         System.out.println("    Lecturer ID: " + (newSyllabus.getLecturer() != null ? newSyllabus.getLecturer().getUserId() : "null"));
         System.out.println("    Academic Year: " + newSyllabus.getAcademicYear());
         System.out.println("    Version: " + newSyllabus.getVersionNo());
+        
+        // AUTO-DETERMINE VERSION NUMBER if not provided
+        if (newSyllabus.getVersionNo() == null && newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null) {
+            Integer nextVersion = determineNextVersionNumber(
+                newSyllabus.getCourse().getCourseId(), 
+                newSyllabus.getAcademicYear()
+            );
+            newSyllabus.setVersionNo(nextVersion);
+            System.out.println("==> [AUTO-VERSION] Auto-determined version: " + nextVersion);
+        }
         
         // Check duplicate
         if (newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null && newSyllabus.getVersionNo() != null) {
@@ -71,6 +81,17 @@ public class SyllabusService {
                 );
             }
         }
+        
+        // Mark old versions as not latest
+        if (newSyllabus.getCourse() != null && newSyllabus.getAcademicYear() != null) {
+            updateOldVersionsAsNotLatest(
+                newSyllabus.getCourse().getCourseId(), 
+                newSyllabus.getAcademicYear()
+            );
+        }
+        
+        // Ensure this is marked as latest version
+        newSyllabus.setIsLatestVersion(true);
         
         // Save to PostgreSQL - THIS IS THE CRITICAL PART
         System.out.println("==> [CREATE] Saving to PostgreSQL...");
@@ -93,6 +114,98 @@ public class SyllabusService {
         }
 
         return saved;
+    }
+    
+    // VERSIONING: Determine next version number for a course and academic year
+    @Transactional(readOnly = true)
+    public Integer determineNextVersionNumber(Long courseId, String academicYear) {
+        Integer maxVersion = syllabusRepo.findMaxVersionNoForCourseAndYear(courseId, academicYear);
+        return (maxVersion == null || maxVersion == 0) ? 1 : maxVersion + 1;
+    }
+    
+    // VERSIONING: Mark all old versions as not latest
+    @Transactional
+    public void updateOldVersionsAsNotLatest(Long courseId, String academicYear) {
+        List<Syllabus> oldVersions = syllabusRepo.findAllVersionsByCourseAndYear(courseId, academicYear);
+        for (Syllabus old : oldVersions) {
+            if (old.getIsLatestVersion()) {
+                old.setIsLatestVersion(false);
+                syllabusRepo.save(old);
+            }
+        }
+    }
+    
+    // VERSIONING: Create new version from existing syllabus
+    @Transactional
+    public Syllabus createNewVersion(Long sourceSyllabusId, String versionNotes, 
+                                     boolean copyMaterials, boolean copySessionPlans, 
+                                     boolean copyAssessments, boolean copyCLOs) {
+        // Get source syllabus
+        Syllabus source = getSyllabusById(sourceSyllabusId);
+        
+        // Create new syllabus with incremented version
+        Integer nextVersion = determineNextVersionNumber(
+            source.getCourse().getCourseId(), 
+            source.getAcademicYear()
+        );
+        
+        Syllabus newVersion = Syllabus.builder()
+                .course(source.getCourse())
+                .lecturer(source.getLecturer())
+                .academicYear(source.getAcademicYear())
+                .versionNo(nextVersion)
+                .currentStatus(Syllabus.SyllabusStatus.DRAFT)
+                .program(source.getProgram())
+                .previousVersionId(sourceSyllabusId)
+                .versionNotes(versionNotes)
+                .isLatestVersion(true)
+                .build();
+        
+        // Mark old versions as not latest
+        updateOldVersionsAsNotLatest(source.getCourse().getCourseId(), source.getAcademicYear());
+        
+        // Save new version
+        Syllabus saved = syllabusRepo.saveAndFlush(newVersion);
+        
+        // Copy content based on flags
+        if (copyMaterials || copySessionPlans || copyAssessments || copyCLOs) {
+            copyContentFromSourceVersion(saved, source, copyMaterials, copySessionPlans, copyAssessments, copyCLOs);
+        }
+        
+        return saved;
+    }
+    
+    // VERSIONING: Copy content from source version
+    @Transactional
+    public void copyContentFromSourceVersion(Syllabus target, Syllabus source,
+                                             boolean copyMaterials, boolean copySessionPlans,
+                                             boolean copyAssessments, boolean copyCLOs) {
+        // Note: Actual copying logic would need Material, SessionPlan, Assessment, CLO services
+        // For now, this is a placeholder - implementation would involve deep copying of related entities
+        System.out.println("==> [COPY CONTENT] Copying from Syllabus ID " + source.getSyllabusId() + " to " + target.getSyllabusId());
+        System.out.println("    Copy Materials: " + copyMaterials);
+        System.out.println("    Copy SessionPlans: " + copySessionPlans);
+        System.out.println("    Copy Assessments: " + copyAssessments);
+        System.out.println("    Copy CLOs: " + copyCLOs);
+        
+        // TODO: Implement actual copying with respective service classes
+    }
+    
+    // VERSIONING: Get all versions of a syllabus for a course and year
+    @Transactional(readOnly = true)
+    public List<Syllabus> getAllVersions(Long courseId, String academicYear) {
+        return syllabusRepo.findAllVersionsByCourseAndYear(courseId, academicYear);
+    }
+    
+    // VERSIONING: Get latest version
+    @Transactional(readOnly = true)
+    public Syllabus getLatestVersion(Long courseId, String academicYear) {
+        return syllabusRepo.findLatestVersionByCourseAndYear(courseId, academicYear)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Syllabus", 
+                    "courseId_academicYear", 
+                    courseId + "_" + academicYear
+                ));
     }
 
     // 2. READ BY ID (with Redis cache)
