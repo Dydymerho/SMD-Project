@@ -227,6 +227,41 @@
   color: #333;
 }
 
+/* Action Bar */
+.action-bar {
+  padding: 20px 40px;
+  background: white;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  margin: 0 40px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.btn-create-syllabus {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-create-syllabus:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-create-syllabus .icon {
+  font-size: 18px;
+}
+
 /* Content Section */
 .content-section {
   margin: 0 40px 40px;

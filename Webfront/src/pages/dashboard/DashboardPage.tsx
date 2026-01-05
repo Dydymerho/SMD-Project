@@ -197,6 +197,19 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Create Syllabus Button for Teachers */}
+        {user?.role === 'TEACHER' && activeTab === 'my-syllabi' && (
+          <div className="action-bar">
+            <button 
+              className="btn-create-syllabus"
+              onClick={() => navigate('/syllabus/create')}
+            >
+              <span className="icon">➕</span>
+              Tạo đề cương mới
+            </button>
+          </div>
+        )}
+
         {/* Tab Content */}
         {activeTab === 'my-syllabi' && (
           <div className="content-section">

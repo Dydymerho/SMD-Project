@@ -10,6 +10,7 @@ import SubjectDetailPage from './pages/SubjectDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import SystemManagementPage from './pages/admin/SystemManagementPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import CreateSyllabusPage from './pages/subjects/CreateSyllabusPage';
 
 function App() {
   return (
@@ -37,6 +38,16 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['TEACHER', 'STUDENT']}>
                   <DashboardPage />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Teacher Routes */}
+            <Route
+              path="/syllabus/create"
+              element={
+                <PrivateRoute allowedRoles={['TEACHER']}>
+                  <CreateSyllabusPage />
                 </PrivateRoute>
               }
             />
