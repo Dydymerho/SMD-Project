@@ -1,9 +1,7 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import HomeScreen from '../screens/Home/HomeScreen'
-import SearchScreen from '../screens/Search/SearchScreen'
-// import ProfileScreen from '../screens/Profile/ProfileScreen'
+import SettingScreen from '../screens/settingpage/SettingScreen'
 import AppHeader from '../components/AppHeader'
 import HomeStack from './HomeStack'
 import ProfileScreen from '../screens/Profile/ProfileScreen'
@@ -70,7 +68,7 @@ export default function BottomTabNavigator() {
         >
             <Tab.Screen name="Home" component={HomeStack} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
-            <Tab.Screen name="Setting" component={HomeScreen} />
+            <Tab.Screen name="Setting" component={SettingScreen} />
         </Tab.Navigator>
     )
 }

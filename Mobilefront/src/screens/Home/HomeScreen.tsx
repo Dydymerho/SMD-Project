@@ -1,87 +1,62 @@
-import React, { useState } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    ScrollView,
-    TouchableOpacity,
-    Image
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import styles from './Home.styles';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { SUBJECTS } from '../../mock/Subject';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HomeStackParamList } from '../../navigation/HomeStack';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StatusBar } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import styles from "./Home.styles"
+import Icon from "react-native-vector-icons/MaterialIcons"
+import { SUBJECTS } from "../../mock/Subject"
+import { useNavigation } from "@react-navigation/native"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import type { HomeStackParamList } from "../../navigation/HomeStack"
 
-// Hoặc: import Icon from 'react-native-vector-icons/Ionicons';
 export default function HomeScreen() {
-    const insets = useSafeAreaInsets();
-    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-    // const [major, setMajor] = useState('ALL');
-    // const [code, setCode] = useState('');
+    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>()
 
     return (
-        <SafeAreaView style={styles.safe} edges={['top']}>
+        <SafeAreaView style={styles.safe} edges={["top"]}>
+            <StatusBar barStyle="light-content" />
 
-            {/* CONTENT */}
-            <ScrollView
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+                {/* Header Section */}
+                <View style={styles.header}>
+                    <Text style={styles.greeting}>Xin chào Tiến 👋</Text>
+                    <Text style={styles.subText}>Học kỳ: HK1 — 2025</Text>
 
-                contentContainerStyle={styles.container}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Greeting */}
-                <Text style={styles.greeting}>Xin chào Tiến👋</Text>
-                <Text style={styles.subText}>Học kỳ: HK1 - 2025</Text>
-
-                {/* Search */}
-
-
-                <View style={styles.searchContainer}>
-                    <TextInput
-                        placeholder="Tìm môn học / mã môn"
-                        placeholderTextColor="#999"
-                        style={styles.SearchBar}
-                    />
-                    <Icon name="search" style={styles.icon} />
-                </View>
-                {/* Suggestions */}
-                <Section title="Các khóa học của bạn">
-                    {SUBJECTS.map(subject => (
-                        <CourseItem
-                            key={subject.code}
-                            onPress={() =>
-                                navigation.navigate('SubjectDetail', { code: subject.code, name: subject.name })
-                            }
-                            code={subject.code}
-                            name={subject.name}
-                            highlight={subject.code === 'OOP236'}
-
+                    <View style={styles.searchWrapper}>
+                        <Icon name="search" style={styles.searchIcon} />
+                        <TextInput
+                            placeholder="Tìm môn học hoặc mã môn..."
+                            placeholderTextColor="#64748B"
+                            style={styles.SearchBar}
                         />
-                    ))}
-                </Section>
+                    </View>
+                </View>
+
+                {/* Main Content */}
+                <View style={styles.content}>
+                    <Text style={styles.sectionTitle}>Khóa học của bạn</Text>
+
+                    <View style={styles.courseList}>
+                        {SUBJECTS.map((subject) => (
+                            <CourseItem
+                                key={subject.code}
+                                code={subject.code}
+                                name={subject.name}
+                                highlight={subject.code === "OOP236"}
+                                onPress={() =>
+                                    navigation.navigate("SubjectDetail", {
+                                        code: subject.code,
+                                        name: subject.name,
+                                    })
+                                }
+                            />
+                        ))}
+                    </View>
+                </View>
             </ScrollView>
         </SafeAreaView>
-    );
+    )
 }
 
 /* ---------------- COMPONENTS ---------------- */
-
-function Section({
-    title,
-    children,
-}: {
-    title: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <View style={styles.card}>{children}</View>
-        </View>
-    );
-}
 
 function CourseItem({
     code,
@@ -89,24 +64,22 @@ function CourseItem({
     highlight,
     onPress,
 }: {
-    code: string;
-    name: string;
-    highlight?: boolean;
-    onPress?: () => void;
+    code: string
+    name: string
+    highlight?: boolean
+    onPress?: () => void
 }) {
     return (
-        <TouchableOpacity style={styles.courseItem} onPress={onPress}>
-            <Text
-                style={[
-                    styles.courseCode,
-                    highlight && { color: '#FF8A00' },
-                ]}
-            >
-                {code}
-            </Text>
-            <Text style={styles.courseName}>{name}</Text>
+        <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.courseItem, highlight && styles.courseItemHighlight]}
+            onPress={onPress}
+        >
+            <View style={styles.courseInfo}>
+                <Text style={[styles.courseCode, highlight && styles.courseCodeHighlight]}>{code}</Text>
+                <Text style={styles.courseName}>{name}</Text>
+            </View>
+            <Icon name="chevron-right" style={[styles.arrowIcon, highlight && styles.arrowIconHighlight]} />
         </TouchableOpacity>
-    );
+    )
 }
-
-
