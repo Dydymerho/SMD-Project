@@ -2,8 +2,10 @@ import os
 import asyncio
 from celery import Celery
 from app.services.file_reader import read_file_from_path
-# --- QUAN TRỌNG: Import Class chứ không import biến instance ---
+# Import Service LLM
 from app.services.llm_service import LLMService 
+# --- MỚI: Import Service Syllabus (Chứa BERT & Highlight) ---
+from app.services import syllabus_service
 
 # Cấu hình Redis
 REDIS_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -44,15 +46,12 @@ def process_ocr_task(self, file_path: str):
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
 
-# --- TASK 2: TÓM TẮT (Summarize) ---
+# --- TASK 2: TÓM TẮT ---
 @celery_app.task(name="app.worker.task_summarize", bind=True)
 def task_summarize(self, text: str):
     try:
         self.update_state(state='PROGRESS', meta={'message': 'AI đang đọc và tóm tắt...'})
-        
-        # [FIX LỖI EVENT LOOP] Khởi tạo service mới ngay trong task
         service = LLMService()
-        
         result = asyncio.run(service.generate_summary(text))
         return {"status": "Success", "summary": result}
     except Exception as e:
@@ -63,25 +62,34 @@ def task_summarize(self, text: str):
 def task_check_clo_plo(self, clo: str, plo: str):
     try:
         self.update_state(state='PROGRESS', meta={'message': 'AI đang đánh giá độ khớp...'})
-        
-        # [FIX LỖI EVENT LOOP] Khởi tạo service mới
         service = LLMService()
-        
         result = asyncio.run(service.check_clo_plo_alignment(clo, plo))
         return {"status": "Success", "data": result}
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
 
-# --- TASK 4: SO SÁNH (Diff) ---
+# --- TASK 4: SO SÁNH (ĐÃ NÂNG CẤP BERT + HIGHLIGHT) ---
 @celery_app.task(name="app.worker.task_diff", bind=True)
 def task_diff(self, old_text: str, new_text: str):
     try:
-        self.update_state(state='PROGRESS', meta={'message': 'AI đang so sánh văn bản...'})
+        # 1. Tính độ tương đồng bằng BERT
+        self.update_state(state='PROGRESS', meta={'message': 'Đang chạy BERT Model...'})
+        similarity_score = syllabus_service.calculate_similarity(old_text, new_text)
         
-        # [FIX LỖI EVENT LOOP] Khởi tạo service mới
-        service = LLMService()
+        # 2. Tìm vị trí khác biệt để tô màu (Highlight)
+        self.update_state(state='PROGRESS', meta={'message': 'Đang tìm vị trí thay đổi...'})
+        highlights = syllabus_service.get_diff_highlight(old_text, new_text)
         
-        result = asyncio.run(service.analyze_changes(old_text, new_text))
-        return {"status": "Success", "analysis": result}
+        # 3. Nhờ LLM nhận xét bằng lời (Optional)
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang viết nhận xét...'})
+        llm_service = LLMService()
+        ai_analysis = asyncio.run(llm_service.analyze_changes(old_text, new_text))
+        
+        return {
+            "status": "Success", 
+            "similarity_percent": round(similarity_score * 100, 2), # Đổi sang %
+            "highlight_data": highlights, # Dùng cái này để FE tô màu
+            "ai_analysis": ai_analysis
+        }
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
