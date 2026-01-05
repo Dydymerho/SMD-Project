@@ -1,42 +1,23 @@
-import React from 'react'
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useNavigation, NavigationProp } from '@react-navigation/native'
-
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useNavigation, type NavigationProp } from "@react-navigation/native"
 
 type HeaderProps = {
     title: string
     showRightIcon?: boolean
     onRightPress?: () => void
-}                    
+}
 
-export default function Header({
-    title,
-    showRightIcon = false,
-    onRightPress,
-}: HeaderProps) {
+export default function Header({ title, showRightIcon = false, onRightPress }: HeaderProps) {
     const insets = useSafeAreaInsets()
     const navigation = useNavigation<NavigationProp<any>>()
     const canGoBack = navigation.canGoBack()
     return (
-        <View
-            style={[
-                styles.container,
-                { paddingTop: insets.top + 12 },
-            ]}
-        >
+        <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
             {/* LEFT */}
             <View style={styles.side}>
                 {canGoBack ? (
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        hitSlop={10}
-                    >
+                    <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
                         <Text style={styles.backIcon}>←</Text>
                     </TouchableOpacity>
                 ) : (
@@ -46,10 +27,7 @@ export default function Header({
 
             {/* CENTER */}
             <View style={styles.center}>
-                <Text
-                    style={styles.title}
-                    numberOfLines={1}
-                >
+                <Text style={styles.title} numberOfLines={1}>
                     {title}
                 </Text>
             </View>
@@ -57,10 +35,7 @@ export default function Header({
             {/* RIGHT */}
             <View style={styles.side}>
                 {showRightIcon ? (
-                    <TouchableOpacity
-                        onPress={onRightPress}
-                        hitSlop={10}
-                    >
+                    <TouchableOpacity onPress={onRightPress} hitSlop={10}>
                         <Text style={styles.rightIcon}>🔔</Text>
                     </TouchableOpacity>
                 ) : (
@@ -72,41 +47,40 @@ export default function Header({
 }
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#2D5BFF',
+        backgroundColor: "#2D5BFF",
         paddingHorizontal: 16,
         paddingBottom: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         borderBottomLeftRadius: 18,
         borderBottomRightRadius: 18,
     },
 
     side: {
         width: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
 
     center: {
         flex: 1,
-        alignItems: 'center',
+        alignItems: "center",
     },
-
     title: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#ffffff",
+        letterSpacing: 0.5,
     },
 
     backIcon: {
-        color: '#FFFFFF',
+        color: "#FFFFFF",
         fontSize: 22,
-        fontWeight: '700',
+        fontWeight: "700",
     },
 
     rightIcon: {
-        color: '#FFFFFF',
+        color: "#FFFFFF",
         fontSize: 18,
     },
 })
-
