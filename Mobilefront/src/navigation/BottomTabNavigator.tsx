@@ -4,13 +4,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons'
 import HomeScreen from '../screens/Home/HomeScreen'
 import SearchScreen from '../screens/Search/SearchScreen'
 // import ProfileScreen from '../screens/Profile/ProfileScreen'
-import Header from '../screens/Home/components/Header'
-import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen'
+import AppHeader from '../components/AppHeader'
 import HomeStack from './HomeStack'
-
+import ProfileScreen from '../screens/Profile/ProfileScreen'
 export type TabParamList = {
     Home: undefined
-    Search: undefined
     Profile: undefined
     Setting: undefined
 }
@@ -19,7 +17,6 @@ const Tab = createBottomTabNavigator<TabParamList>()
 
 const TAB_TITLES: Record<keyof TabParamList, string> = {
     Home: 'Trang chủ',
-    Search: 'Tìm kiếm',
     Profile: 'Cá nhân',
     Setting: 'Cài đặt',
 }
@@ -29,7 +26,7 @@ export default function BottomTabNavigator() {
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 header: () => (
-                    <Header title={TAB_TITLES[route.name]} />
+                    <AppHeader title={TAB_TITLES[route.name]} />
                 ),
 
                 tabBarIcon: ({ focused, color }) => {
@@ -50,21 +47,30 @@ export default function BottomTabNavigator() {
 
                 tabBarActiveTintColor: '#2563EB',
                 tabBarInactiveTintColor: '#9CA3AF',
-
                 tabBarStyle: {
-                    height: 80,
+                    flexDirection: "row",
+                    borderWidth: 25,
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    height: 60,
                     marginHorizontal: 20,
-                    marginBottom: 12,
+                    marginBottom: 15,
                     borderRadius: 20,
-                    paddingTop: 10,
                     position: 'absolute',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    justifyContent: 'center',   // 🔥 quan trọng
+                    alignItems: 'center',       // 🔥 quan trọng
+                    paddingVertical: 8,         // 🔥 giảm
+                    elevation: 12,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 16,
                 },
             })}
         >
             <Tab.Screen name="Home" component={HomeStack} />
-            <Tab.Screen name="Search" component={SearchScreen} />
-            <Tab.Screen name="Profile" component={HomeScreen} />
-            <Tab.Screen name="Setting" component={SubjectDetailScreen} />
+            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen name="Setting" component={HomeScreen} />
         </Tab.Navigator>
     )
 }
