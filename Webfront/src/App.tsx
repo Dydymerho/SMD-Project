@@ -10,7 +10,7 @@ import SubjectDetailPage from './pages/SubjectDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import SystemManagementPage from './pages/admin/SystemManagementPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
-import CreateSyllabusPage from './pages/subjects/CreateSyllabusPage';
+import CreateSyllabusPage from './pages/CreateSyllabusPage';
 
 function App() {
   return (
