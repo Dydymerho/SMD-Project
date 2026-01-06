@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,5 +25,6 @@ public class Role {
     // Relationships
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"role", "user"})
     private List<UserRole> userRoles;
 }

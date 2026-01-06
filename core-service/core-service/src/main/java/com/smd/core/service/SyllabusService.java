@@ -470,6 +470,8 @@ public class SyllabusService {
             boolean isDeptHead = user.getUserRoles().stream()
                 .anyMatch(ur -> ur.getRole() != null && 
                                "HEAD_OF_DEPARTMENT".equalsIgnoreCase(ur.getRole().getRoleName()));
+            
+            if (isDeptHead && user.getDepartment() != null && 
                 syllabus.getCourse() != null && syllabus.getCourse().getDepartment() != null) {
                 boolean sameDepartment = user.getDepartment().getDepartmentId()
                     .equals(syllabus.getCourse().getDepartment().getDepartmentId());
