@@ -129,8 +129,8 @@ public class Syllabus {
 
     public enum SyllabusStatus {
         DRAFT,
-        IN_REVIEW,
-        APPROVED,
+        PENDING_REVIEW,
+        PENDING_APPROVAL,
         PUBLISHED,
         ARCHIVED
     }

@@ -4,7 +4,7 @@
 
 Hệ thống sử dụng 3 bảng để quản lý quyền:
 
-- **`role`**: Lưu danh sách các quyền (ADMIN, LECTURER, DEPARTMENT_HEAD, REVIEWER)
+- **`role`**: Lưu danh sách các quyền (ADMIN, LECTURER, HEAD_OF_DEPARTMENT, ACADEMIC_AFFAIRS, STUDENT)
 - **`user`**: Lưu thông tin người dùng
 - **`user_role`**: Bảng liên kết giữa user và role (many-to-many)
 
@@ -12,8 +12,9 @@ Hệ thống sử dụng 3 bảng để quản lý quyền:
 
 1. **ADMIN**: Quản trị viên - có toàn quyền trong hệ thống
 2. **LECTURER**: Giảng viên - quản lý syllabuses của mình
-3. **DEPARTMENT_HEAD**: Trưởng khoa - quản lý syllabuses trong khoa
-4. **REVIEWER**: Người đánh giá - review và comment syllabuses
+3. **HEAD_OF_DEPARTMENT**: Trưởng khoa - quản lý syllabuses trong khoa
+4. **ACADEMIC_AFFAIRS**: Phòng Đào tạo - quản lý và phê duyệt syllabuses
+5. **STUDENT**: Sinh viên - xem syllabuses đã được publish
 
 ## 🚀 Cách Khởi Tạo Roles
 
@@ -80,7 +81,7 @@ INSERT INTO user_role (user_id, role_id)
 SELECT u.user_id, r.role_id
 FROM "user" u, role r
 WHERE u.username = 'john.doe'
-  AND r.role_name IN ('LECTURER', 'REVIEWER');
+  AND r.role_name IN ('LECTURER', 'ACADEMIC_AFFAIRS');
 ```
 
 ## 📝 Ví Dụ Thực Tế
@@ -129,7 +130,7 @@ POST /api/v1/roles/assign
 }
 ```
 
-### Scenario 3: Tạo Department Head
+### Scenario 3: Tạo Head of Department
 
 ```bash
 # 1. Register với department
@@ -142,11 +143,51 @@ POST /api/v1/auth/register
   "departmentId": 1
 }
 
-# 2. Gán DEPARTMENT_HEAD role
+# 2. Gán HEAD_OF_DEPARTMENT role
 POST /api/v1/roles/assign
 {
   "userId": 3,
-  "roleName": "DEPARTMENT_HEAD"
+  "roleName": "HEAD_OF_DEPARTMENT"
+}
+```
+
+### Scenario 4: Tạo Academic Affairs Staff
+
+```bash
+# 1. Register
+POST /api/v1/auth/register
+{
+  "username": "academic.staff",
+  "password": "password123",
+  "fullName": "Academic Affairs Staff",
+  "email": "academic@university.edu"
+}
+
+# 2. Gán ACADEMIC_AFFAIRS role
+POST /api/v1/roles/assign
+{
+  "userId": 4,
+  "roleName": "ACADEMIC_AFFAIRS"
+}
+```
+
+### Scenario 5: Tạo Student
+
+```bash
+# 1. Register
+POST /api/v1/auth/register
+{
+  "username": "student1",
+  "password": "password123",
+  "fullName": "Student Name",
+  "email": "student@university.edu"
+}
+
+# 2. Gán STUDENT role
+POST /api/v1/roles/assign
+{
+  "userId": 5,
+  "roleName": "STUDENT"
 }
 ```
 
@@ -200,19 +241,22 @@ GET /api/v1/roles/user/1
 
 Sau khi gán role, hệ thống tự động áp dụng quyền:
 
-| Role                | Upload/Delete PDF                 |
-| ------------------- | --------------------------------- |
-| **ADMIN**           | ✅ Tất cả syllabuses              |
-| **DEPARTMENT_HEAD** | ✅ Syllabuses trong khoa của mình |
-| **LECTURER**        | ✅ Syllabuses của mình            |
-| **REVIEWER**        | ❌ Không có quyền                 |
+| Role                   | Upload/Delete PDF                 |
+| ---------------------- | --------------------------------- |
+| **ADMIN**              | ✅ Tất cả syllabuses              |
+| **HEAD_OF_DEPARTMENT** | ✅ Syllabuses trong khoa của mình |
+| **LECTURER**           | ✅ Syllabuses của mình            |
+| **ACADEMIC_AFFAIRS**   | ✅ Tất cả syllabuses (read-only)  |
+| **STUDENT**            | ❌ Không có quyền                 |
 
 ## ⚠️ Lưu Ý
 
 1. **Chỉ ADMIN mới có thể gán/xóa roles cho users**
 2. Một user có thể có nhiều roles
-3. Department Head cần có `department_id` trùng với department của course trong syllabus
+3. Head of Department cần có `department_id` trùng với department của course trong syllabus
 4. Roles phân biệt chữ hoa/thường (nên dùng CHỮ HOA)
+5. **STUDENT** chỉ có quyền xem syllabuses đã được published
+6. **ACADEMIC_AFFAIRS** có quyền xem tất cả syllabuses và phê duyệt
 
 ## 🔧 Troubleshooting
 
@@ -221,11 +265,11 @@ Sau khi gán role, hệ thống tự động áp dụng quyền:
 - Kiểm tra user và role có tồn tại không
 - Kiểm tra token JWT có quyền admin không
 
-### Department Head không có quyền upload?
+### Head of Department không có quyền upload?
 
 - Kiểm tra user có `department_id` chưa
 - Kiểm tra department của course trong syllabus
-- Đảm bảo user có role "DEPARTMENT_HEAD"
+- Đảm bảo user có role "HEAD_OF_DEPARTMENT"
 
 ### Xem log để debug:
 
