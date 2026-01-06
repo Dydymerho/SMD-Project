@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage';
 import SystemManagementPage from './pages/admin/SystemManagementPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import CreateSyllabusPage from './pages/CreateSyllabusPage';
+import StudentDashboard from './pages/dashboard/StudentDashboard';
 
 function App() {
   return (
@@ -32,11 +33,11 @@ function App() {
               }
             />
 
-            {/* Teacher/Student Dashboard */}
+            {/* Teacher Dashboard */}
             <Route
-              path="/dashboard"
+              path="/teacher/dashboard"
               element={
-                <PrivateRoute allowedRoles={['TEACHER', 'STUDENT']}>
+                <PrivateRoute allowedRoles={['TEACHER']}>
                   <DashboardPage />
                 </PrivateRoute>
               }
@@ -48,6 +49,16 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['TEACHER']}>
                   <CreateSyllabusPage />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Student Dashboard */}
+            <Route
+              path="/student/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['STUDENT']}>
+                  <StudentDashboard />
                 </PrivateRoute>
               }
             />
