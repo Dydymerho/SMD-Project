@@ -7,7 +7,6 @@ from fastapi import UploadFile
 from docx import Document
 from pypdf import PdfReader 
 
-# --- CẤU HÌNH ĐƯỜNG DẪN ---
 if platform.system() == "Windows":
     # Cấu hình cho máy Windows của bạn
     PATH_TO_TESSERACT = r'D:\AI SMD\tesseract.exe'
@@ -27,7 +26,7 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 def ocr_pdf_to_text(file_path: str) -> str:
     """Hàm OCR: Chỉ chạy khi file là ảnh/scan"""
     try:
-        print(f"⚠️ PdfReader bó tay. Đang chạy OCR cho file: {file_path}...")
+        print(f"Đang chạy OCR cho file: {file_path}...")
         pages = convert_from_path(file_path, dpi=300, poppler_path=PATH_TO_POPPLER)
         full_text = ""
         for i, page in enumerate(pages):
@@ -57,7 +56,7 @@ def read_file_from_path(file_path: str) -> str:
             if len(content.strip()) < 50:
                 content = ocr_pdf_to_text(file_path)
             else:
-                print("✅ Đã đọc thành công bằng PdfReader (Siêu nhanh).")
+                print("Đã đọc thành công bằng ")
 
         elif file_path.lower().endswith(".docx"):
             doc = Document(file_path)
