@@ -1,107 +1,119 @@
-import { StyleSheet } from 'react-native';
-import { SearchBar } from 'react-native-screens';
-import { Icon } from 'react-native-vector-icons/Icon';
+import { StyleSheet, Dimensions } from "react-native"
+
+const { width } = Dimensions.get("window")
 
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
-        backgroundColor: '#F6F7FB',
+        backgroundColor: "#0F172A",
     },
-
-    header: {
-        backgroundColor: '#2D5BFF',
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomLeftRadius: 18,
-        borderBottomRightRadius: 18,
-    },
-
-    headerTitle: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
-    },
-
-    headerIcons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-
-    icon: {
-        fontSize: 30,
-        color: '#999',
-    },
-
     container: {
-        padding: 20,
+        flexGrow: 1,
+        paddingBottom: 40,
     },
-
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        marginVertical: 12,
+    header: {
+        paddingHorizontal: 24,
+        paddingTop: 20,
+        paddingBottom: 30,
+        backgroundColor: "#1E293B",
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    greeting: {
+        fontSize: 28,
+        fontWeight: "900",
+        color: "#F8FAFC",
+        letterSpacing: -0.5,
+    },
+    subText: {
+        fontSize: 16,
+        color: "#94A3B8",
+        marginTop: 4,
+        fontWeight: "500",
+    },
+    searchWrapper: {
+        marginTop: 24,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#0F172A",
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 56,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: "#334155",
+    },
+    searchIcon: {
+        fontSize: 20,
+        color: "#64748B",
+        marginRight: 12,
     },
     SearchBar: {
         flex: 1,
-        paddingRight: 8,
-    },
-
-    greeting: {
-        fontSize: 30,
-        fontWeight: '700',
-        marginTop: 8,
-    },
-
-    subText: {
-        color: '#666',
-        marginBottom: 16,
         fontSize: 16,
+        color: "#F8FAFC",
+        fontWeight: "500",
     },
-
-    section: {
-        marginBottom: 24,
+    content: {
+        paddingHorizontal: 24,
+        paddingTop: 32,
     },
-
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 12,
+        fontSize: 14,
+        fontWeight: "800",
+        color: "#3B82F6",
+        textTransform: "uppercase",
+        letterSpacing: 2,
+        marginBottom: 20,
     },
-
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 14,
-        paddingVertical: 8,
+    courseList: {
+        gap: 16,
     },
-
     courseItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        backgroundColor: "#1E293B",
+        borderRadius: 20,
+        padding: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderWidth: 1,
+        borderColor: "#334155",
     },
-
+    courseItemHighlight: {
+        borderColor: "#3B82F6",
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+    },
+    courseInfo: {
+        flex: 1,
+    },
     courseCode: {
-        fontWeight: '700',
-        marginRight: 12,
-        color: '#2D5BFF',
-        width: 60,
+        fontSize: 12,
+        fontWeight: "800",
+        color: "#64748B",
+        marginBottom: 4,
+        letterSpacing: 1,
     },
-
+    courseCodeHighlight: {
+        color: "#3B82F6",
+    },
     courseName: {
-        fontSize: 16,
-        color: '#333',
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#F8FAFC",
+        lineHeight: 24,
     },
-});
+    arrowIcon: {
+        fontSize: 24,
+        color: "#334155",
+        marginLeft: 16,
+    },
+    arrowIconHighlight: {
+        color: "#3B82F6",
+    },
+})
 
-export default styles;
+export default styles
