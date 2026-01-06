@@ -23,9 +23,9 @@ const LoginPage: React.FC = () => {
       if (user.role === 'ADMIN') {
         navigate('/admin/system-management');
       } else if (user.role === 'TEACHER') {
-        navigate('/dashboard');
+        navigate('/teacher/dashboard');
       } else {
-        navigate('/search');
+        navigate('/student/dashboard');
       }
     } catch (err: any) {
       setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
