@@ -15,7 +15,7 @@ class LLMService:
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         # --------------------
         
-        print(f"🤖 Đang kết nối AI tại: {base_url}") # In ra để debug xem nó trỏ đi đâu
+        print(f"Đang kết nối AI tại: {base_url}") # In ra để debug xem nó trỏ đi đâu
 
         self.llm = OllamaLLM(
             base_url=base_url,
