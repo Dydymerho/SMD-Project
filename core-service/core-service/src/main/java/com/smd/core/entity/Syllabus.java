@@ -45,6 +45,24 @@ public class Syllabus {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
+
+    @Column(name = "is_latest_version")
+    private Boolean isLatestVersion;
+
+    @Column(name = "previous_version_id")
+    private Long previousVersionId;
+
+    @Column(name = "version_notes", length = 1000)
+    private String versionNotes;
+
     @Column(name = "pdf_file_path", length = 500)
     private String pdfFilePath;
 
@@ -92,12 +110,21 @@ public class Syllabus {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
         if (currentStatus == null) {
             currentStatus = SyllabusStatus.DRAFT;
         }
         if (versionNo == null) {
             versionNo = 1;
         }
+        if (isLatestVersion == null) {
+            isLatestVersion = true;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     public enum SyllabusStatus {
