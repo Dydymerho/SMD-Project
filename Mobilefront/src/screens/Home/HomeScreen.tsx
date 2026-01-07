@@ -2,14 +2,13 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StatusBar } from "
 import { SafeAreaView } from "react-native-safe-area-context"
 import styles from "./Home.styles"
 import Icon from "react-native-vector-icons/MaterialIcons"
-import { SUBJECTS } from "../../mock/Subject"
+import { SYLLABUS_CONTENT } from "../../mock/Syllabus"
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type { HomeStackParamList } from "../../navigation/HomeStack"
-
 export default function HomeScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>()
-
+    const syllabus = SYLLABUS_CONTENT;
     return (
         <SafeAreaView style={styles.safe} edges={["top"]}>
             <StatusBar barStyle="light-content" />
@@ -21,7 +20,7 @@ export default function HomeScreen() {
                     <Text style={styles.subText}>Học kỳ: HK1 — 2025</Text>
 
                     <View style={styles.searchWrapper}>
-                        <Icon name="search" style={styles.searchIcon} />
+                        <Icon name="search" size={20} color="#64748B" style={styles.searchIcon} />
                         <TextInput
                             placeholder="Tìm môn học hoặc mã môn..."
                             placeholderTextColor="#64748B"
@@ -33,26 +32,32 @@ export default function HomeScreen() {
                 {/* Main Content */}
                 <View style={styles.content}>
                     <Text style={styles.sectionTitle}>Khóa học của bạn</Text>
+                    <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Text style={styles.button}>
+                            <Icon name="filter-list" />
+                            Lọc</Text>
+                    </TouchableOpacity>
+                </View>
 
-                    <View style={styles.courseList}>
-                        {SUBJECTS.map((subject) => (
-                            <CourseItem
-                                key={subject.code}
-                                code={subject.code}
-                                name={subject.name}
-                                highlight={subject.code === "OOP236"}
-                                onPress={() =>
-                                    navigation.navigate("SubjectDetail", {
-                                        code: subject.code,
-                                        name: subject.name,
-                                    })
-                                }
-                            />
-                        ))}
-                    </View>
+                <View style={styles.courseList}>
+                    {syllabus.map((subject) => (
+                        <CourseItem
+                            key={subject.code ?? ""}
+                            code={subject.code ?? ""}
+                            name={subject.name ?? ""}
+                            highlight={subject.code === "OOP236"}
+                            department={subject.department ?? ""}
+                            onPress={() =>
+                                navigation.navigate("SubjectDetail", {
+                                    code: subject.code ?? "",
+                                    name: subject.name ?? "",
+                                })
+                            }
+                        />
+                    ))}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     )
 }
 
@@ -61,11 +66,13 @@ export default function HomeScreen() {
 function CourseItem({
     code,
     name,
+    department,
     highlight,
     onPress,
 }: {
     code: string
     name: string
+    department: string
     highlight?: boolean
     onPress?: () => void
 }) {
@@ -78,8 +85,9 @@ function CourseItem({
             <View style={styles.courseInfo}>
                 <Text style={[styles.courseCode, highlight && styles.courseCodeHighlight]}>{code}</Text>
                 <Text style={styles.courseName}>{name}</Text>
+                <Text style={styles.courseCode}>{department}</Text>
             </View>
-            <Icon name="chevron-right" style={[styles.arrowIcon, highlight && styles.arrowIconHighlight]} />
+            <Icon name="school" size={22} color={highlight ? "#3B82F6" : "#334155"} style={[styles.arrowIcon, highlight && styles.arrowIconHighlight]} />
         </TouchableOpacity>
     )
 }

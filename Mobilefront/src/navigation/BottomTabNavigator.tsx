@@ -30,7 +30,7 @@ export default function BottomTabNavigator() {
                 tabBarIcon: ({ focused, color }) => {
                     const ICONS: Record<string, string> = {
                         Home: focused ? 'home' : 'home-outline',
-                        Search: focused ? 'search' : 'search-outline',
+                        Setting: focused ? 'settings' : 'settings-outline',
                         Profile: focused ? 'person' : 'person-outline',
                     }
 

@@ -5,17 +5,17 @@ const { width } = Dimensions.get("window")
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
-        backgroundColor: "#0F172A",
+        backgroundColor: "#ffffff",
     },
     container: {
         flexGrow: 1,
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     header: {
         paddingHorizontal: 24,
         paddingTop: 20,
         paddingBottom: 30,
-        backgroundColor: "#1E293B",
+        backgroundColor: "#ffffff",
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         shadowColor: "#000",
@@ -27,12 +27,12 @@ const styles = StyleSheet.create({
     greeting: {
         fontSize: 28,
         fontWeight: "900",
-        color: "#F8FAFC",
+        color: "#0F172A",
         letterSpacing: -0.5,
     },
     subText: {
         fontSize: 16,
-        color: "#94A3B8",
+        color: "#64748B",
         marginTop: 4,
         fontWeight: "500",
     },
@@ -40,30 +40,33 @@ const styles = StyleSheet.create({
         marginTop: 24,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#0F172A",
+        backgroundColor: "#ffffff",
         borderRadius: 16,
         paddingHorizontal: 16,
         height: 56,
         borderWidth: 1,
-        borderColor: "#334155",
+        borderColor: "#b9bcc2ff",
     },
     searchIcon: {
         fontSize: 20,
-        color: "#64748B",
+        color: "#64748b69",
         marginRight: 12,
     },
     SearchBar: {
         flex: 1,
         fontSize: 16,
-        color: "#F8FAFC",
+        color: "#0F172A",
         fontWeight: "500",
     },
     content: {
-        paddingHorizontal: 24,
-        paddingTop: 32,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 30,
+        paddingHorizontal: 8,
     },
     sectionTitle: {
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: "800",
         color: "#3B82F6",
         textTransform: "uppercase",
@@ -74,14 +77,14 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     courseItem: {
-        backgroundColor: "#1E293B",
+        backgroundColor: "#ffffff",
         borderRadius: 20,
         padding: 20,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         borderWidth: 1,
-        borderColor: "#334155",
+        borderColor: "#b9bcc2ff",
     },
     courseItemHighlight: {
         borderColor: "#3B82F6",
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
     courseName: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#F8FAFC",
+        color: "#0F172A",
         lineHeight: 24,
     },
     arrowIcon: {
@@ -114,6 +117,19 @@ const styles = StyleSheet.create({
     arrowIconHighlight: {
         color: "#3B82F6",
     },
+    button: {
+        backgroundColor: "#f3f3f37e",
+        borderWidth: 1,         // Độ dày viền
+        borderColor: "#e6e3e3ff", // Màu viền (có thể thay đổi)
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        alignContent: "center",
+        alignSelf: "flex-end",
+        marginBottom: 16,
+        justifyContent: "center",
+        alignItems: "center",
+    }
 })
 
 export default styles
