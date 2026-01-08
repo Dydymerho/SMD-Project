@@ -4,11 +4,11 @@ import difflib
 
 # Load model (Sẽ tải về lần đầu chạy, khoảng 80MB)
 try:
-    print("⏳ Đang load BERT Model (all-MiniLM-L6-v2)...")
+    print("Đang load BERT Model (all-MiniLM-L6-v2)...")
     model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("✅ Load BERT Model thành công!")
+    print("Load BERT Model thành công!")
 except Exception as e:
-    print(f"❌ Lỗi load model BERT: {e}")
+    print(f"Lỗi load model BERT: {e}")
     model = None
 
 def extract_text_from_pdf(file_bytes):
