@@ -3,6 +3,9 @@ package com.smd.core.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_role")
@@ -29,4 +32,8 @@ public class UserRole {
     @ToString.Exclude
     @JsonIgnoreProperties({"userRoles"})
     private Role role;
+
+    @CreationTimestamp
+    @Column(name = "assigned_at", nullable = false, updatable = false)
+    private LocalDateTime assignedAt;
 }

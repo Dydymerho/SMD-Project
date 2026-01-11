@@ -131,6 +131,7 @@ public class Syllabus {
         DRAFT,
         PENDING_REVIEW,
         PENDING_APPROVAL,
+        APPROVED,
         PUBLISHED,
         ARCHIVED
     }

@@ -8,6 +8,7 @@ INSERT INTO role (role_name) VALUES ('ADMIN') ON CONFLICT (role_name) DO NOTHING
 INSERT INTO role (role_name) VALUES ('LECTURER') ON CONFLICT (role_name) DO NOTHING;
 INSERT INTO role (role_name) VALUES ('HEAD_OF_DEPARTMENT') ON CONFLICT (role_name) DO NOTHING;
 INSERT INTO role (role_name) VALUES ('ACADEMIC_AFFAIRS') ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO role (role_name) VALUES ('PRINCIPAL') ON CONFLICT (role_name) DO NOTHING;
 INSERT INTO role (role_name) VALUES ('STUDENT') ON CONFLICT (role_name) DO NOTHING;
 
 -- 2. EXAMPLE: Assign roles to users

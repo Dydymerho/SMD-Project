@@ -97,6 +97,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Xử lý UnauthorizedException - HTTP 403 Forbidden
+     */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedException(
+            UnauthorizedException ex,
+            HttpServletRequest request) {
+        
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Forbidden")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
+    /**
      * Xử lý tất cả các exceptions chưa được handle - HTTP 500
      */
     @ExceptionHandler(Exception.class)

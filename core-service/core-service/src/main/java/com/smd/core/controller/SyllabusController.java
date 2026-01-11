@@ -3,7 +3,9 @@ package com.smd.core.controller;
 import com.smd.core.document.SyllabusDocument;
 import com.smd.core.dto.*;
 import com.smd.core.entity.Syllabus;
+import com.smd.core.entity.SyllabusWorkflowHistory;
 import com.smd.core.service.SyllabusService;
+import com.smd.core.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,6 +34,9 @@ import java.util.stream.Collectors;
 public class SyllabusController {
     @Autowired
     private SyllabusService syllabusService;
+    
+    @Autowired
+    private WorkflowService workflowService;
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Syllabus syllabus) {
@@ -280,4 +285,233 @@ public class SyllabusController {
         
         return ResponseEntity.ok(response);
     }
+    
+    // ==================== WORKFLOW ENDPOINTS ====================
+    
+    @PostMapping("/{id}/submit-for-review")
+    @Operation(
+        summary = "Submit syllabus for review (LECTURER only)",
+        description = "Lecturer submits their draft syllabus for HOD review. Changes status from DRAFT to PENDING_REVIEW.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus submitted successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in DRAFT"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not the owner or not a LECTURER"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> submitForReview(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.submitForReview(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/hod-approve")
+    @Operation(
+        summary = "HOD approves syllabus (HEAD_OF_DEPARTMENT only)",
+        description = "Head of Department approves the syllabus. Changes status from PENDING_REVIEW to PENDING_APPROVAL.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus approved by HOD"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in PENDING_REVIEW"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not a HEAD_OF_DEPARTMENT"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> hodApprove(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.approveByHOD(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/hod-reject")
+    @Operation(
+        summary = "HOD rejects syllabus (HEAD_OF_DEPARTMENT only)",
+        description = "Head of Department rejects the syllabus. Changes status from PENDING_REVIEW back to DRAFT.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus rejected by HOD"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in PENDING_REVIEW"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not a HEAD_OF_DEPARTMENT"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> hodReject(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.rejectByHOD(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/aa-approve")
+    @Operation(
+        summary = "Academic Affairs approves syllabus (ACADEMIC_AFFAIRS only)",
+        description = "Academic Affairs approves the syllabus. Changes status from PENDING_APPROVAL to APPROVED.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus approved by Academic Affairs"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in PENDING_APPROVAL"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not ACADEMIC_AFFAIRS"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> aaApprove(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.approveByAA(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/aa-reject")
+    @Operation(
+        summary = "Academic Affairs rejects syllabus (ACADEMIC_AFFAIRS only)",
+        description = "Academic Affairs rejects the syllabus. Changes status from PENDING_APPROVAL back to PENDING_REVIEW.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus rejected by Academic Affairs"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in PENDING_APPROVAL"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not ACADEMIC_AFFAIRS"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> aaReject(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.rejectByAA(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/principal-approve")
+    @Operation(
+        summary = "Principal approves syllabus (PRINCIPAL only)",
+        description = "Principal approves the syllabus for publication. Changes status from APPROVED to PUBLISHED.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus published by Principal"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in APPROVED"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not PRINCIPAL"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> principalApprove(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.approveByPrincipal(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/principal-reject")
+    @Operation(
+        summary = "Principal rejects syllabus (PRINCIPAL only)",
+        description = "Principal rejects the syllabus. Changes status from APPROVED back to PENDING_APPROVAL.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabus rejected by Principal"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or not in APPROVED"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Not PRINCIPAL"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<WorkflowTransitionResponse> principalReject(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkflowTransitionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        if (request == null) {
+            request = new WorkflowTransitionRequest();
+        }
+        request.setSyllabusId(id);
+        
+        WorkflowTransitionResponse response = workflowService.rejectByPrincipal(request, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{id}/workflow-history")
+    @Operation(
+        summary = "Get workflow history for a syllabus",
+        description = "Retrieve the complete workflow history including all approvals, rejections, and status changes.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Workflow history retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<List<SyllabusWorkflowHistory>> getWorkflowHistory(
+            @PathVariable Long id) {
+        
+        List<SyllabusWorkflowHistory> history = workflowService.getWorkflowHistory(id);
+        return ResponseEntity.ok(history);
+    }
+    
+    @GetMapping("/by-status/{status}")
+    @Operation(
+        summary = "Get syllabuses by status",
+        description = "Get all syllabuses with a specific status. Results are filtered based on user role: " +
+                     "LECTURER sees only their own, HOD sees their department's, AA/ADMIN see all.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Syllabuses retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<Syllabus>> getSyllabusesByStatus(
+            @PathVariable String status,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        Syllabus.SyllabusStatus syllabusStatus = Syllabus.SyllabusStatus.valueOf(status.toUpperCase());
+        List<Syllabus> syllabuses = workflowService.getSyllabusesByStatus(syllabusStatus, userDetails.getUsername());
+        return ResponseEntity.ok(syllabuses);
+    }
 }
+

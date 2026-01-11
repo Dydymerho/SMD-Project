@@ -41,4 +41,7 @@ public interface SyllabusRepository extends JpaRepository<Syllabus, Long> {
     // Update old versions to not be latest
     @Query("UPDATE Syllabus s SET s.isLatestVersion = false WHERE s.course.courseId = :courseId AND s.academicYear = :academicYear AND s.isLatestVersion = true")
     void updateOldVersionsAsNotLatest(@Param("courseId") Long courseId, @Param("academicYear") String academicYear);
+    
+    // Find syllabuses by status
+    List<Syllabus> findByCurrentStatus(Syllabus.SyllabusStatus status);
 }
