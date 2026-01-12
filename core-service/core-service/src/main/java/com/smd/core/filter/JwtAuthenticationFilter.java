@@ -3,6 +3,7 @@ package com.smd.core.filter;
 import com.smd.core.service.CustomUserDetailsService;
 import com.smd.core.util.JwtUtil;
 import jakarta.servlet.FilterChain;
+import org.springframework.context.annotation.Lazy;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Autowired
+    @Lazy
     private CustomUserDetailsService userDetailsService;
 
     @Override

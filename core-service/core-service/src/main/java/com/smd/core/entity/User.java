@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,14 +53,17 @@ public class User {
 
     @OneToMany(mappedBy = "lecturer", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Syllabus> syllabuses;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<ReviewComment> reviewComments;
 
     @OneToMany(mappedBy = "actionBy", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
 
     @PrePersist
