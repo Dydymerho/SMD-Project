@@ -5,6 +5,7 @@ import SettingScreen from '../screens/settingpage/SettingScreen'
 import AppHeader from '../components/AppHeader'
 import HomeStack from './HomeStack'
 import ProfileScreen from '../screens/Profile/ProfileScreen'
+import SettingStackNavigator from '../screens/settingpage/SettingStackNavigation'
 export type TabParamList = {
     Home: undefined
     Profile: undefined
@@ -68,7 +69,11 @@ export default function BottomTabNavigator() {
         >
             <Tab.Screen name="Home" component={HomeStack} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
-            <Tab.Screen name="Setting" component={SettingScreen} />
+            <Tab.Screen name="Setting" component={SettingStackNavigator}
+                options={{
+                    headerShown: false,
+                }} />
+
         </Tab.Navigator>
     )
 }

@@ -2,7 +2,18 @@ import type React from "react"
 import { View, Text, TouchableOpacity, ScrollView } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Bell, Globe, Palette, Info, FileText, ChevronRight, LogOut } from "lucide-react-native"
+import { useNavigation } from "@react-navigation/native"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import styles from "./Setting.styles"
+
+// Cách 1: Import type từ Stack Navigator
+import type { SettingStackParamList } from "./SettingStackNavigation"
+
+// Cách 2: Hoặc định nghĩa riêng (phải khớp với Stack)
+type SettingScreenParamList = {
+    About: undefined;
+    Terms: undefined;
+};
 
 type SettingItemProps = {
     icon: React.ReactNode
@@ -26,6 +37,12 @@ const SettingItem = ({ icon, label, value, isLast, onPress }: SettingItemProps) 
 )
 
 export default function SettingScreen() {
+    // Sử dụng type đúng
+    const navigation = useNavigation<NativeStackNavigationProp<SettingStackParamList>>()
+
+    // Hoặc nếu dùng type riêng:
+    // const navigation = useNavigation<NativeStackNavigationProp<SettingScreenParamList>>()
+
     return (
         <View style={styles.container}>
             <SafeAreaView edges={["bottom"]} style={{ flex: 1 }}>
@@ -41,8 +58,19 @@ export default function SettingScreen() {
                     {/* APPLICATION SECTION */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Ứng dụng</Text>
-                        <SettingItem icon={<Info size={20} color="#2563EB" />} label="Giới thiệu" />
-                        <SettingItem icon={<FileText size={20} color="#2563EB" />} label="Điều khoản sử dụng" isLast />
+                        <SettingItem
+                            icon={<Info size={20} color="#2563EB" />}
+                            label="Giới thiệu"
+                            // 👇 QUAN TRỌNG: Phải dùng đúng screen name
+                            onPress={() => navigation.navigate('About')}
+                        />
+                        <SettingItem
+                            icon={<FileText size={20} color="#2563EB" />}
+                            label="Điều khoản sử dụng"
+                            isLast
+                            // 👇 QUAN TRỌNG: Phải dùng đúng screen name
+                            onPress={() => navigation.navigate('Terms')}
+                        />
                     </View>
 
                     {/* ACCOUNT SECTION */}

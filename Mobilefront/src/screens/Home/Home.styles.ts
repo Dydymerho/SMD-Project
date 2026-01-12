@@ -129,7 +129,37 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         justifyContent: "center",
         alignItems: "center",
+    },
+    filter_container: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.3)",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+    filter_tag: {
+        width: "80%",
+        backgroundColor: "#fff",
+        borderRadius: 10,
+        padding: 20,
+        alignItems: "center"
+    },
+    filter_choices: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 16
+    },
+    filter_elements: {
+        marginTop: 20,
+        backgroundColor: "#3B82F6",
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 8
+    },
+    title_button: {
+        color: "#fff",
+        fontWeight: "bold"
     }
+
 })
 
 export default styles

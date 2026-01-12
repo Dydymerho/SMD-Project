@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import styles from './styles';
+import { useState } from 'react';
+import { SYLLABUS_CONTENT } from '../../mock/Syllabus';
 import { MOCK_PROFILE } from '../../mock/profile';
-
 
 const Section = ({
     title,
@@ -76,7 +77,10 @@ const BottomNavItem = ({
 
 export default function ProfileScreen() {
     const profile = MOCK_PROFILE;
-
+    const syllabus = SYLLABUS_CONTENT;
+    const [showCourseList, setShowCourseList] = useState(false);
+    const COURSE_LIMIT = 4;
+    const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
     return (
         <View style={styles.container}>
             <ScrollView
@@ -114,13 +118,24 @@ export default function ProfileScreen() {
 
                 {/* COURSES */}
                 <Section title="Các khóa học">
-                    {profile.subjectdetails?.map((subject, index) => (
+                    {displayShowAllCourses.map((subject, index) => (
                         <Bullet
                             key={index}
                             code={subject.code}
-                            text={subject.title}
+                            text={subject.name ?? subject.title}
                         />
                     ))}
+                    {syllabus.length > COURSE_LIMIT && (
+                        <TouchableOpacity
+                            style={styles.viewAllBtn}
+                            onPress={() => setShowCourseList(prev => !prev)}
+                        >
+                            <Text style={styles.viewAllText}>
+
+                                {showCourseList ? 'Thu gọn' : 'Xem tất cả'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </Section>
             </ScrollView>
         </View>
