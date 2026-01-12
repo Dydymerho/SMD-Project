@@ -3,6 +3,8 @@ export interface Syllabus {
     name?: string;
     title: string;        // Tên tài liệu
     department?: string;
+    semester: number;     // Học kỳ (1-8) - THÊM VÀO ĐÂY
+    academicYear?: string; // Năm học (ví dụ: "2024–2025")
     content: string;      // Nội dung tài liệu
     url?: string;         // Đường dẫn tài liệu
     description?: string; // Mô tả ngắn
@@ -19,7 +21,6 @@ export interface Syllabus {
     assessments?: AssessmentItem[];
     materials?: Material[];
 }
-
 export interface SubjectRelationship {
     prerequisites: string[]; // Môn học tiên quyết
     next: string[];          // Môn học tiếp theo   
@@ -53,7 +54,9 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         code: 'SE101',
         name: 'Software Engineering',
         title: 'Đề cương môn Software Engineering',
-        department: 'Khoa Công nghệ Thông tin',
+        department: 'Khoa Kỹ thuật Phần mềm',
+        semester: 3,
+        academicYear: '2024–2025',   // 👈 thêm trường năm học
         content: 'Tổng quan về phát triển phần mềm, quy trình SE, UML, quản lý dự án.',
         url: 'https://example.com/syllabus/SE101.pdf',
         description: 'Học phần nhập môn về phát triển phần mềm.',
@@ -99,9 +102,10 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         code: 'CT101',
         name: 'Cấu trúc dữ liệu',
         title: 'Đề cương môn Cấu trúc dữ liệu',
-        department: 'Khoa Công nghệ Thông tin',
-        content: 'Giới thiệu các cấu trúc dữ liệu cơ bản và nâng cao: Mảng, Danh sách liên kết, Stack, Queue, Cây, Đồ thị, Bảng băm.',
-        url: 'https://example.com/syllabus/CT101.pdf',
+        department: 'Khoa Khoa học Máy tính',
+        semester: 2,
+        academicYear: '2023–2024',   // 👈 khác năm cũng được
+        content: 'Giới thiệu các cấu trúc dữ liệu cơ bản...',
         description: 'Học phần nền tảng về cấu trúc dữ liệu và giải thuật.',
         credits: 3,
         prerequisites: ['IT102', 'TH101'],
@@ -144,6 +148,8 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         name: 'Lập trình Web',
         title: 'Đề cương môn Lập trình Web',
         department: 'Khoa Công nghệ Thông tin',
+        semester: 4,
+        academicYear: '2024–2025',
         content: 'HTML5, CSS3, JavaScript ES6+, React.js, Node.js, Express.js, RESTful API, Database Integration.',
         url: 'https://example.com/syllabus/IT203.pdf',
         description: 'Xây dựng ứng dụng web hiện đại với công nghệ mới nhất.',
@@ -189,6 +195,8 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         name: 'Lập trình hướng đối tượng',
         title: 'Đề cương môn Lập trình hướng đối tượng',
         department: 'Khoa Công nghệ Thông tin',
+        semester: 2,
+        academicYear: '2023–2024',
         content: 'Class, Object, Inheritance, Polymorphism, Encapsulation, Abstraction, Design Patterns, UML Diagram.',
         url: 'https://example.com/syllabus/OOP236.pdf',
         description: 'Kiến thức nền tảng về lập trình hướng đối tượng với Java/C++.',
@@ -233,7 +241,9 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         code: 'MB401',
         name: 'Lập trình di động',
         title: 'Đề cương môn Lập trình di động',
-        department: 'Khoa Công nghệ Thông tin',
+        department: 'Khoa Kỹ thuật Phần mềm',
+        semester: 5,
+        academicYear: '2025–2026',
         content: 'React Native, Navigation, State Management, Native Modules, API Integration, Firebase, App Deployment.',
         url: 'https://example.com/syllabus/MB401.pdf',
         description: 'Phát triển ứng dụng di động đa nền tảng.',
@@ -278,7 +288,9 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         code: 'AI501',
         name: 'Trí tuệ nhân tạo',
         title: 'Đề cương môn Trí tuệ nhân tạo',
-        department: 'Khoa Công nghệ Thông tin',
+        department: 'Khoa Trí tuệ Nhân tạo',
+        semester: 6,
+        academicYear: '2025–2026',
         content: 'Introduction to AI, Machine Learning Algorithms, Neural Networks, Natural Language Processing, Computer Vision, AI Ethics.',
         url: 'https://example.com/syllabus/AI501.pdf',
         description: 'Nhập môn Trí tuệ nhân tạo và Học máy.',
@@ -374,4 +386,33 @@ export function calculateTotalCredits(codes: string[]): number {
         const syllabus = getSyllabusByCode(code);
         return total + (syllabus?.credits || 0);
     }, 0);
+}
+// NEW FUNCTION: Get syllabus by semester
+export function getSyllabusBySemester(semester: number): Syllabus[] {
+    return SYLLABUS_CONTENT.filter(syllabus => syllabus.semester === semester);
+}
+
+// NEW FUNCTION: Get all semesters available
+export function getAllSemesters(): number[] {
+    const semesters = new Set<number>();
+    SYLLABUS_CONTENT.forEach(syllabus => {
+        if (syllabus.semester) {
+            semesters.add(syllabus.semester);
+        }
+    });
+    return Array.from(semesters).sort((a, b) => a - b);
+}
+
+// NEW FUNCTION: Validate prerequisites based on semester
+export function validatePrerequisitesSemester(code: string): boolean {
+    const syllabus = getSyllabusByCode(code);
+    if (!syllabus || !syllabus.prerequisites) return true;
+
+    for (const prereqCode of syllabus.prerequisites) {
+        const prereq = getSyllabusByCode(prereqCode);
+        if (prereq && prereq.semester >= syllabus.semester) {
+            return false; // Prerequisite is in the same or a later semester
+        }
+    }
+    return true;
 }

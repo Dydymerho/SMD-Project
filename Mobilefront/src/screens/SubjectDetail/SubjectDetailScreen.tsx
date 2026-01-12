@@ -1,14 +1,8 @@
-import styles from './styles'
-import React from 'react'
-import {
-    View,
-    Text,
-    ScrollView,
-    TouchableOpacity,
-    Alert,
-} from 'react-native'
-import { RouteProp, useRoute } from '@react-navigation/native'
-import { SYLLABUS_CONTENT } from '../../mock/Syllabus'
+import styles from "./SubjectDetailScreen.styles"
+import type React from "react"
+import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native"
+import { type RouteProp, useRoute } from "@react-navigation/native"
+import { SYLLABUS_CONTENT } from "../../mock/Syllabus"
 
 /* ===== TYPES ===== */
 
@@ -37,21 +31,19 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 const InfoRow = ({ label, value }: { label: string; value?: string }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value || '—'}</Text>
+        <Text style={styles.infoValue}>{value || "—"}</Text>
     </View>
 )
 
-const Bullet = ({ text }: { text: string }) => (
-    <Text style={styles.bullet}>• {text}</Text>
-)
+const Bullet = ({ text }: { text: string }) => <Text style={styles.bullet}>• {text}</Text>
 
 /* ===== SCREEN ===== */
 
 export default function SubjectDetailScreen() {
-    const route = useRoute<RouteProp<RouteParams, 'SubjectDetail'>>()
+    const route = useRoute<RouteProp<RouteParams, "SubjectDetail">>()
     const { code, name } = route.params
 
-    const syllabus = SYLLABUS_CONTENT.find(item => item.code === code)
+    const syllabus = SYLLABUS_CONTENT.find((item) => item.code === code)
 
     if (!syllabus) {
         return (
@@ -62,46 +54,32 @@ export default function SubjectDetailScreen() {
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={{ paddingBottom: 40 }}
-        >
+        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
             {/* ===== HEADER ===== */}
             <View style={styles.header}>
                 <Text style={styles.title}>{syllabus.code}</Text>
                 <Text style={styles.subtitle}>{name || syllabus.name}</Text>
 
                 <View style={styles.headerActions}>
-                    <ActionTag
-                        label="Theo dõi"
-                        onPress={() => Alert.alert('Đã theo dõi')}
-                    />
+                    <ActionTag label="Theo dõi" onPress={() => Alert.alert("Đã theo dõi")} />
                     <ActionTag label="Thông báo" />
                 </View>
             </View>
 
             {/* ===== COURSE DESCRIPTION ===== */}
             <Section title="Mô tả khóa học">
-                <Text>{syllabus.description || syllabus.content}</Text>
+                <Text style={styles.bullet}>{syllabus.description || syllabus.content}</Text>
             </Section>
 
             {/* ===== COURSE INFO ===== */}
             <Section title="Thông tin khóa học">
                 <InfoRow label="Khoa" value={syllabus.department} />
                 <InfoRow label="Tín chỉ" value={String(syllabus.credits)} />
-                <InfoRow
-                    label="Môn học tiên quyết"
-                    value={
-                        syllabus.prerequisites && syllabus.prerequisites.length > 0
-                            ? syllabus.prerequisites.join(', ')
-                            : 'Không'
-                    }
-                />
             </Section>
 
             {/* ===== AI SUMMARY ===== */}
             <Section title="AI Summary">
-                <Text>{syllabus.aiSummary}</Text>
+                <Text style={styles.bullet}>{syllabus.aiSummary}</Text>
             </Section>
 
             {/* ===== CLO LIST ===== */}
@@ -115,7 +93,7 @@ export default function SubjectDetailScreen() {
             <Section title="Liên kết CLO → PLO">
                 {syllabus.cloPloLinks?.map((item, index) => (
                     <Text key={index} style={styles.mapping}>
-                        {item.clo} → {item.plos.join(', ')}
+                        {item.clo} → {item.plos.join(", ")}
                     </Text>
                 ))}
             </Section>
@@ -129,19 +107,6 @@ export default function SubjectDetailScreen() {
                             <Text style={styles.linkText}>• {code}</Text>
                         </TouchableOpacity>
                     ))
-                ) : (
-                    <Text style={styles.linkText}>Không có</Text>
-                )}
-
-                <Text style={styles.treeTitle}>Môn tiếp theo</Text>
-                {syllabus.subjectRelationship && syllabus.subjectRelationship.type === 'tree' && Array.isArray(syllabus.subjectRelationship.value) && syllabus.subjectRelationship.value.length > 0 ? (
-                    syllabus.subjectRelationship.value
-                        .filter((code: string) => code !== syllabus.code && !(syllabus.prerequisites || []).includes(code))
-                        .map((code: string) => (
-                            <TouchableOpacity key={code}>
-                                <Text style={styles.linkText}>• {code}</Text>
-                            </TouchableOpacity>
-                        ))
                 ) : (
                     <Text style={styles.linkText}>Không có</Text>
                 )}
@@ -184,7 +149,7 @@ export default function SubjectDetailScreen() {
 
             {/* ===== REPORT ===== */}
             <TouchableOpacity style={styles.reportBtn}>
-                <Text style={styles.reportText}>🚨 Báo cáo vấn đề</Text>
+                <Text style={styles.reportText}>⚠ Báo cáo vấn đề</Text>
             </TouchableOpacity>
         </ScrollView>
     )

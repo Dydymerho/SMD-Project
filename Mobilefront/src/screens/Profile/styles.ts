@@ -8,7 +8,7 @@ export default StyleSheet.create({
         backgroundColor: "#f8fafc",
     },
     scrollContent: {
-        paddingBottom: 0,
+        paddingBottom: 80,
     },
     // Hero Section
     heroCard: {
@@ -123,6 +123,14 @@ export default StyleSheet.create({
     },
     navTextActive: {
         color: "#3b82f6",
+    },
+    viewAllBtn: {
+        marginTop: 12,
+        alignItems: 'center',
+    },
+    viewAllText: {
+        color: '#3b82f6',
+        fontWeight: '600',
     },
 
 })
