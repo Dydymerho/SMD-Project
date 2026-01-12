@@ -1,0 +1,234 @@
+Dưới đây là nội dung dự án được trình bày lại theo cấu trúc rõ ràng, sử dụng các tiêu đề, danh sách và bảng biểu để thuận tiện cho việc theo dõi và tra cứu.
+
+TỔNG QUAN DỰ ÁN
+English Name: Syllabus Management and Digitalization System of the University (SMD)
+Vietnamese Name: Hệ thống quản lý và số hóa Giáo trình (SMD)
+Abbreviation: SP26SE001
+
+1. Context (Bối cảnh)
+Vấn đề: Dự án SMD được phát triển để giải quyết các thách thức hiện tại trong việc quản lý giáo trình qua các khóa học và chương trình đại học.
+Hiện trạng: Trong quản lý giáo trình truyền thống, các trường đại học thường gặp các vấn đề như: lưu trữ file giáo trình phân tán (PDF/Word), định dạng không nhất quán, khó theo dõi cập nhật phiên bản và thiếu quy trình minh bạch để xem xét và phê duyệt. Sinh viên và giảng viên cũng gặp khó khăn trong việc tiếp cận, so sánh hoặc phân tích giáo trình hiệu quả giữa các khóa học và năm học.
+Giải pháp: Hệ thống SMD tích hợp một nền tảng web tập trung hóa việc kiểm soát phiên bản và quản lý quy trình làm việc.
+Điểm đổi mới: Các tính năng quản lý giáo trình tự động, bao gồm phát hiện thay đổi bằng AI, ánh xạ CLO–PLO và tóm tắt nội dung. Các công cụ này giúp chuẩn hóa nội dung khóa học, theo dõi thay đổi theo thời gian và tạo điều kiện so sánh dễ dàng giữa các phiên bản và khóa học.
+Mục tiêu: Cải thiện hiệu quả, độ chính xác và tính minh bạch trong quản lý khóa học; cung cấp cho giảng viên, khoa và sinh viên một hệ thống hợp lý để truy cập, xem xét và phân tích nội dung khóa học; hỗ trợ mở rộng trong tương lai và khả năng tích hợp với các hệ thống quản lý học tập (LMS).
+
+2. Proposed Solutions (Giải pháp đề xuất)
+Dự án “Syllabus Management and Digitization System (SMD)” nhằm xây dựng một nền tảng tập trung để phục vụ việc quản lý, tra cứu và phân tích giáo trình cho các khoa, giảng viên và sinh viên trong trường đại học.
+Các mục tiêu cụ thể:
+Centralized Syllabus Digitization and Management (Số hóa và quản lý tập trung):
+Cho phép giảng viên và khoa nhập, chỉnh sửa và chuẩn hóa nội dung giáo trình trên một Web App thống nhất.
+Hỗ trợ đính kèm dữ liệu đặc tả chuẩn như CLO (Chuẩn đầu vào), PLO (Chuẩn đầu ra), trọng số đánh giá, kiến thức tiên quyết, nội dung giảng dạy và tài liệu học tập.
+Thiết lập mối quan hệ giữa các giáo trình: “thay thế”, “cập nhật”, “phiên bản mới”, hỗ trợ quản lý khoa học theo năm học.
+Flexible review workflow (Quy trình xét duyệt linh hoạt):
+Quy trình: Draft → Pending Review → Pending Approval → Approved → Published.
+Vai trò Reviewer/Approver đảm bảo chất lượng nội dung học thuật và lịch sử phiên bản rõ ràng.
+Lưu trữ toàn bộ lịch sử chỉnh sửa phục vụ kiểm định.
+Advanced search (Tìm kiếm nâng cao):
+Tra cứu theo: mã môn, tên môn, giảng viên, từ khóa hoặc nội dung chi tiết.
+So sánh các phiên bản giáo trình theo năm học.
+Xem bảng ánh xạ CLO → PLO.
+Hiển thị mối quan hệ giữa các học phần (tiên quyết - song hành - bổ trợ) dưới dạng bảng hoặc cây.
+Automated AI (Tự động hóa AI):
+Phát hiện thay đổi giữa các phiên bản.
+Gợi ý các CLO tương tự.
+Kiểm tra tính nhất quán với chuẩn đầu ra chương trình (PLO).
+Tự động tạo tóm tắt nội dung cho sinh viên.
+Real-time notifications and tracking (Thông báo và theo dõi thời gian thực):
+Đăng ký theo dõi môn học hoặc chương trình đào tạo để nhận thông báo khi giáo trình được cập nhật hoặc thay đổi trạng thái.
+Security and authorization (Bảo mật và phân quyền):
+Cơ chế phân quyền dựa trên vai trò (RBAC): System Admin, Faculty Admin, Lecturer, Reviewer, Approver, Student.
+Ghi log hệ thống chi tiết cho mục đích kiểm toán.
+
+
+
+3. Functional Requirements (Yêu cầu chức năng)
+3.1. System Admin – Web App
+(System Admin Flow)
+No.
+Function
+Description
+1
+User Management
+Quản lý toàn bộ vòng đời tài khoản người dùng (Giảng viên, Sinh viên, Trưởng khoa...). Tạo tài khoản mới (đơn lẻ hoặc hàng loạt via Import), phân quyền chi tiết theo vai trò, quản lý trạng thái tài khoản (khóa/mở) để đảm bảo bảo mật.
+2
+System Configuration
+Thiết lập và duy trì các tham số nền tảng, học thuật và giao diện chung. Đảm bảo tính nhất quán trong dữ liệu học kỳ, thang điểm, CLO/PLO Templates, nội dung tĩnh và cấu hình các quy tắc nghiệp vụ cốt lõi.
+3
+Publishing Management
+Kiểm soát việc phê duyệt và phát hành Giáo trình hoàn chỉnh ra cộng đồng. Bao gồm quy trình xem xét chi tiết, ra quyết định Approve/Reject, thiết lập ngày hiệu lực và quản lý nội dung sau khi phát hành (Unpublish, Archive).
+
+
+
+3.2. Lecturer – Web App
+(Faculty Admin / Lecturer Main Flow)
+No.
+Function
+Description
+1
+Create Syllabus
+Nhập nội dung giáo trình, đính kèm metadata (CLO, PLO, trọng số, tiên quyết), tạo mối quan hệ học phần và gửi giáo trình mới cho HoD phê duyệt.
+2
+Update Syllabus
+Tìm kiếm và chọn giáo trình để cập nhật, chỉnh sửa nội dung và gửi lại cho HoD.
+3
+Syllabus Management
+Xem, tìm kiếm, lọc và so sánh các phiên bản giáo trình; truy cập ánh xạ CLO–PLO và cây quan hệ học phần; theo dõi giáo trình để nhận thông báo cập nhật.
+4
+Collaborative
+Xem xét giáo trình trong giai đoạn cộng tác, thêm bình luận, chỉnh sửa hoặc xóa phản hồi của bạn và báo cáo lỗi phát hiện nhanh chóng.
+5
+Notification
+Nhận cảnh báo thời gian thực về việc gửi giáo trình, thời hạn xem xét, phản hồi hoặc từ chối từ cấp trên (để xử lý kịp thời).
+
+
+
+3.3. Student / Public User – Web App / Mobile App
+(Student Main Flow)
+No.
+Function
+Description
+1
+Search
+Tìm kiếm giáo trình theo Tên môn, Mã môn hoặc Lọc theo Chuyên ngành/Học kỳ.
+2
+View Detail
+Xem toàn bộ nội dung giáo trình. Hỗ trợ các công cụ trực quan: AI Summary, Subject Tree (Môn nào học trước/sau), và Bản đồ chuẩn đầu ra.
+3
+Subscribe
+Nhấn nút "Follow" để nhận email/thông báo khi giáo trình thay đổi.
+4
+Feedback
+Gửi báo cáo nhanh nếu phát hiện lỗi trong nội dung giáo trình.
+
+
+3.4. Head of Department (HoD) – Web App
+(Head of Department Main Flow)
+No.
+Function
+Description
+1
+Syllabus Review/ Approval
+Phê duyệt chính thức Cấp 1. Xác minh nội dung học thuật, CLO và sự tuân thủ của Giáo trình. Sử dụng AI Change Detection để theo dõi sửa đổi nhanh. Quyết định Approve (chuyển sang AA) hoặc Reject/Require Edit (trả lại Giảng viên kèm lý do bắt buộc).
+2
+Collaborative Review Management
+Quản lý việc tham vấn cộng tác giữa các Giảng viên trong Khoa. Giám sát phản hồi trong khung thời gian quy định. Tổng hợp ý kiến, chốt bản nháp và chính thức chuyển Giáo trình vào quy trình xem xét của HOD.
+3
+Lookup & Analysis
+Tìm kiếm, lọc và tra cứu tất cả Giáo trình trong Khoa. Bao gồm tính năng So sánh Phiên bản Giáo trình qua các năm/khóa học để đảm bảo tính nhất quán.
+4
+Notification
+Nhận thông báo thời gian thực cho các sự kiện quan trọng: Gửi giáo trình, kết thúc giai đoạn Collaborative Review hoặc Giáo trình bị từ chối bởi cấp trên.
+
+
+3.5. Academic Affairs (AA) – Web App
+(Academic Affairs Flow)
+No.
+Function
+Description
+1
+Academic Approval
+Phê duyệt chính thức Cấp 2. Xác minh sự phù hợp của Giáo trình với Chuẩn đầu ra Chương trình (PLO Mapping) và các tiêu chuẩn chung của trường (Tín chỉ, Rubrics). Quyết định Approve (gửi đến Final Approver/Publish) hoặc Reject (trả lại HOD/Giảng viên).
+2
+Course/Program Management
+Quản lý các tiêu chuẩn học thuật cấp cao và dữ liệu cấu trúc. Bao gồm quản lý chuẩn PLO, Cấu trúc chương trình và các quy tắc tiên quyết/song hành (Module Relationships) cho toàn bộ Khoa/Chương trình.
+3
+Lookup & Analysis
+Tìm kiếm, lọc và tra cứu tất cả Giáo trình trong Khoa. Bao gồm tính năng So sánh Phiên bản Giáo trình qua các năm/khóa học để đảm bảo tính nhất quán.
+4
+Notification
+Nhận thông báo thời gian thực cho các sự kiện quan trọng: Gửi giáo trình, kết thúc giai đoạn Collaborative Review hoặc Giáo trình bị từ chối bởi cấp trên.
+
+
+3.6. Principal – Web App
+(Principle Main Flow)
+No.
+Function
+Description
+1
+Final Strategic Approval
+Phê duyệt cuối cùng các tài liệu/đề xuất học thuật quan trọng.
+2
+System Oversight
+Xem tổng quan hệ thống, báo cáo và trạng thái hoạt động.
+
+
+
+4. Non-functional Requirements (Yêu cầu phi chức năng)
+4.1. Performance (Hiệu năng)
+Response Time:
+Hệ thống đảm bảo phản hồi mượt mà cho các tác vụ cơ bản (đăng nhập, chuyển trang, xem danh sách) trong điều kiện mạng ổn định.
+Chức năng tìm kiếm Giáo trình trả về kết quả trong thời gian chấp nhận được với cơ sở dữ liệu hiện tại.
+AI Processing:
+Các tác vụ yêu cầu tài nguyên tính toán cao (so sánh văn bản, kiểm tra CLO-PLO, tóm tắt nội dung) chạy ngầm (background processing/asynchronous) để không làm gián đoạn trải nghiệm người dùng.
+Hệ thống gửi thông báo sau khi xử lý AI hoàn tất.
+Concurrency:
+Hệ thống hoạt động ổn định với lượng truy cập đồng thời dự kiến phục vụ cấp Khoa/Trường (khoảng 50-100 người dùng đồng thời).
+4.2. Reliability / Availability (Độ tin cậy / Tính sẵn sàng)
+Data Safety:
+Cơ chế sao lưu dữ liệu định kỳ.
+Đảm bảo toàn vẹn dữ liệu trong quá trình chuyển đổi trạng thái phê duyệt (Workflow).
+Error Handling:
+Cơ chế bắt lỗi và hiển thị thông báo thân thiện, rõ ràng, tránh crash ứng dụng đột ngột.
+Ghi log lỗi hệ thống phục vụ bảo trì.
+4.3. Security (Bảo mật)
+Access Control:
+Yêu cầu xác thực cho tất cả chức năng quản lý.
+Phân quyền theo vai trò (RBAC): Đảm bảo người dùng chỉ truy cập tài nguyên được phép.
+Data Security:
+Mật khẩu người dùng được mã hóa một chiều (Hashing).
+Tuân thủ nguyên tắc bảo mật Web cơ bản (chống SQL Injection, XSS).
+4.4. Usability (Khả năng sử dụng)
+User Interface: Giao diện trực quan, nhất quán, dễ sử dụng cho người không chuyên về kỹ thuật. Hỗ trợ tốt trên các trình duyệt phổ biến (Chrome, Edge, Firefox).
+Mobile Experience: Phân hệ Sinh viên hỗ trợ giao diện Responsive hoặc Mobile App.
+4.5. Maintainability & Scalability (Khả năng bảo trì & Mở rộng)
+System Architecture: Kiến trúc Service-oriented hoặc Microservices cơ bản, tách biệt Web App và Module AI.
+
+Shutterstock
+Source Code: Tuân thủ quy ước lập trình, tổ chức rõ ràng.
+
+5. Main Proposal Content (Nội dung đề xuất chính)
+5.1. Theory and practice (Document)
+Sinh viên áp dụng quy trình phát triển phần mềm và UML 2.0 trong mô hình hóa hệ thống.
+Tài liệu bao gồm: User Requirements, SRS, Architecture Design, Detail Design, System Implementation, Testing Document, Installation Guide, Source Code, và Software Packages.
+5.2. Technology Stack
+Server-side:
+Server: Java SpringBoot
+Database Design: MySQL + Redis
+Client-side:
+Web Client: ReactJS/NextJs
+Mobile App: React native
+AI & Crawler Module:
+Architecture: Python Microservice (FastAPI + Celery) theo mô hình Event-driven (Redis/RabbitMQ).
+AI Core & NLP:
+Orchestration: LangChain.
+Models: Hugging Face (PhoBERT/ViBERT), SentenceTransformers (Semantic check), KeyBERT & VnCoreNLP (Keyword/Relation).
+GenAI: Llama 3 (Ollama) hoặc OpenAI/Gemini API (Summarization).
+Data Processing:
+Crawler: Selenium, BeautifulSoup.
+OCR: VietOCR/Tesseract (xử lý PDF/Image).
+Storage & Search:
+DB: PostgreSQL + pgvector (Vector & Relational Data).
+Search: Elasticsearch (Full-text).
+Cache: Redis.
+5.3. Products
+Web App for System Admin: Quản lý người dùng, cấu hình Workflow, tham số hệ thống và xuất bản cuối cùng.
+Web App for Lecturer: Tạo, sửa, cập nhật Giáo trình, gửi duyệt, theo dõi phản hồi và tìm kiếm tài nguyên.
+Web App for Reviewer & Approver (HOD & AA): Đánh giá cộng tác, dùng AI phát hiện thay đổi, CLO-PLO Mapping và quản lý khung chương trình.
+Web App for Strategic Approver (Rector): Phê duyệt chiến lược cấp cao, xem báo cáo Impact Analysis và giám sát chỉ số hệ thống.
+Web & Mobile App for Student / Public User: Tra cứu giáo trình công khai, xem tóm tắt (AI Summary), xem cây quan hệ môn học (Relationship Tree) và nhận thông báo.
+AI & Crawler Microservice: Thực hiện các tác vụ thông minh (Logic check, Semantic Diff, Summarization).
+Web API: Core Service giao tiếp dữ liệu.
+5.4. Proposed Tasks
+Task package 1: Phát triển Web App cho System Admin.
+Task package 2: Phát triển Web App cho Lecturer.
+Task package 3: Phát triển Web App cho Reviewers & Approvers (HOD, AA, Rector).
+Task package 4: Phát triển Công cụ Tra cứu & Phân tích nội bộ.
+Task package 5: Phát triển Web & Mobile App cho Student.
+Task package 6: Phát triển AI & Crawler Microservice.
+Task package 7: Phát triển Web API (Core Backend).
+Task package 8: Xây dựng, Triển khai và Kiểm thử toàn bộ hệ thống (Integration, Performance, Security Test).
+Task package 9: Chuẩn bị toàn bộ tài liệu yêu cầu (SRS, Design, Manuals...).
+
+6. Other comments
+(Propose all relative things if have).
+

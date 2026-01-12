@@ -96,7 +96,7 @@ public class RoleController {
     @PostMapping("/initialize")
     @Operation(
         summary = "Initialize default roles",
-        description = "Create default roles (ADMIN, LECTURER, DEPARTMENT_HEAD, REVIEWER) if they don't exist"
+        description = "Create default roles (ADMIN, LECTURER, HEAD_OF_DEPARTMENT, ACADEMIC_AFFAIRS, STUDENT) if they don't exist"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Default roles initialized")

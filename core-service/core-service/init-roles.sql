@@ -6,8 +6,10 @@
 -- 1. CREATE DEFAULT ROLES
 INSERT INTO role (role_name) VALUES ('ADMIN') ON CONFLICT (role_name) DO NOTHING;
 INSERT INTO role (role_name) VALUES ('LECTURER') ON CONFLICT (role_name) DO NOTHING;
-INSERT INTO role (role_name) VALUES ('DEPARTMENT_HEAD') ON CONFLICT (role_name) DO NOTHING;
-INSERT INTO role (role_name) VALUES ('REVIEWER') ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO role (role_name) VALUES ('HEAD_OF_DEPARTMENT') ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO role (role_name) VALUES ('ACADEMIC_AFFAIRS') ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO role (role_name) VALUES ('PRINCIPAL') ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO role (role_name) VALUES ('STUDENT') ON CONFLICT (role_name) DO NOTHING;
 
 -- 2. EXAMPLE: Assign roles to users
 -- Replace user_id with actual user IDs from your database
@@ -27,11 +29,25 @@ INSERT INTO role (role_name) VALUES ('REVIEWER') ON CONFLICT (role_name) DO NOTH
 -- WHERE u.username = 'lecturer1' AND r.role_name = 'LECTURER'
 -- ON CONFLICT DO NOTHING;
 
--- Example: Assign DEPARTMENT_HEAD role to user with username 'dept_head1'
+-- Example: Assign HEAD_OF_DEPARTMENT role to user with username 'dept_head1'
 -- INSERT INTO user_role (user_id, role_id)
 -- SELECT u.user_id, r.role_id
 -- FROM "user" u, role r
--- WHERE u.username = 'dept_head1' AND r.role_name = 'DEPARTMENT_HEAD'
+-- WHERE u.username = 'dept_head1' AND r.role_name = 'HEAD_OF_DEPARTMENT'
+-- ON CONFLICT DO NOTHING;
+
+-- Example: Assign ACADEMIC_AFFAIRS role to user with username 'academic1'
+-- INSERT INTO user_role (user_id, role_id)
+-- SELECT u.user_id, r.role_id
+-- FROM "user" u, role r
+-- WHERE u.username = 'academic1' AND r.role_name = 'ACADEMIC_AFFAIRS'
+-- ON CONFLICT DO NOTHING;
+
+-- Example: Assign STUDENT role to user with username 'student1'
+-- INSERT INTO user_role (user_id, role_id)
+-- SELECT u.user_id, r.role_id
+-- FROM "user" u, role r
+-- WHERE u.username = 'student1' AND r.role_name = 'STUDENT'
 -- ON CONFLICT DO NOTHING;
 
 -- 3. VERIFY ROLES

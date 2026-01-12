@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,6 +47,7 @@ public class User {
     // Relationships
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"user", "role"})
     private List<UserRole> userRoles;
 
     @OneToMany(mappedBy = "lecturer", cascade = CascadeType.ALL)

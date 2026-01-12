@@ -440,7 +440,7 @@ public class SyllabusService {
      * Permission rules:
      * 1. Lecturer who owns the syllabus
      * 2. Admin (any user with ADMIN role)
-     * 3. Department Head (user with DEPARTMENT_HEAD role in the same department as the syllabus's course)
+     * 3. Head of Department (user with HEAD_OF_DEPARTMENT role in the same department as the syllabus's course)
      */
     private boolean hasPermissionToManagePdf(Syllabus syllabus, String username) {
         User user = userRepository.findByUsername(username)
@@ -469,14 +469,14 @@ public class SyllabusService {
             // Rule 3: User is Department Head in the same department
             boolean isDeptHead = user.getUserRoles().stream()
                 .anyMatch(ur -> ur.getRole() != null && 
-                               "DEPARTMENT_HEAD".equalsIgnoreCase(ur.getRole().getRoleName()));
+                               "HEAD_OF_DEPARTMENT".equalsIgnoreCase(ur.getRole().getRoleName()));
             
             if (isDeptHead && user.getDepartment() != null && 
                 syllabus.getCourse() != null && syllabus.getCourse().getDepartment() != null) {
                 boolean sameDepartment = user.getDepartment().getDepartmentId()
                     .equals(syllabus.getCourse().getDepartment().getDepartmentId());
                 if (sameDepartment) {
-                    System.out.println("==> [PERMISSION] User is DEPARTMENT_HEAD in same department - access granted");
+                    System.out.println("==> [PERMISSION] User is HEAD_OF_DEPARTMENT in same department - access granted");
                     return true;
                 }
             }
