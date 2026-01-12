@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Department {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,13 +25,16 @@ public class Department {
     // Relationships
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"department", "syllabuses", "prerequisiteRelations", "relatedToRelations"})
     private List<Course> courses;
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"department", "plos"})
     private List<Program> programs;
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"department", "roles"})
     private List<User> users;
 }
