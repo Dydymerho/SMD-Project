@@ -27,4 +27,12 @@ public class Role {
     @ToString.Exclude
     @JsonIgnoreProperties({"role", "user"})
     private List<UserRole> userRoles;
+    /*
+    ADMIN
+    LECTURER
+    HEAD_OF_DEPARTMENT
+    ACADEMIC_AFFAIRS
+    PRINCIPAL
+    STUDENT
+    */
 }
