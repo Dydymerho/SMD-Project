@@ -56,9 +56,9 @@ export default function BottomTabNavigator() {
                     borderRadius: 20,
                     position: 'absolute',
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    justifyContent: 'center',   // 🔥 quan trọng
-                    alignItems: 'center',       // 🔥 quan trọng
-                    paddingVertical: 8,         // 🔥 giảm
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingVertical: 8,
                     elevation: 12,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 6 },

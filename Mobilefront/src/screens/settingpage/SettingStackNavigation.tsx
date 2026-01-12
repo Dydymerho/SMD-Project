@@ -1,7 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import SettingScreen from "./SettingScreen"
-import TermsScreen from "./TermsScreen"
-import AboutScreen from "./AboutScreen"
+import TermsScreen from "./components/Term/TermsScreen"
+import AboutScreen from "./components/About/AboutScreen"
 
 // Định nghĩa param list cho toàn bộ Stack
 export type SettingStackParamList = {
