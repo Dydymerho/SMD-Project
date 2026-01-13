@@ -5,11 +5,13 @@ import SettingScreen from '../screens/settingpage/SettingScreen'
 import AppHeader from '../components/AppHeader'
 import HomeStack from './HomeStack'
 import ProfileScreen from '../screens/Profile/ProfileScreen'
+import NotificationScreen from '../screens/Notification/NotificationScreen'
 import SettingStackNavigator from '../screens/settingpage/SettingStackNavigation'
 export type TabParamList = {
     Home: undefined
     Profile: undefined
     Setting: undefined
+    Notification: undefined
 }
 
 const Tab = createBottomTabNavigator<TabParamList>()
@@ -18,6 +20,7 @@ const TAB_TITLES: Record<keyof TabParamList, string> = {
     Home: 'Trang chủ',
     Profile: 'Cá nhân',
     Setting: 'Cài đặt',
+    Notification: 'Thông báo',
 }
 
 export default function BottomTabNavigator() {
@@ -33,6 +36,7 @@ export default function BottomTabNavigator() {
                         Home: focused ? 'home' : 'home-outline',
                         Setting: focused ? 'settings' : 'settings-outline',
                         Profile: focused ? 'person' : 'person-outline',
+                        Notification: focused ? 'notifications' : 'notifications-outline',
                     }
 
                     return (
@@ -69,6 +73,7 @@ export default function BottomTabNavigator() {
         >
             <Tab.Screen name="Home" component={HomeStack} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen name="Notification" component={NotificationScreen} />
             <Tab.Screen name="Setting" component={SettingStackNavigator}
                 options={{
                     headerShown: false,
