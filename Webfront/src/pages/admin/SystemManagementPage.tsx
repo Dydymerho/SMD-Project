@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import './SystemManagementPage.css';
+import NotificationMenu from '../../components/NotificationMenu';
 
 interface UserData {
   id: string;
@@ -14,7 +15,8 @@ const SystemManagementPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [passwordError, setPasswordError] = useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   // Demo data
   const stats = {
     totalUsers: 123,
@@ -48,15 +50,32 @@ const SystemManagementPage: React.FC = () => {
     status: 'Hoạt động',
   });
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const password = formData.password;
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= 8;
+
+    if (!isLongEnough && !hasSpecialChar) {
+      setPasswordError('Mật khẩu phải dài ít nhất 8 ký tự hoặc chứa ít nhất 1 ký tự đặc biệt.');
+      return;
+    }
+
+    setPasswordError('');
+    console.log('Dữ liệu hợp lệ, đang gửi...', formData);
+    setIsModalOpen(false);
+
+    setFormData({
+      name: '', username: '', email: '', password: '', 
+      role: 'Giảng viên', status: 'ACTIVE'
+    });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Dữ liệu người dùng mới:', formData);
-    setIsModalOpen(false);
+    if (name === 'password') setPasswordError('');
   };
 
   return (
@@ -104,9 +123,12 @@ const SystemManagementPage: React.FC = () => {
             <p>Quản lý người dùng và cấu hình hệ thống</p>
           </div>
           <div className="header-right">
-            <div className="notification-icon">
-              🔔
-              <span className="badge">2</span>
+            <div className="notification-wrapper">
+              <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+                🔔
+                <span className="badge">2</span>
+              </div>
+              <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>
             <div className="user-menu">
               <span className="user-icon">👤</span>
@@ -228,10 +250,12 @@ const SystemManagementPage: React.FC = () => {
                       type="password" 
                       name="password"
                       placeholder="••••••••" 
+                      className={passwordError ? 'input-error' : ''}
                       value={formData.password}
                       onChange={handleInputChange}
                       required 
                     />
+                    {passwordError && <span className="error-message">{passwordError}</span>}
                   </div>
                   <div className="form-row">
                     <div className="form-group">

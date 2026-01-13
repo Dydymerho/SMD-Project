@@ -120,15 +120,24 @@
   gap: 20px;
 }
 
+.notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .notification-icon {
   position: relative;
   font-size: 24px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .notification-icon .badge {
   position: absolute;
-  top: -5px;
+  top: -2px;
   right: -5px;
   background-color: #ff4444;
   color: white;
@@ -136,6 +145,7 @@
   padding: 2px 6px;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .user-menu {
@@ -322,6 +332,21 @@
   padding: 0;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   animation: modalFadeIn 0.3s ease-out;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.input-error {
+  border-color: #ff4d4f !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
 }
 
 @keyframes modalFadeIn {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './DashboardPage.css';
+import NotificationMenu from '../../components/NotificationMenu';
 
 interface Syllabus {
   id: string;
@@ -19,6 +20,7 @@ const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'my-syllabi' | 'pending' | 'approved' | 'search'>('my-syllabi');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   // Demo data
   const stats = {
@@ -151,9 +153,12 @@ const DashboardPage: React.FC = () => {
             <p>{activeTab === 'my-syllabi' ? 'Quản lý giáo trình và tiến độ phát triển' : activeTab === 'pending' ? 'Phê duyệt và quản lý giáo trình' : 'Tìm kiếm và xem giáo trình các môn học'}</p>
           </div>
           <div className="header-right">
-            <div className="notification-icon">
-              🔔
-              <span className="badge">2</span>
+            <div className="notification-wrapper">
+              <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+                🔔
+                <span className="badge">2</span>
+              </div>
+              <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>
             <div className="user-menu">
               <span className="user-icon">👤</span>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, User, ChevronLeft, Loader2, Home, BookOpen, Star } from 'lucide-react';
+import { Search, Bell, User, ChevronLeft, Loader2, Home, Star } from 'lucide-react';
 import { searchSubjects } from '../../services/api';
+import NotificationMenu from '../../components/NotificationMenu';
 
 interface Subject {
   id: string;
@@ -22,6 +23,7 @@ const StudentDashboard: React.FC = () => {
   const [courses, setCourses] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
 // dữ liệu giả
   const recommendedCourses: Subject[] = [
@@ -94,9 +96,12 @@ const StudentDashboard: React.FC = () => {
       <main className="smd-main">
         <header className="smd-header">
           <div className="header-right">
-            <div className="notification-badge">
-              <Bell size={22} />
-              <span className="badge-count">2</span>
+            <div className="notification-wrapper">
+              <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+                🔔
+                <span className="badge">2</span>
+              </div>
+              <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>
             <div className="user-profile" onClick={goToProfile} style={{ cursor: 'pointer' }}>
               <div className="user-info">
