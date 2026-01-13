@@ -59,34 +59,32 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div className="smd-container">
-      <aside className="smd-sidebar">
-        <div className="sidebar-top">
-          <div className="logo-placeholder"></div>
-          <div className="smd-brand">
-            <h2>SMD System</h2>
-            <span>Hệ thống quản lý & tra cứu</span>
-          </div>
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <div className="logo">📚</div>
+          <h2>SMD System</h2>
+          <p>Hệ thống quản lý & tra cứu</p>
         </div>
         
-        <nav className="smd-nav">
+        <nav className="sidebar-nav">
           <div 
             className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} 
             onClick={() => setActiveTab('home')}
           >
-            <Home size={20} />
+            <span className="icon"><Home size={20} /></span>
             <span>Trang chủ</span>
           </div>
           <div 
             className={`nav-item ${activeTab === 'search' ? 'active' : ''}`} 
             onClick={() => setActiveTab('search')}
           >
-            <Search size={20} />
+            <span className="icon"><Search size={20} /></span>
             <span>Tra cứu giáo trình</span>
           </div>
         </nav>
 
         <div className="sidebar-footer">
-          <button className="collapse-btn">
+          <button className="logout-btn">
             <ChevronLeft size={16} />
             <span>Thu gọn</span>
           </button>

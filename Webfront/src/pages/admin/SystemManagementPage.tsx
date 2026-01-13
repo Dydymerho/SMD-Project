@@ -13,6 +13,7 @@ interface UserData {
 const SystemManagementPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Demo data
   const stats = {
@@ -38,6 +39,25 @@ const SystemManagementPage: React.FC = () => {
       createdDate: '15/12/2025',
     },
   ];
+  const [formData, setFormData] = useState({
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    role: 'Giảng viên',
+    status: 'Hoạt động',
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Dữ liệu người dùng mới:', formData);
+    setIsModalOpen(false);
+  };
 
   return (
     <div className="system-management-page">
@@ -134,7 +154,7 @@ const SystemManagementPage: React.FC = () => {
         <div className="content-section">
           <div className="section-header">
             <h2>Quản lý người dùng</h2>
-            <button className="add-button">+ Thêm người dùng</button>
+            <button className="add-button" onClick={() => setIsModalOpen(true)}>+ Thêm người dùng</button>
           </div>
 
           <div className="table-container">
@@ -165,6 +185,79 @@ const SystemManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {/* Modal Popup */}
+          {isModalOpen && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3>Thêm người dùng mới</h3>
+                  <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
+                </div>
+                <form onSubmit={handleSubmit} className="user-form">
+                  <div className="form-group">
+                    <label>Họ và tên</label>
+                    <input type="text" name="name" placeholder="Nhập họ tên người dùng" value={formData.name}
+                      onChange={handleInputChange}required />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Tên đăng nhập (username)</label>
+                      <input 
+                        type="text" 
+                        name="username"
+                        placeholder="vana_nguyen" 
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input 
+                        type="email" 
+                        name="email"
+                        placeholder="example@school.edu.vn" 
+                        onChange={handleInputChange}
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Mật khẩu tạm thời</label>
+                    <input 
+                      type="password" 
+                      name="password"
+                      placeholder="••••••••" 
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required 
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Vai trò</label>
+                      <select name="role" value={formData.role} onChange={handleInputChange}>
+                        <option value="Giảng viên">Giảng viên</option>
+                        <option value="Sinh viên">Sinh viên</option>
+                        <option value="Quản trị viên">Quản trị viên</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Trạng thái</label>
+                      <select name="status" value={formData.status} onChange={handleInputChange}>
+                        <option value="Hoạt động">Hoạt động</option>
+                        <option value="Đã khóa">Khóa tài khoản</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>Hủy</button>
+                    <button type="submit" className="submit-btn">Tạo người dùng</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
