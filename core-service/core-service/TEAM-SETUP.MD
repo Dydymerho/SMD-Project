@@ -34,6 +34,12 @@ docker-compose logs -f backend
 docker-compose down
 ```
 
+- dung va xoa db
+
+```bash
+docker-compose down -v
+```
+
 ---
 
 ### 6. them du lieu mau ban dau vao db (tuy chon ko thich thi khoi lam cung duoc)
@@ -57,3 +63,7 @@ docker-compose down
   port: 5432
   username: root
   password: rootpassword
+
+```
+
+```
