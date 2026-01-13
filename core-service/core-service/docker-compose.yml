@@ -1,9 +1,8 @@
 version: "3.8"
 
 services:
-  # 1. PostgreSQL Database (Thay thế MySQL)
+  # 1. PostgreSQL Database
   postgresdb:
-    # Sử dụng image pgvector để hỗ trợ AI sau này, hoặc dùng 'postgres:16' nếu chỉ cần cơ bản
     image: pgvector/pgvector:pg16
     container_name: smd_postgres
     environment:
@@ -14,8 +13,14 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
     networks:
       - smd_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 2. Redis Cache
   redis:
@@ -26,14 +31,14 @@ services:
     networks:
       - smd_net
 
-  # 3. Elasticsearch (Single node for dev)
+  # 3. Elasticsearch
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: smd_elastic
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false # Tắt bảo mật để dev cho dễ
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # Giới hạn RAM
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "${ELASTICSEARCH_PORT:-9200}:9200"
     networks:
@@ -41,9 +46,7 @@ services:
 
   # 4. Backend Spring Boot Application
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: tuanng205/smd-core-service:lastest
     container_name: smd_backend
     ports:
       - "${SERVER_PORT:-8080}:8080"
@@ -57,11 +60,10 @@ services:
       - JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
     volumes:
-      - ./uploads:/app/uploads # Persist uploaded files
+      - ./uploads:/app/uploads
     depends_on:
-      - postgresdb
-      - redis
-      - elasticsearch
+      postgresdb:
+        condition: service_healthy
     networks:
       - smd_net
     restart: unless-stopped
