@@ -12,20 +12,27 @@ import type { HomeStackParamList } from "../../navigation/HomeStack"
 export default function HomeScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>()
     const syllabus = SYLLABUS_CONTENT;
+    const [searchText, setSearchText] = useState("");
     const [filterVisible, setFilterVisible] = React.useState(false);
     const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [showList, setShowList] = useState(false);
     const [ShowListYear, setShowListYear] = useState(false);
-
+    const normalizedSearchText = searchText.trim().toLowerCase();
     // Lấy danh sách các khoa duy nhất
     const departments = Array.from(new Set(syllabus.map(s => s.department).filter(Boolean))) as string[];
     const academicYears = Array.from(new Set(syllabus.map(s => s.academicYear).filter(Boolean))) as string[];
     // Lọc theo khoa
-    const filteredSyllabus = syllabus.filter(s =>
-        (selectedFilter ? s.department === selectedFilter : true) &&
-        (selectedYear ? s.academicYear === selectedYear : true)
-    );
+    const filteredSyllabus = syllabus.filter(s => {
+        const matchDepartment = selectedFilter ? s.department === selectedFilter : true;
+        const matchYear = selectedYear ? s.academicYear === selectedYear : true;
+        const matchSearch = normalizedSearchText
+            ? (s.name?.toLowerCase().includes(normalizedSearchText) ||
+                s.code?.toLowerCase().includes(normalizedSearchText))
+            : true;
+        return matchDepartment && matchYear && matchSearch;
+
+    });
 
     return (
         <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -43,6 +50,8 @@ export default function HomeScreen() {
                             placeholder="Tìm môn học hoặc mã môn..."
                             placeholderTextColor="#64748B"
                             style={styles.SearchBar}
+                            value={searchText}
+                            onChangeText={setSearchText}
                         />
                     </View>
                 </View>
