@@ -7,11 +7,11 @@ services:
     image: pgvector/pgvector:pg16
     container_name: smd_postgres
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: rootpassword
-      POSTGRES_DB: smd_db
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rootpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-smd_db}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -22,7 +22,7 @@ services:
     image: redis:latest
     container_name: smd_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     networks:
       - smd_net
 
@@ -35,9 +35,36 @@ services:
       - xpack.security.enabled=false # Tắt bảo mật để dev cho dễ
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # Giới hạn RAM
     ports:
-      - "9200:9200"
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
     networks:
       - smd_net
+
+  # 4. Backend Spring Boot Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smd_backend
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresdb:5432/${POSTGRES_DB:-smd_db}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-root}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - JWT_SECRET=${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+    volumes:
+      - ./uploads:/app/uploads # Persist uploaded files
+    depends_on:
+      - postgresdb
+      - redis
+      - elasticsearch
+    networks:
+      - smd_net
+    restart: unless-stopped
 
 volumes:
   postgres_data:
