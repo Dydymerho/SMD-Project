@@ -39,13 +39,12 @@ export default function SettingScreen() {
                     <View style={[styles.section, { marginTop: 24 }]}>
                         <Text style={styles.sectionTitle}>Hệ thống</Text>
                         <SettingItem icon={<Bell size={20} color="#2563EB" />} label="Thông báo" value="Bật" />
-                        <SettingItem icon={<Globe size={20} color="#2563EB" />} label="Ngôn ngữ" value="Tiếng Việt" />
                         <SettingItem icon={<Palette size={20} color="#2563EB" />} label="Giao diện" value="Sáng" isLast />
+
                     </View>
 
-                    {/* APPLICATION SECTION */}
+                    {/* ACCOUNT SECTION */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Ứng dụng</Text>
                         <SettingItem
                             icon={<Info size={20} color="#2563EB" />}
                             label="Giới thiệu"
@@ -57,10 +56,6 @@ export default function SettingScreen() {
                             isLast
                             onPress={() => navigation.navigate('Terms')}
                         />
-                    </View>
-
-                    {/* ACCOUNT SECTION */}
-                    <View style={styles.section}>
                         <SettingItem
                             icon={<LogOut size={20} color="#EF4444" />}
                             label="Đăng xuất"
