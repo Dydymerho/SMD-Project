@@ -32,8 +32,4 @@ public class UserRole {
     @ToString.Exclude
     @JsonIgnoreProperties({"userRoles"})
     private Role role;
-
-    @CreationTimestamp
-    @Column(name = "assigned_at", nullable = false, updatable = false)
-    private LocalDateTime assignedAt;
 }
