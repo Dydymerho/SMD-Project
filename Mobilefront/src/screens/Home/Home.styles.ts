@@ -75,6 +75,9 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
         marginBottom: 20,
     },
+    courseHeader: {
+        backgroundColor: "#4000FF",
+    },
     courseList: {
         gap: 16,
     },
@@ -111,6 +114,11 @@ const styles = StyleSheet.create({
         color: "#0F172A",
         lineHeight: 24,
     },
+    descriptionContainer: {
+        borderBlockColor: "#e2e8f0",
+        marginTop: 8,
+        maxWidth: width - 140,
+    },
     arrowIcon: {
         fontSize: 24,
         color: "#334155",
@@ -119,7 +127,76 @@ const styles = StyleSheet.create({
     arrowIconHighlight: {
         color: "#3B82F6",
     },
+    card: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        overflow: "hidden",
+        marginVertical: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+    /* HEADER */
+    headerCard: {
+        backgroundColor: "#4F1CFF",
+        padding: 16,
+    },
+    code: {
+        color: "#DAD7FF",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    title: {
+        color: "#FFFFFF",
+        fontSize: 20,
+        fontWeight: "800",
+        marginTop: 4,
+    },
+
+    /* BODY */
+    body: {
+        padding: 16,
+    },
+    text: {
+        fontSize: 16,
+        color: "#334155",
+        marginBottom: 6,
+    },
+
+    /* DESCRIPTION */
+    descBox: {
+        backgroundColor: "#E8F1FF",
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 12,
+    },
+    descTitle: {
+        color: "#2563EB",
+        fontWeight: "700",
+        marginBottom: 4,
+        fontSize: 13,
+    },
+    descText: {
+        color: "#1E293B",
+        fontSize: 15,
+        lineHeight: 18,
+    },
+
+    /* BUTTON */
     button: {
+        backgroundColor: "#4F1CFF",
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: "center",
+        marginTop: 16,
+    },
+    buttonText: {
+        color: "#FFFFFF",
+        fontWeight: "700",
+        fontSize: 15,
+    },
+    buttonFilter: {
         backgroundColor: "#f3f3f37e",
         borderWidth: 1,         // Độ dày viền
         borderColor: "#e6e3e3ff", // Màu viền (có thể thay đổi)

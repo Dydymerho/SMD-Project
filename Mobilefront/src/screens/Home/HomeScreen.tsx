@@ -61,7 +61,7 @@ export default function HomeScreen() {
                     <Text style={styles.sectionTitle}>Khóa học của bạn</Text>
                     <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }}
                         onPress={() => setFilterVisible(true)}>
-                        <Text style={styles.button}>
+                        <Text style={styles.buttonFilter}>
                             <Icon name="filter-list" />
                             Lọc</Text>
                     </TouchableOpacity>
@@ -73,7 +73,11 @@ export default function HomeScreen() {
                             key={subject.code ?? ""}
                             code={subject.code ?? ""}
                             name={subject.name ?? ""}
-                            highlight={subject.code === "OOP236"}
+                            author={subject.author ?? ""}
+                            academicYear={subject.academicYear ?? ""}
+                            credits={subject.credits ?? 0}
+                            description={subject.description ?? ""}
+                            highlight={subject.code === ""}
                             department={subject.department ?? ""}
                             onPress={() =>
                                 navigation.navigate("SubjectDetail", {
@@ -164,26 +168,51 @@ function CourseItem({
     name,
     department,
     highlight,
+    author,
+    credits,
+    academicYear,
+    description,
+
     onPress,
 }: {
     code: string
     name: string
     department: string
+    author: string
+    credits: number
+    academicYear: string
+    description: string
     highlight?: boolean
     onPress?: () => void
 }) {
     return (
-        <TouchableOpacity
-            activeOpacity={0.7}
-            style={[styles.courseItem, highlight && styles.courseItemHighlight]}
-            onPress={onPress}
-        >
-            <View style={styles.courseInfo}>
-                <Text style={[styles.courseCode, highlight && styles.courseCodeHighlight]}>{code}</Text>
-                <Text style={styles.courseName}>{name}</Text>
-                <Text style={styles.courseCode}>{department}</Text>
+        <View style={styles.card}>
+            {/* HEADER */}
+            <View style={styles.headerCard}>
+                <Text style={styles.code}>{code}</Text>
+                <Text style={styles.title}>{name}</Text>
             </View>
-            <Icon name="school" size={22} color={highlight ? "#3B82F6" : "#334155"} style={[styles.arrowIcon, highlight && styles.arrowIconHighlight]} />
-        </TouchableOpacity>
+
+            {/* BODY */}
+            <View style={styles.body}>
+                <Text style={styles.text}>Viện: {department}</Text>
+                <Text style={styles.text}>Người đăng: {author}</Text>
+                <Text style={styles.text}>Học kỳ: {academicYear}</Text>
+                <Text style={styles.text}>Tín chỉ: {credits} Tín chỉ</Text>
+
+                {/* DESCRIPTION */}
+                <View style={styles.descBox}>
+                    <Text style={styles.descTitle}>Giới thiệu học phần</Text>
+                    <Text style={styles.descText} numberOfLines={3}>
+                        {description}
+                    </Text>
+                </View>
+
+                {/* BUTTON */}
+                <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>
+                    <Text style={styles.buttonText}>Xem chi tiết</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
     )
 }

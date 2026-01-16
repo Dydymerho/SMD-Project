@@ -1,8 +1,12 @@
 export interface Syllabus {
     code: string;         // Mã môn học (liên kết với Subject)
     name?: string;
+    author?: string;
     title: string;        // Tên tài liệu
     department?: string;
+    type?: string;       // Loại học phần (Bắt buộc/Tự chọn)
+    version?: string;    // Phiên bản tài liệu
+    datePublished?: string; // Ngày xuất bản tài liệu
     semester: number;     // Học kỳ (1-8) - THÊM VÀO ĐÂY
     academicYear?: string; // Năm học (ví dụ: "2024–2025")
     content: string;      // Nội dung tài liệu
@@ -12,6 +16,7 @@ export interface Syllabus {
     credits?: number;     // Số tín chỉ
     prerequisites?: string[]; // Môn học cần hoàn thành trước đó
     clos?: string[];      // Chuẩn đầu ra khóa học (CLOs)
+    target?: string;    // Mục tiêu học phần
     cloPloLinks?: CloPloMap[]; // Liên kết CLO → PLO
     subjectRelationship?: {
         type: 'tree' | 'text';
@@ -51,256 +56,226 @@ export interface CloPloMap {
 
 export const SYLLABUS_CONTENT: Syllabus[] = [
     {
-        code: 'SE101',
-        name: 'Software Engineering',
-        title: 'Đề cương môn Software Engineering',
-        department: 'Khoa Kỹ thuật Phần mềm',
-        semester: 3,
-        academicYear: '2024–2025',   // 👈 thêm trường năm học
-        content: 'Tổng quan về phát triển phần mềm, quy trình SE, UML, quản lý dự án.',
-        url: 'https://example.com/syllabus/SE101.pdf',
-        description: 'Học phần nhập môn về phát triển phần mềm.',
+        code: 'IT101',
+        name: 'Nhập môn lập trình',
+        author: 'TS. Trần Văn Hải',
+        title: 'Đề cương môn Nhập môn lập trình',
+        department: 'Khoa Công nghệ Thông tin',
+        type: 'Bắt buộc',
+        version: '2.0',
+        datePublished: '2024-08-15',
+        semester: 1,
+        academicYear: '2024-2025',
+        content: 'Giới thiệu ngôn ngữ lập trình C, cấu trúc cơ bản, biến, kiểu dữ liệu, cấu trúc điều khiển, hàm, mảng.',
+        url: 'https://example.com/syllabus/IT101.pdf',
+        description: 'Môn học nền tảng cho sinh viên bắt đầu học lập trình.',
+        aiSummary: 'Cung cấp kiến thức cơ bản về lập trình với ngôn ngữ C, xây dựng tư duy lập trình.',
         credits: 3,
-        prerequisites: ['IT101'],
-        aiSummary: 'Cung cấp kiến thức nền tảng về Software Engineering và quản lý dự án phần mềm.',
+        prerequisites: [],
         clos: [
-            'CLO1 – Hiểu quy trình Software Engineering',
-            'CLO2 – Áp dụng UML trong phân tích & thiết kế',
-            'CLO3 – Phân tích và lập kế hoạch dự án phần mềm'
-        ],
-        cloPloLinks: [
-            { clo: 'CLO1', plos: ['PLO1', 'PLO3'] },
-            { clo: 'CLO2', plos: ['PLO2', 'PLO4'] },
-            { clo: 'CLO3', plos: ['PLO5', 'PLO6'] }
-        ],
-        subjectRelationship: {
-            type: 'tree',
-            value: ['SE101', 'SE201', 'SE301', 'PM401']
-        },
-        teachingPlan: [
-            { week: 1, topic: 'Giới thiệu Software Engineering', method: 'Thuyết giảng' },
-            { week: 2, topic: 'Process Models', method: 'Thảo luận' },
-            { week: 3, topic: 'UML cơ bản', method: 'Thực hành' },
-            { week: 4, topic: 'Requirement Engineering', method: 'Thảo luận nhóm' },
-            { week: 5, topic: 'Software Design', method: 'Thuyết giảng + Thực hành' },
-            { week: 6, topic: 'Software Testing', method: 'Thực hành lab' }
-        ],
-        assessments: [
-            { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập cá nhân', weight: 20 },
-            { type: 'Bài tập nhóm', weight: 20 },
-            { type: 'Giữa kỳ', weight: 20 },
-            { type: 'Cuối kỳ', weight: 30 }
-        ],
-        materials: [
-            { name: 'Software Engineering', author: 'Ian Sommerville', type: 'Chính' },
-            { name: 'Clean Code', author: 'Robert C. Martin', type: 'Tham khảo' },
-            { name: 'The Pragmatic Programmer', author: 'David Thomas, Andrew Hunt', type: 'Tham khảo' }
-        ]
-    },
-    {
-        code: 'CT101',
-        name: 'Cấu trúc dữ liệu',
-        title: 'Đề cương môn Cấu trúc dữ liệu',
-        department: 'Khoa Khoa học Máy tính',
-        semester: 2,
-        academicYear: '2023–2024',   // 👈 khác năm cũng được
-        content: 'Giới thiệu các cấu trúc dữ liệu cơ bản...',
-        description: 'Học phần nền tảng về cấu trúc dữ liệu và giải thuật.',
-        credits: 3,
-        prerequisites: ['IT102', 'TH101'],
-        aiSummary: 'Trang bị kiến thức và kỹ năng sử dụng cấu trúc dữ liệu hiệu quả trong lập trình.',
-        clos: [
-            'CLO1 – Hiểu và phân tích các cấu trúc dữ liệu cơ bản',
-            'CLO2 – Áp dụng cấu trúc dữ liệu vào giải quyết bài toán thực tế',
-            'CLO3 – Đánh giá độ phức tạp thuật toán'
+            'CLO1 – Hiểu và áp dụng cú pháp cơ bản của ngôn ngữ C',
+            'CLO2 – Viết chương trình với các cấu trúc điều khiển cơ bản',
+            'CLO3 – Sử dụng hàm và mảng trong giải quyết bài toán'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO1', 'PLO2'] },
             { clo: 'CLO2', plos: ['PLO3', 'PLO4'] },
-            { clo: 'CLO3', plos: ['PLO5'] }
+            { clo: 'CLO3', plos: ['PLO5', 'PLO6'] }
         ],
         subjectRelationship: {
             type: 'tree',
-            value: ['CT101', 'CT201', 'TH202', 'AI301']
+            value: ['IT101', 'OOP236', 'CT101', 'IT203']
         },
         teachingPlan: [
-            { week: 1, topic: 'Giới thiệu Cấu trúc dữ liệu và Giải thuật', method: 'Thuyết giảng' },
-            { week: 2, topic: 'Mảng & Danh sách', method: 'Thực hành' },
-            { week: 3, topic: 'Stack & Queue', method: 'Thực hành' },
-            { week: 4, topic: 'Cây nhị phân', method: 'Thuyết giảng + Thực hành' },
-            { week: 5, topic: 'Cây tìm kiếm nhị phân', method: 'Thực hành lab' },
-            { week: 6, topic: 'Đồ thị cơ bản', method: 'Thảo luận nhóm' }
+            { week: 1, topic: 'Giới thiệu lập trình và môi trường', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Biến, kiểu dữ liệu và toán tử', method: 'Thực hành' },
+            { week: 3, topic: 'Cấu trúc điều khiển if-else', method: 'Thực hành' },
+            { week: 4, topic: 'Vòng lặp (for, while, do-while)', method: 'Thực hành lab' },
+            { week: 5, topic: 'Hàm và tham số', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Mảng một chiều', method: 'Thực hành' }
         ],
         assessments: [
             { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập thực hành', weight: 30 },
-            { type: 'Kiểm tra giữa kỳ', weight: 25 },
-            { type: 'Thi cuối kỳ', weight: 35 }
+            { type: 'Bài tập cá nhân', weight: 30 },
+            { type: 'Kiểm tra giữa kỳ', weight: 20 },
+            { type: 'Thi cuối kỳ', weight: 40 }
         ],
         materials: [
-            { name: 'Data Structures and Algorithms', author: 'Michael T. Goodrich', type: 'Chính' },
-            { name: 'Introduction to Algorithms', author: 'Cormen, Leiserson, Rivest, Stein', type: 'Tham khảo' }
+            { name: 'Programming in C', author: 'Stephen G. Kochan', type: 'Chính' },
+            { name: 'The C Programming Language', author: 'Brian W. Kernighan, Dennis M. Ritchie', type: 'Tham khảo' }
         ]
     },
     {
-        code: 'IT203',
-        name: 'Lập trình Web',
-        title: 'Đề cương môn Lập trình Web',
-        department: 'Khoa Công nghệ Thông tin',
-        semester: 4,
-        academicYear: '2024–2025',
-        content: 'HTML5, CSS3, JavaScript ES6+, React.js, Node.js, Express.js, RESTful API, Database Integration.',
-        url: 'https://example.com/syllabus/IT203.pdf',
-        description: 'Xây dựng ứng dụng web hiện đại với công nghệ mới nhất.',
+        code: 'TH101',
+        name: 'Toán cao cấp 1',
+        author: 'PGS.TS. Nguyễn Thị Lan',
+        title: 'Đề cương môn Toán cao cấp 1',
+        department: 'Khoa Khoa học Cơ bản',
+        type: 'Bắt buộc',
+        version: '1.5',
+        datePublished: '2024-08-10',
+        semester: 1,
+        academicYear: '2024-2025',
+        content: 'Đại số tuyến tính: ma trận, định thức, hệ phương trình tuyến tính, không gian vector.',
+        url: 'https://example.com/syllabus/TH101.pdf',
+        description: 'Cung cấp kiến thức toán học nền tảng cho kỹ thuật.',
+        aiSummary: 'Xây dựng nền tảng toán học về đại số tuyến tính và ma trận.',
         credits: 3,
-        prerequisites: ['CT101', 'OOP236'],
-        aiSummary: 'Học phát triển full-stack web ứng dụng với frontend và backend.',
+        prerequisites: [],
         clos: [
-            'CLO1 – Xây dựng giao diện web responsive với HTML/CSS',
-            'CLO2 – Phát triển ứng dụng web động với JavaScript và React',
-            'CLO3 – Thiết kế và xây dựng RESTful API với Node.js'
+            'CLO1 – Tính toán với ma trận và định thức',
+            'CLO2 – Giải hệ phương trình tuyến tính',
+            'CLO3 – Hiểu khái niệm không gian vector'
         ],
         cloPloLinks: [
-            { clo: 'CLO1', plos: ['PLO4', 'PLO6'] },
-            { clo: 'CLO2', plos: ['PLO3', 'PLO7'] },
-            { clo: 'CLO3', plos: ['PLO5', 'PLO8'] }
+            { clo: 'CLO1', plos: ['PLO1', 'PLO7'] },
+            { clo: 'CLO2', plos: ['PLO2', 'PLO8'] },
+            { clo: 'CLO3', plos: ['PLO3', 'PLO9'] }
         ],
         subjectRelationship: {
-            type: 'text',
-            value: 'Liên quan đến Frontend Development, Backend Development, Full-stack Development'
+            type: 'tree',
+            value: ['TH101', 'TH202', 'XM302', 'AI501']
         },
         teachingPlan: [
-            { week: 1, topic: 'HTML5 & Semantic Web', method: 'Thực hành' },
-            { week: 2, topic: 'CSS3 & Responsive Design', method: 'Thực hành' },
-            { week: 3, topic: 'JavaScript ES6+ Fundamentals', method: 'Thuyết giảng + Thực hành' },
-            { week: 4, topic: 'React.js Basics', method: 'Thực hành lab' },
-            { week: 5, topic: 'Node.js & Express.js', method: 'Thảo luận nhóm' },
-            { week: 6, topic: 'Database Integration & Deployment', method: 'Dự án nhóm' }
+            { week: 1, topic: 'Ma trận và phép toán', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Định thức và tính chất', method: 'Thực hành' },
+            { week: 3, topic: 'Hệ phương trình tuyến tính', method: 'Thảo luận' },
+            { week: 4, topic: 'Giải hệ bằng phương pháp Gauss', method: 'Thực hành lab' },
+            { week: 5, topic: 'Không gian vector', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Cơ sở và số chiều', method: 'Thực hành' }
         ],
         assessments: [
             { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập cá nhân', weight: 25 },
+            { type: 'Bài tập về nhà', weight: 20 },
+            { type: 'Kiểm tra giữa kỳ', weight: 30 },
+            { type: 'Thi cuối kỳ', weight: 40 }
+        ],
+        materials: [
+            { name: 'Linear Algebra and Its Applications', author: 'David C. Lay', type: 'Chính' },
+            { name: 'Advanced Engineering Mathematics', author: 'Erwin Kreyszig', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'IT102',
+        name: 'Cấu trúc máy tính',
+        author: 'TS. Lê Minh Đức',
+        title: 'Đề cương môn Cấu trúc máy tính',
+        department: 'Khoa Kỹ thuật Máy tính',
+        type: 'Bắt buộc',
+        version: '2.1',
+        datePublished: '2024-08-20',
+        semester: 2,
+        academicYear: '2024-2025',
+        content: 'Kiến trúc máy tính, bộ xử lý, bộ nhớ, hệ thống vào ra, assembly cơ bản.',
+        url: 'https://example.com/syllabus/IT102.pdf',
+        description: 'Hiểu biết về cấu trúc và hoạt động của máy tính.',
+        aiSummary: 'Cung cấp kiến thức về kiến trúc phần cứng máy tính và lập trình assembly.',
+        credits: 3,
+        prerequisites: ['IT101'],
+        clos: [
+            'CLO1 – Hiểu kiến trúc cơ bản của máy tính',
+            'CLO2 – Phân tích hoạt động của CPU và bộ nhớ',
+            'CLO3 – Viết chương trình assembly đơn giản'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO4', 'PLO8'] },
+            { clo: 'CLO2', plos: ['PLO5', 'PLO9'] },
+            { clo: 'CLO3', plos: ['PLO6', 'PLO10'] }
+        ],
+        subjectRelationship: {
+            type: 'tree',
+            value: ['IT102', 'HT301', 'MM401', 'AT501']
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Tổng quan kiến trúc máy tính', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Biểu diễn dữ liệu và số học', method: 'Thực hành' },
+            { week: 3, topic: 'Bộ xử lý trung tâm (CPU)', method: 'Thảo luận' },
+            { week: 4, topic: 'Hệ thống bộ nhớ', method: 'Thực hành lab' },
+            { week: 5, topic: 'Hệ thống vào ra (I/O)', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Lập trình Assembly cơ bản', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Bài tập thực hành', weight: 25 },
             { type: 'Dự án nhóm', weight: 25 },
             { type: 'Thi cuối kỳ', weight: 40 }
         ],
         materials: [
-            { name: 'Full-Stack React Projects', author: 'Shama Hoque', type: 'Chính' },
-            { name: 'Eloquent JavaScript', author: 'Marijn Haverbeke', type: 'Tham khảo' },
-            { name: 'Node.js Design Patterns', author: 'Mario Casciaro', type: 'Tham khảo' }
+            { name: 'Computer Organization and Design', author: 'David A. Patterson, John L. Hennessy', type: 'Chính' },
+            { name: 'Structured Computer Organization', author: 'Andrew S. Tanenbaum', type: 'Tham khảo' }
         ]
     },
     {
-        code: 'OOP236',
-        name: 'Lập trình hướng đối tượng',
-        title: 'Đề cương môn Lập trình hướng đối tượng',
-        department: 'Khoa Công nghệ Thông tin',
-        semester: 2,
-        academicYear: '2023–2024',
-        content: 'Class, Object, Inheritance, Polymorphism, Encapsulation, Abstraction, Design Patterns, UML Diagram.',
-        url: 'https://example.com/syllabus/OOP236.pdf',
-        description: 'Kiến thức nền tảng về lập trình hướng đối tượng với Java/C++.',
-        credits: 3,
-        prerequisites: ['TH101'],
-        aiSummary: 'Trang bị tư duy lập trình hướng đối tượng và áp dụng design patterns.',
+        code: 'EN202',
+        name: 'Tiếng Anh chuyên ngành CNTT',
+        author: 'ThS. Phan Thị Hương',
+        title: 'Đề cương môn Tiếng Anh chuyên ngành CNTT',
+        department: 'Khoa Ngoại ngữ',
+        type: 'Bắt buộc',
+        version: '1.2',
+        datePublished: '2024-08-25',
+        semester: 3,
+        academicYear: '2024-2025',
+        content: 'Từ vựng chuyên ngành CNTT, đọc hiểu tài liệu kỹ thuật, viết email chuyên nghiệp, thuyết trình kỹ thuật.',
+        url: 'https://example.com/syllabus/EN202.pdf',
+        description: 'Nâng cao kỹ năng tiếng Anh trong lĩnh vực công nghệ thông tin.',
+        aiSummary: 'Phát triển kỹ năng tiếng Anh chuyên ngành CNTT cho môi trường làm việc quốc tế.',
+        credits: 2,
+        prerequisites: ['EN101'],
         clos: [
-            'CLO1 – Hiểu và áp dụng 4 tính chất OOP',
-            'CLO2 – Thiết kế hệ thống sử dụng UML',
-            'CLO3 – Áp dụng Design Patterns phổ biến'
+            'CLO1 – Hiểu và sử dụng từ vựng chuyên ngành CNTT',
+            'CLO2 – Đọc và dịch tài liệu kỹ thuật tiếng Anh',
+            'CLO3 – Viết email và báo cáo chuyên nghiệp'
         ],
         cloPloLinks: [
-            { clo: 'CLO1', plos: ['PLO2', 'PLO5'] },
-            { clo: 'CLO2', plos: ['PLO3', 'PLO6'] },
-            { clo: 'CLO3', plos: ['PLO4', 'PLO7'] }
+            { clo: 'CLO1', plos: ['PLO11', 'PLO12'] },
+            { clo: 'CLO2', plos: ['PLO12', 'PLO13'] },
+            { clo: 'CLO3', plos: ['PLO13', 'PLO14'] }
         ],
         subjectRelationship: {
-            type: 'tree',
-            value: ['OOP236', 'IT203', 'MB401', 'PM301']
+            type: 'text',
+            value: 'Hỗ trợ cho tất cả các môn học yêu cầu đọc tài liệu tiếng Anh'
         },
         teachingPlan: [
-            { week: 1, topic: 'Giới thiệu OOP & Class/Object', method: 'Thuyết giảng' },
-            { week: 2, topic: 'Inheritance & Polymorphism', method: 'Thực hành' },
-            { week: 3, topic: 'Encapsulation & Abstraction', method: 'Thảo luận' },
-            { week: 4, topic: 'UML Class Diagram', method: 'Thực hành lab' },
-            { week: 5, topic: 'Design Patterns cơ bản', method: 'Thuyết giảng + Thực hành' },
-            { week: 6, topic: 'Dự án OOP', method: 'Dự án nhóm' }
+            { week: 1, topic: 'Từ vựng cơ bản về phần cứng', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Từ vựng về phần mềm và lập trình', method: 'Thực hành' },
+            { week: 3, topic: 'Đọc hiểu tài liệu kỹ thuật', method: 'Thảo luận' },
+            { week: 4, topic: 'Viết email chuyên nghiệp', method: 'Thực hành lab' },
+            { week: 5, topic: 'Kỹ năng thuyết trình kỹ thuật', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Ôn tập và kiểm tra', method: 'Thực hành' }
         ],
         assessments: [
-            { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập thực hành', weight: 30 },
-            { type: 'Kiểm tra giữa kỳ', weight: 20 },
-            { type: 'Dự án cuối kỳ', weight: 40 }
-        ],
-        materials: [
-            { name: 'Head First Design Patterns', author: 'Eric Freeman, Elisabeth Robson', type: 'Chính' },
-            { name: 'Clean Code', author: 'Robert C. Martin', type: 'Tham khảo' },
-            { name: 'UML Distilled', author: 'Martin Fowler', type: 'Tham khảo' }
-        ]
-    },
-    {
-        code: 'MB401',
-        name: 'Lập trình di động',
-        title: 'Đề cương môn Lập trình di động',
-        department: 'Khoa Kỹ thuật Phần mềm',
-        semester: 5,
-        academicYear: '2025–2026',
-        content: 'React Native, Navigation, State Management, Native Modules, API Integration, Firebase, App Deployment.',
-        url: 'https://example.com/syllabus/MB401.pdf',
-        description: 'Phát triển ứng dụng di động đa nền tảng.',
-        credits: 3,
-        prerequisites: ['OOP236', 'IT203'],
-        aiSummary: 'Xây dựng ứng dụng di động đa nền tảng với React Native và tích hợp dịch vụ đám mây.',
-        clos: [
-            'CLO1 – Thiết kế giao diện mobile với React Native',
-            'CLO2 – Quản lý state và navigation trong ứng dụng di động',
-            'CLO3 – Tích hợp API và dịch vụ đám mây (Firebase)'
-        ],
-        cloPloLinks: [
-            { clo: 'CLO1', plos: ['PLO6', 'PLO8'] },
-            { clo: 'CLO2', plos: ['PLO4', 'PLO7'] },
-            { clo: 'CLO3', plos: ['PLO5', 'PLO9'] }
-        ],
-        subjectRelationship: {
-            type: 'tree',
-            value: ['MB401', 'MB501', 'PM401', 'AI401']
-        },
-        teachingPlan: [
-            { week: 1, topic: 'Giới thiệu React Native & Setup', method: 'Thực hành' },
-            { week: 2, topic: 'Component & Styling', method: 'Thực hành' },
-            { week: 3, topic: 'Navigation & Routing', method: 'Thuyết giảng + Thực hành' },
-            { week: 4, topic: 'State Management với Redux', method: 'Thực hành lab' },
-            { week: 5, topic: 'API Integration & Authentication', method: 'Thảo luận nhóm' },
-            { week: 6, topic: 'Firebase Integration & App Deployment', method: 'Dự án nhóm' }
-        ],
-        assessments: [
-            { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập thực hành', weight: 30 },
-            { type: 'Dự án ứng dụng di động', weight: 30 },
+            { type: 'Chuyên cần', weight: 15 },
+            { type: 'Bài tập từ vựng', weight: 25 },
+            { type: 'Bài thuyết trình nhóm', weight: 30 },
             { type: 'Thi cuối kỳ', weight: 30 }
         ],
         materials: [
-            { name: 'React Native in Action', author: 'Nader Dabit', type: 'Chính' },
-            { name: 'Fullstack React Native', author: 'Houssein Djirdeh, Anthony Accomazzo', type: 'Tham khảo' },
-            { name: 'Firebase Essentials', author: 'Google Developers', type: 'Tham khảo' }
+            { name: 'English for Information Technology', author: 'Maja Olejniczak', type: 'Chính' },
+            { name: 'Oxford English for Computing', author: 'Keith Boeckner, P. Charles Brown', type: 'Tham khảo' }
         ]
     },
     {
-        code: 'AI501',
-        name: 'Trí tuệ nhân tạo',
-        title: 'Đề cương môn Trí tuệ nhân tạo',
-        department: 'Khoa Trí tuệ Nhân tạo',
-        semester: 6,
-        academicYear: '2025–2026',
-        content: 'Introduction to AI, Machine Learning Algorithms, Neural Networks, Natural Language Processing, Computer Vision, AI Ethics.',
-        url: 'https://example.com/syllabus/AI501.pdf',
-        description: 'Nhập môn Trí tuệ nhân tạo và Học máy.',
+        code: 'TH202',
+        name: 'Xác suất thống kê',
+        author: 'TS. Vũ Đình Hoàng',
+        title: 'Đề cương môn Xác suất thống kê',
+        department: 'Khoa Khoa học Cơ bản',
+        type: 'Bắt buộc',
+        version: '1.8',
+        datePublished: '2024-01-15',
+        semester: 4,
+        academicYear: '2024-2025',
+        content: 'Xác suất, biến ngẫu nhiên, phân phối xác suất, thống kê mô tả, ước lượng, kiểm định giả thuyết.',
+        url: 'https://example.com/syllabus/TH202.pdf',
+        description: 'Cung cấp kiến thức xác suất thống kê ứng dụng trong phân tích dữ liệu.',
+        aiSummary: 'Nền tảng toán học cho machine learning và phân tích dữ liệu.',
         credits: 3,
-        prerequisites: ['CT101', 'TH202', 'XM302'],
-        aiSummary: 'Kiến thức nền tảng về AI, Machine Learning và ứng dụng thực tế.',
+        prerequisites: ['TH101'],
         clos: [
-            'CLO1 – Hiểu các khái niệm cơ bản về AI và ML',
-            'CLO2 – Áp dụng các thuật toán Machine Learning cơ bản',
-            'CLO3 – Xây dựng mô hình Neural Network đơn giản'
+            'CLO1 – Tính toán xác suất cơ bản',
+            'CLO2 – Hiểu và áp dụng các phân phối xác suất',
+            'CLO3 – Thực hiện phân tích thống kê cơ bản'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO7', 'PLO9'] },
@@ -309,30 +284,278 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         ],
         subjectRelationship: {
             type: 'tree',
-            value: ['AI501', 'ML601', 'DL701', 'NLP801']
+            value: ['TH202', 'XM302', 'AI501', 'TK601']
         },
         teachingPlan: [
-            { week: 1, topic: 'Giới thiệu AI & Lịch sử phát triển', method: 'Thuyết giảng' },
-            { week: 2, topic: 'Machine Learning cơ bản', method: 'Thảo luận' },
-            { week: 3, topic: 'Supervised Learning Algorithms', method: 'Thực hành' },
-            { week: 4, topic: 'Neural Networks cơ bản', method: 'Thực hành lab' },
-            { week: 5, topic: 'Natural Language Processing giới thiệu', method: 'Thuyết giảng + Thực hành' },
-            { week: 6, topic: 'AI Ethics & Tương lai AI', method: 'Thảo luận nhóm' }
+            { week: 1, topic: 'Khái niệm xác suất cơ bản', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Biến ngẫu nhiên', method: 'Thực hành' },
+            { week: 3, topic: 'Phân phối xác suất rời rạc', method: 'Thảo luận' },
+            { week: 4, topic: 'Phân phối xác suất liên tục', method: 'Thực hành lab' },
+            { week: 5, topic: 'Thống kê mô tả', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Ước lượng tham số', method: 'Thực hành' }
         ],
         assessments: [
             { type: 'Chuyên cần', weight: 10 },
-            { type: 'Bài tập thực hành Python', weight: 25 },
-            { type: 'Dự án nhóm AI', weight: 25 },
-            { type: 'Thi cuối kỳ', weight: 40 }
+            { type: 'Bài tập về nhà', weight: 30 },
+            { type: 'Kiểm tra giữa kỳ', weight: 25 },
+            { type: 'Thi cuối kỳ', weight: 35 }
         ],
         materials: [
-            { name: 'Artificial Intelligence: A Modern Approach', author: 'Stuart Russell, Peter Norvig', type: 'Chính' },
-            { name: 'Hands-On Machine Learning', author: 'Aurélien Géron', type: 'Tham khảo' },
-            { name: 'Deep Learning', author: 'Ian Goodfellow, Yoshua Bengio, Aaron Courville', type: 'Tham khảo' }
+            { name: 'Probability and Statistics for Engineering', author: 'Ronald E. Walpole', type: 'Chính' },
+            { name: 'Introduction to Probability', author: 'Joseph K. Blitzstein, Jessica Hwang', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'SE201',
+        name: 'Kiểm thử phần mềm',
+        author: 'ThS. Nguyễn Quang Minh',
+        title: 'Đề cương môn Kiểm thử phần mềm',
+        department: 'Khoa Kỹ thuật Phần mềm',
+        type: 'Bắt buộc',
+        version: '2.3',
+        datePublished: '2024-01-20',
+        semester: 5,
+        academicYear: '2024-2025',
+        content: 'Nguyên lý kiểm thử, kỹ thuật thiết kế test case, kiểm thử đơn vị, tích hợp, hệ thống, tự động hóa kiểm thử.',
+        url: 'https://example.com/syllabus/SE201.pdf',
+        description: 'Kỹ năng và phương pháp kiểm thử phần mềm chuyên nghiệp.',
+        aiSummary: 'Đào tạo chuyên sâu về các phương pháp và công cụ kiểm thử phần mềm.',
+        credits: 3,
+        prerequisites: ['SE101', 'OOP236'],
+        clos: [
+            'CLO1 – Hiểu các nguyên lý và mức độ kiểm thử',
+            'CLO2 – Thiết kế test case hiệu quả',
+            'CLO3 – Áp dụng công cụ kiểm thử tự động'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO4', 'PLO6'] },
+            { clo: 'CLO2', plos: ['PLO5', 'PLO7'] },
+            { clo: 'CLO3', plos: ['PLO8', 'PLO9'] }
+        ],
+        subjectRelationship: {
+            type: 'tree',
+            value: ['SE201', 'SE301', 'QA401', 'AT501']
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Nguyên lý kiểm thử phần mềm', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Kỹ thuật thiết kế test case', method: 'Thực hành' },
+            { week: 3, topic: 'Kiểm thử đơn vị với JUnit', method: 'Thảo luận' },
+            { week: 4, topic: 'Kiểm thử tích hợp', method: 'Thực hành lab' },
+            { week: 5, topic: 'Kiểm thử hệ thống và chấp nhận', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Tự động hóa kiểm thử với Selenium', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Bài tập thực hành', weight: 30 },
+            { type: 'Dự án kiểm thử', weight: 30 },
+            { type: 'Thi cuối kỳ', weight: 30 }
+        ],
+        materials: [
+            { name: 'Foundations of Software Testing', author: 'Dorothy Graham, Erik van Veenendaal', type: 'Chính' },
+            { name: 'The Art of Software Testing', author: 'Glenford J. Myers', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'DB301',
+        name: 'Hệ quản trị cơ sở dữ liệu',
+        author: 'TS. Hoàng Văn Tùng',
+        title: 'Đề cương môn Hệ quản trị cơ sở dữ liệu',
+        department: 'Khoa Hệ thống Thông tin',
+        type: 'Bắt buộc',
+        version: '2.5',
+        datePublished: '2024-01-25',
+        semester: 6,
+        academicYear: '2024-2025',
+        content: 'SQL nâng cao, thiết kế database, normalization, transaction, concurrency control, indexing, performance tuning.',
+        url: 'https://example.com/syllabus/DB301.pdf',
+        description: 'Quản lý và tối ưu hệ thống cơ sở dữ liệu doanh nghiệp.',
+        aiSummary: 'Chuyên sâu về quản trị và tối ưu hiệu suất cơ sở dữ liệu.',
+        credits: 3,
+        prerequisites: ['CT101', 'TH202'],
+        clos: [
+            'CLO1 – Thiết kế database chuẩn hóa',
+            'CLO2 – Viết truy vấn SQL phức tạp',
+            'CLO3 – Quản lý transaction và concurrency'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO5', 'PLO8'] },
+            { clo: 'CLO2', plos: ['PLO6', 'PLO9'] },
+            { clo: 'CLO3', plos: ['PLO7', 'PLO10'] }
+        ],
+        subjectRelationship: {
+            type: 'tree',
+            value: ['DB301', 'BD401', 'DW501', 'DB601']
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Review SQL và database design', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Normalization và optimization', method: 'Thực hành' },
+            { week: 3, topic: 'Transaction và ACID properties', method: 'Thảo luận' },
+            { week: 4, topic: 'Concurrency control', method: 'Thực hành lab' },
+            { week: 5, topic: 'Indexing và query optimization', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Backup và recovery', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Bài tập SQL', weight: 25 },
+            { type: 'Dự án database', weight: 35 },
+            { type: 'Thi cuối kỳ', weight: 30 }
+        ],
+        materials: [
+            { name: 'Database System Concepts', author: 'Abraham Silberschatz, Henry F. Korth', type: 'Chính' },
+            { name: 'SQL Performance Explained', author: 'Markus Winand', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'NW401',
+        name: 'Mạng máy tính',
+        author: 'TS. Phạm Thanh Bình',
+        title: 'Đề cương môn Mạng máy tính',
+        department: 'Khoa Mạng và Truyền thông',
+        type: 'Bắt buộc',
+        version: '2.0',
+        datePublished: '2024-02-01',
+        semester: 7,
+        academicYear: '2024-2025',
+        content: 'Mô hình OSI/TCP-IP, địa chỉ IP, routing, switching, network security, wireless networks, network management.',
+        url: 'https://example.com/syllabus/NW401.pdf',
+        description: 'Kiến thức toàn diện về mạng máy tính và bảo mật.',
+        aiSummary: 'Hiểu biết sâu về kiến trúc mạng, giao thức và bảo mật.',
+        credits: 3,
+        prerequisites: ['IT102'],
+        clos: [
+            'CLO1 – Hiểu mô hình OSI và TCP/IP',
+            'CLO2 – Cấu hình mạng cơ bản',
+            'CLO3 – Phân tích vấn đề bảo mật mạng'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO6', 'PLO10'] },
+            { clo: 'CLO2', plos: ['PLO7', 'PLO11'] },
+            { clo: 'CLO3', plos: ['PLO8', 'PLO12'] }
+        ],
+        subjectRelationship: {
+            type: 'tree',
+            value: ['NW401', 'NS501', 'CL601', 'SDN701']
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Giới thiệu mạng máy tính', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Mô hình OSI và TCP/IP', method: 'Thực hành' },
+            { week: 3, topic: 'Địa chỉ IP và subnetting', method: 'Thảo luận' },
+            { week: 4, topic: 'Routing và switching', method: 'Thực hành lab' },
+            { week: 5, topic: 'Network security cơ bản', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Wireless networks', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Bài lab cấu hình mạng', weight: 30 },
+            { type: 'Dự án mô phỏng mạng', weight: 30 },
+            { type: 'Thi cuối kỳ', weight: 30 }
+        ],
+        materials: [
+            { name: 'Computer Networking: A Top-Down Approach', author: 'James F. Kurose, Keith W. Ross', type: 'Chính' },
+            { name: 'CCNA Routing and Switching Official Cert Guide', author: 'Wendell Odom', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'PM301',
+        name: 'Quản lý dự án phần mềm',
+        author: 'ThS. Đỗ Thị Ngọc Ánh',
+        title: 'Đề cương môn Quản lý dự án phần mềm',
+        department: 'Khoa Quản lý Công nghệ',
+        type: 'Tự chọn',
+        version: '1.6',
+        datePublished: '2024-02-05',
+        semester: 8,
+        academicYear: '2024-2025',
+        content: 'Quy trình quản lý dự án, lập kế hoạch, ước lượng, quản lý rủi ro, quản lý nhóm, agile methodology, scrum.',
+        url: 'https://example.com/syllabus/PM301.pdf',
+        description: 'Kỹ năng quản lý dự án phần mềm chuyên nghiệp.',
+        aiSummary: 'Đào tạo phương pháp quản lý dự án phần mềm theo chuẩn quốc tế.',
+        credits: 3,
+        prerequisites: ['SE101'],
+        clos: [
+            'CLO1 – Lập kế hoạch dự án phần mềm',
+            'CLO2 – Ước lượng chi phí và thời gian',
+            'CLO3 – Áp dụng agile methodology'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO9', 'PLO12'] },
+            { clo: 'CLO2', plos: ['PLO10', 'PLO13'] },
+            { clo: 'CLO3', plos: ['PLO11', 'PLO14'] }
+        ],
+        subjectRelationship: {
+            type: 'text',
+            value: 'Kết hợp với SE101, SE201, SE301 cho chuyên ngành phần mềm'
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Giới thiệu quản lý dự án', method: 'Thuyết giảng' },
+            { week: 2, topic: 'Lập kế hoạch dự án', method: 'Thực hành' },
+            { week: 3, topic: 'Ước lượng và lập ngân sách', method: 'Thảo luận' },
+            { week: 4, topic: 'Quản lý rủi ro', method: 'Thực hành lab' },
+            { week: 5, topic: 'Agile và Scrum methodology', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'Quản lý nhóm và giao tiếp', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Bài tập kế hoạch dự án', weight: 30 },
+            { type: 'Dự án nhóm quản lý', weight: 40 },
+            { type: 'Thi cuối kỳ', weight: 20 }
+        ],
+        materials: [
+            { name: 'Software Project Management', author: 'Bob Hughes, Mike Cotterell', type: 'Chính' },
+            { name: 'Agile Project Management with Scrum', author: 'Ken Schwaber', type: 'Tham khảo' }
+        ]
+    },
+    {
+        code: 'IS501',
+        name: 'Hệ thống thông tin doanh nghiệp',
+        author: 'TS. Trương Văn Hùng',
+        title: 'Đề cương môn Hệ thống thông tin doanh nghiệp',
+        department: 'Khoa Hệ thống Thông tin',
+        type: 'Tự chọn',
+        version: '1.4',
+        datePublished: '2024-02-10',
+        semester: 8,
+        academicYear: '2024-2025',
+        content: 'ERP systems, CRM, SCM, business intelligence, data warehousing, enterprise architecture, IT governance.',
+        url: 'https://example.com/syllabus/IS501.pdf',
+        description: 'Hiểu biết về hệ thống thông tin trong doanh nghiệp hiện đại.',
+        aiSummary: 'Kiến thức tổng quan về hệ thống thông tin doanh nghiệp và quản lý dữ liệu.',
+        credits: 3,
+        prerequisites: ['DB301', 'SE101'],
+        clos: [
+            'CLO1 – Hiểu kiến trúc hệ thống doanh nghiệp',
+            'CLO2 – Phân tích nhu cầu hệ thống ERP',
+            'CLO3 – Đánh giá giải pháp business intelligence'
+        ],
+        cloPloLinks: [
+            { clo: 'CLO1', plos: ['PLO10', 'PLO13'] },
+            { clo: 'CLO2', plos: ['PLO11', 'PLO14'] },
+            { clo: 'CLO3', plos: ['PLO12', 'PLO15'] }
+        ],
+        subjectRelationship: {
+            type: 'tree',
+            value: ['IS501', 'BI601', 'EA701', 'GD801']
+        },
+        teachingPlan: [
+            { week: 1, topic: 'Giới thiệu hệ thống thông tin doanh nghiệp', method: 'Thuyết giảng' },
+            { week: 2, topic: 'ERP systems và modules', method: 'Thực hành' },
+            { week: 3, topic: 'CRM và SCM systems', method: 'Thảo luận' },
+            { week: 4, topic: 'Business Intelligence', method: 'Thực hành lab' },
+            { week: 5, topic: 'Data warehousing', method: 'Thuyết giảng + Thực hành' },
+            { week: 6, topic: 'IT governance và compliance', method: 'Thực hành' }
+        ],
+        assessments: [
+            { type: 'Chuyên cần', weight: 10 },
+            { type: 'Case study phân tích hệ thống', weight: 30 },
+            { type: 'Dự án đề xuất giải pháp ERP', weight: 40 },
+            { type: 'Thi cuối kỳ', weight: 20 }
+        ],
+        materials: [
+            { name: 'Enterprise Information Systems', author: 'David L. Olson', type: 'Chính' },
+            { name: 'Business Intelligence Guidebook', author: 'Rick Sherman', type: 'Tham khảo' }
         ]
     }
 ];
-
 // Utility functions for working with syllabus data
 export function getSyllabusByCode(code: string): Syllabus | undefined {
     return SYLLABUS_CONTENT.find(syllabus => syllabus.code === code);

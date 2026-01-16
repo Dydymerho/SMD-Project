@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native"
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: "#FFFFFF",
   },
   contentContainer: {
@@ -12,22 +13,29 @@ const styles = StyleSheet.create({
 
   /* ===== HEADER ===== */
   header: {
-    paddingTop: 24,
-    paddingBottom: 32,
-    marginBottom: 8,
+    backgroundColor: "#4F1CFF", // tím đậm
+    marginHorizontal: -16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: "#0F172A",
-    marginBottom: 8,
+  code: {
+    color: "#E0E7FF",
+    fontSize: 12,
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
-  subtitle: {
+
+  title: {
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 20,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  subtitle: {
+    color: "#DAD7FF",
+    fontSize: 12,
+    marginTop: 2,
   },
   headerActions: {
     flexDirection: "row",
@@ -36,6 +44,7 @@ const styles = StyleSheet.create({
 
   /* ===== ACTION TAG ===== */
   tag: {
+    marginTop: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: "#E0E7FF",
@@ -51,7 +60,7 @@ const styles = StyleSheet.create({
 
   /* ===== SECTION ===== */
   section: {
-    marginBottom: 32,
+    marginTop: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
@@ -64,7 +73,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: "uppercase",
   },
+  summarySection: {
 
+  },
   /* ===== INFO ROW ===== */
   infoRow: {
     flexDirection: "row",

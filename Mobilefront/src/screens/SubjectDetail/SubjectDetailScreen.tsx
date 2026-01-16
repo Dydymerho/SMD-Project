@@ -3,7 +3,7 @@ import type React from "react"
 import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { type RouteProp, useRoute } from "@react-navigation/native"
 import { SYLLABUS_CONTENT } from "../../mock/Syllabus"
-
+import LinearGradient from "react-native-linear-gradient"
 /* ===== TYPES ===== */
 
 type RouteParams = {
@@ -56,32 +56,37 @@ export default function SubjectDetailScreen() {
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
             {/* ===== HEADER ===== */}
-            <View style={styles.header}>
-                <Text style={styles.title}>{syllabus.code}</Text>
-                <Text style={styles.subtitle}>{name || syllabus.name}</Text>
-
-                <View style={styles.headerActions}>
+            <LinearGradient
+                colors={["#4F1CFF", "#2D5BFF"]}
+                style={styles.header}
+            >
+                <Text style={styles.code}>{syllabus.code}</Text>
+                <Text style={styles.title}>{syllabus.name}</Text>
+                <Text style={styles.subtitle}>{syllabus.department}</Text>
+            </LinearGradient>
+            {/* <View style={styles.headerActions}>
                     <ActionTag label="Theo dõi" onPress={() => Alert.alert("Đã theo dõi")} />
                     <ActionTag label="Thông báo" />
-                </View>
-            </View>
-
+                </View> */}
             {/* ===== COURSE DESCRIPTION ===== */}
-            <Section title="Mô tả khóa học">
-                <Text style={styles.bullet}>{syllabus.description || syllabus.content}</Text>
+
+            <Section title="Mô tả tóm tắt học phần">
+                <Text style={styles.bullet}>{syllabus.aiSummary}</Text>
             </Section>
+
 
             {/* ===== COURSE INFO ===== */}
             <Section title="Thông tin khóa học">
                 <InfoRow label="Khoa" value={syllabus.department} />
+                <InfoRow label="Người đăng" value={syllabus.author} />
                 <InfoRow label="Tín chỉ" value={String(syllabus.credits)} />
+                <InfoRow label="Loại học phần" value={syllabus.type} />
+                <InfoRow label="Phiên bản" value={String(syllabus.version)} />
+                <InfoRow label="Ngày xuất bản" value={syllabus.datePublished} />
             </Section>
-
-            {/* ===== AI SUMMARY ===== */}
-            <Section title="AI Summary">
-                <Text style={styles.bullet}>{syllabus.aiSummary}</Text>
-            </Section>
-
+            {/* <Section title="Mục tiêu học phần">
+                {syllabus.target?.map((obj, index))}
+            </Section> */}
             {/* ===== CLO LIST ===== */}
             <Section title="Chuẩn đầu ra khóa học (CLOs)">
                 {syllabus.clos?.map((clo, index) => (
@@ -113,44 +118,50 @@ export default function SubjectDetailScreen() {
             </Section>
 
             {/* ===== TEACHING PLAN ===== */}
-            {syllabus.teachingPlan && (
-                <Section title="Kế hoạch giảng dạy">
-                    {syllabus.teachingPlan.map((item, index) => (
-                        <View key={index} style={styles.teachingPlanRow}>
-                            <Text style={styles.week}>Tuần {item.week}</Text>
-                            <Text style={styles.topic}>{item.topic}</Text>
-                            <Text style={styles.method}>{item.method}</Text>
-                        </View>
-                    ))}
-                </Section>
-            )}
+            {
+                syllabus.teachingPlan && (
+                    <Section title="Kế hoạch giảng dạy">
+                        {syllabus.teachingPlan.map((item, index) => (
+                            <View key={index} style={styles.teachingPlanRow}>
+                                <Text style={styles.week}>Tuần {item.week}</Text>
+                                <Text style={styles.topic}>{item.topic}</Text>
+                                <Text style={styles.method}>{item.method}</Text>
+                            </View>
+                        ))}
+                    </Section>
+                )
+            }
 
             {/* ===== ASSESSMENT ===== */}
-            {syllabus.assessments && (
-                <Section title="Phương pháp đánh giá">
-                    {syllabus.assessments.map((item, index) => (
-                        <Text key={index} style={styles.bullet}>
-                            • {item.type}: {item.weight}%
-                        </Text>
-                    ))}
-                </Section>
-            )}
+            {
+                syllabus.assessments && (
+                    <Section title="Phương pháp đánh giá">
+                        {syllabus.assessments.map((item, index) => (
+                            <Text key={index} style={styles.bullet}>
+                                • {item.type}: {item.weight}%
+                            </Text>
+                        ))}
+                    </Section>
+                )
+            }
 
             {/* ===== MATERIALS ===== */}
-            {syllabus.materials && (
-                <Section title="Tài liệu học tập">
-                    {syllabus.materials.map((item, index) => (
-                        <Text key={index} style={styles.bullet}>
-                            • {item.name} – {item.author} ({item.type})
-                        </Text>
-                    ))}
-                </Section>
-            )}
+            {
+                syllabus.materials && (
+                    <Section title="Tài liệu học tập">
+                        {syllabus.materials.map((item, index) => (
+                            <Text key={index} style={styles.bullet}>
+                                • {item.name} – {item.author} ({item.type})
+                            </Text>
+                        ))}
+                    </Section>
+                )
+            }
 
             {/* ===== REPORT ===== */}
             <TouchableOpacity style={styles.reportBtn}>
                 <Text style={styles.reportText}>⚠ Báo cáo vấn đề</Text>
             </TouchableOpacity>
-        </ScrollView>
+        </ScrollView >
     )
 }
