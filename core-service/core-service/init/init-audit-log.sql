@@ -1,28 +1,3 @@
--- Migration script for Syllabus Audit Log
--- This script creates the audit log table to track all syllabus operations
-
--- Create syllabus_audit_logs table
-CREATE TABLE IF NOT EXISTS syllabus_audit_logs (
-    id BIGSERIAL PRIMARY KEY,
-    syllabus_id BIGINT,  -- Nullable to preserve audit trail after syllabus deletion
-    action_type VARCHAR(50) NOT NULL,
-    performed_by VARCHAR(100) NOT NULL,
-    performed_by_role VARCHAR(50),
-    old_status VARCHAR(50),
-    new_status VARCHAR(50),
-    comments TEXT,
-    changed_fields TEXT,
-    ip_address VARCHAR(50),
-    user_agent VARCHAR(500),
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    additional_data TEXT,
-    
-    -- Foreign key constraint
-    -- NOTE: Using ON DELETE SET NULL to preserve audit trail even after syllabus deletion
-    -- This is critical for compliance and audit requirements
-    CONSTRAINT fk_audit_syllabus FOREIGN KEY (syllabus_id) 
-        REFERENCES syllabus(syllabus_id) ON DELETE SET NULL
-);
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_audit_syllabus_id ON syllabus_audit_logs(syllabus_id);
