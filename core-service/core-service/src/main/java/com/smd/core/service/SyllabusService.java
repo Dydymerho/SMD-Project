@@ -3,6 +3,7 @@ package com.smd.core.service;
 import com.smd.core.document.SyllabusDocument;
 import com.smd.core.dto.SyllabusUploadResponse;
 import com.smd.core.entity.Syllabus;
+import com.smd.core.entity.SyllabusAuditLog;
 import com.smd.core.entity.User;
 import com.smd.core.exception.DuplicateResourceException;
 import com.smd.core.exception.InvalidDataException;
@@ -42,6 +43,9 @@ public class SyllabusService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private AuditLogService auditLogService;
     
     @Value("${file.upload.path:uploads/syllabus/pdf}")
     private String uploadPath; 
@@ -556,6 +560,22 @@ public class SyllabusService {
             syllabus.setPdfUploadedAt(LocalDateTime.now());
             syllabusRepo.save(syllabus);
             
+            // Audit log
+            java.util.Map<String, Object> additionalData = new java.util.HashMap<>();
+            additionalData.put("fileName", originalFilename);
+            additionalData.put("fileSize", file.getSize());
+            additionalData.put("filePath", filePath.toString());
+            
+            auditLogService.logAction(
+                syllabus,
+                SyllabusAuditLog.AuditAction.UPLOAD_PDF.name(),
+                username,
+                null,
+                null,
+                "Uploaded PDF: " + originalFilename + " (" + file.getSize() + " bytes)",
+                additionalData
+            );
+            
             // Clear cache
             try {
                 String key = "syllabus:" + syllabusId;
@@ -630,6 +650,8 @@ public class SyllabusService {
 
         try {
             Path filePath = Paths.get(syllabus.getPdfFilePath());
+            String deletedFileName = syllabus.getPdfFileName();
+            
             Files.deleteIfExists(filePath);
             System.out.println("==> Deleted file: " + filePath);
             
@@ -638,6 +660,14 @@ public class SyllabusService {
             syllabus.setPdfFileName(null);
             syllabus.setPdfUploadedAt(null);
             syllabusRepo.save(syllabus);
+            
+            // Audit log
+            auditLogService.logAction(
+                syllabus,
+                SyllabusAuditLog.AuditAction.DELETE_PDF.name(),
+                username,
+                "Deleted PDF: " + deletedFileName
+            );
             
             // Clear cache
             try {

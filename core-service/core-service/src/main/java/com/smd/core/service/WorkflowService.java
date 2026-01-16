@@ -4,6 +4,7 @@ import com.smd.core.dto.WorkflowTransitionRequest;
 import com.smd.core.dto.WorkflowTransitionResponse;
 import com.smd.core.entity.*;
 import com.smd.core.entity.Syllabus.SyllabusStatus;
+import com.smd.core.entity.SyllabusAuditLog;
 import com.smd.core.entity.SyllabusWorkflowHistory.WorkflowAction;
 import com.smd.core.exception.InvalidDataException;
 import com.smd.core.exception.ResourceNotFoundException;
@@ -38,6 +39,9 @@ public class WorkflowService {
     @Autowired
     private RoleRepository roleRepository;
     
+    @Autowired
+    private AuditLogService auditLogService;
+    
     /**
      * LECTURER: Submit syllabus for review (DRAFT -> PENDING_REVIEW)
      */
@@ -68,6 +72,16 @@ public class WorkflowService {
         
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.SUBMIT, "Pending Review", request.getComment());
+        
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.SUBMIT_FOR_REVIEW.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.PENDING_REVIEW.name(),
+            request.getComment()
+        );
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -105,6 +119,16 @@ public class WorkflowService {
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.APPROVE, "Pending Approval", request.getComment());
         
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.HOD_APPROVE.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.PENDING_APPROVAL.name(),
+            request.getComment()
+        );
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -140,6 +164,16 @@ public class WorkflowService {
         
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.REJECT, "Draft", request.getComment());
+        
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.HOD_REJECT.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.DRAFT.name(),
+            request.getComment()
+        );
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -177,6 +211,16 @@ public class WorkflowService {
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.APPROVE, "Approved", request.getComment());
         
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.AA_APPROVE.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.APPROVED.name(),
+            request.getComment()
+        );
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -212,6 +256,16 @@ public class WorkflowService {
         
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.REJECT, "Pending Review", request.getComment());
+        
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.AA_REJECT.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.PENDING_REVIEW.name(),
+            request.getComment()
+        );
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -250,6 +304,16 @@ public class WorkflowService {
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.PUBLISH, "Published", request.getComment());
         
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.PRINCIPAL_APPROVE.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.PUBLISHED.name(),
+            request.getComment()
+        );
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -285,6 +349,16 @@ public class WorkflowService {
         
         // Record history
         recordWorkflowHistory(syllabus, user, WorkflowAction.REJECT, "Pending Approval", request.getComment());
+        
+        // Audit log
+        auditLogService.logStatusChange(
+            syllabus,
+            SyllabusAuditLog.AuditAction.PRINCIPAL_REJECT.name(),
+            username,
+            previousStatus,
+            SyllabusStatus.PENDING_APPROVAL.name(),
+            request.getComment()
+        );
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 

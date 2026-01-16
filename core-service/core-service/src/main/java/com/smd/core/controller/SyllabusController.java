@@ -3,7 +3,9 @@ package com.smd.core.controller;
 import com.smd.core.document.SyllabusDocument;
 import com.smd.core.dto.*;
 import com.smd.core.entity.Syllabus;
+import com.smd.core.entity.SyllabusAuditLog;
 import com.smd.core.entity.SyllabusWorkflowHistory;
+import com.smd.core.service.AuditLogService;
 import com.smd.core.service.SyllabusService;
 import com.smd.core.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,6 +39,9 @@ public class SyllabusController {
     
     @Autowired
     private WorkflowService workflowService;
+    
+    @Autowired
+    private AuditLogService auditLogService;
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Syllabus syllabus) {
@@ -512,6 +517,145 @@ public class SyllabusController {
         Syllabus.SyllabusStatus syllabusStatus = Syllabus.SyllabusStatus.valueOf(status.toUpperCase());
         List<Syllabus> syllabuses = workflowService.getSyllabusesByStatus(syllabusStatus, userDetails.getUsername());
         return ResponseEntity.ok(syllabuses);
+    }
+    
+    // ==================== AUDIT LOG ENDPOINTS ====================
+    
+    @GetMapping("/{id}/audit-logs")
+    @Operation(
+        summary = "Get audit logs for a syllabus",
+        description = "Retrieve complete audit trail for all actions performed on a specific syllabus. " +
+                     "Includes workflow transitions, PDF operations, and other changes.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Audit logs retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getAuditLogsBySyllabus(
+            @Parameter(description = "Syllabus ID", required = true)
+            @PathVariable Long id) {
+        
+        List<SyllabusAuditLog> logs = auditLogService.getAuditLogsBySyllabus(id);
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{id}/audit-workflow-history")
+    @Operation(
+        summary = "Get audit workflow history for a syllabus",
+        description = "Retrieve only workflow-related audit logs (submit, approve, reject actions) in chronological order",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Workflow history retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getAuditWorkflowHistory(
+            @Parameter(description = "Syllabus ID", required = true)
+            @PathVariable Long id) {
+        
+        List<SyllabusAuditLog> logs = auditLogService.getWorkflowHistory(id);
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/audit-logs/my-actions")
+    @Operation(
+        summary = "Get audit logs by current user",
+        description = "Retrieve all audit logs for actions performed by the currently authenticated user",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User audit logs retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getMyAuditLogs(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        List<SyllabusAuditLog> logs = auditLogService.getAuditLogsByUser(userDetails.getUsername());
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/audit-logs/user/{username}")
+    @Operation(
+        summary = "Get audit logs by specific user",
+        description = "Retrieve all audit logs for actions performed by a specific user. " +
+                     "Typically used by administrators for auditing purposes.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User audit logs retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin only")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getAuditLogsByUser(
+            @Parameter(description = "Username", required = true)
+            @PathVariable String username) {
+        
+        List<SyllabusAuditLog> logs = auditLogService.getAuditLogsByUser(username);
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/audit-logs/recent")
+    @Operation(
+        summary = "Get recent audit logs",
+        description = "Retrieve audit logs from the last N days (default: 7 days)",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Recent audit logs retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getRecentAuditLogs(
+            @Parameter(description = "Number of days to look back (default: 7)")
+            @RequestParam(defaultValue = "7") int days) {
+        
+        List<SyllabusAuditLog> logs = auditLogService.getRecentAuditLogs(days);
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/audit-logs/date-range")
+    @Operation(
+        summary = "Get audit logs by date range",
+        description = "Retrieve audit logs within a specific date range. Useful for generating audit reports.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Audit logs retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid date format"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<List<AuditLogResponse>> getAuditLogsByDateRange(
+            @Parameter(description = "Start date (ISO format: yyyy-MM-dd'T'HH:mm:ss)", required = true)
+            @RequestParam String startDate,
+            @Parameter(description = "End date (ISO format: yyyy-MM-dd'T'HH:mm:ss)", required = true)
+            @RequestParam String endDate) {
+        
+        java.time.LocalDateTime start = java.time.LocalDateTime.parse(startDate);
+        java.time.LocalDateTime end = java.time.LocalDateTime.parse(endDate);
+        
+        List<SyllabusAuditLog> logs = auditLogService.getAuditLogsByDateRange(start, end);
+        List<AuditLogResponse> response = logs.stream()
+                .map(AuditLogResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 }
 
