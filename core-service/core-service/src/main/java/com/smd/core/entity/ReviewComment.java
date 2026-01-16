@@ -27,6 +27,7 @@ public class ReviewComment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private User user;
 
     @Column(columnDefinition = "TEXT", nullable = false)

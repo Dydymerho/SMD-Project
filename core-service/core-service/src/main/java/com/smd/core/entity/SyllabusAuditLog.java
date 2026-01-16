@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.LocalDateTime;
 
 /**
@@ -30,6 +32,7 @@ public class SyllabusAuditLog {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "syllabus_id")  // Nullable - preserve audit trail after deletion
+    @JsonIgnore
     private Syllabus syllabus;
     
     @Column(name = "action_type", nullable = false, length = 50)

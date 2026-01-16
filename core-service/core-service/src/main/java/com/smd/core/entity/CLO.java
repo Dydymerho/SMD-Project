@@ -33,5 +33,6 @@ public class CLO {
     // Relationships
     @OneToMany(mappedBy = "clo", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CLOPLOMapping> ploMappings;
 }

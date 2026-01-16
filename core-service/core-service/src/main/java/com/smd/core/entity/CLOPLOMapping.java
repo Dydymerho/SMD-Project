@@ -1,5 +1,7 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,11 +21,13 @@ public class CLOPLOMapping {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clo_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private CLO clo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plo_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private PLO plo;
 
     @Enumerated(EnumType.STRING)

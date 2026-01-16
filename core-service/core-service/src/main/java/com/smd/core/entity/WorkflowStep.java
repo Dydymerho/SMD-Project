@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "workflow_step")
 @Getter
@@ -26,5 +28,6 @@ public class WorkflowStep {
     // Relationships
     @OneToMany(mappedBy = "workflowStep", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
 }

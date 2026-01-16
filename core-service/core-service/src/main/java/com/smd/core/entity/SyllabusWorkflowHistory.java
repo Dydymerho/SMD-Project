@@ -27,11 +27,13 @@ public class SyllabusWorkflowHistory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "step_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private WorkflowStep workflowStep;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "action_by", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private User actionBy;
 
     @Enumerated(EnumType.STRING)

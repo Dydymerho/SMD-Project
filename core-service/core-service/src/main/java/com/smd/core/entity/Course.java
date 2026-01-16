@@ -1,5 +1,6 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,13 +38,16 @@ public class Course {
     // Relationships
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Syllabus> syllabuses;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CourseRelation> prerequisiteRelations;
 
     @OneToMany(mappedBy = "relatedCourse", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CourseRelation> relatedToRelations;
 }
