@@ -73,6 +73,17 @@ public class User {
             status = UserStatus.ACTIVE;
         }
     }
+    
+    /**
+     * Get the primary role of the user
+     * Returns the first role if multiple roles exist
+     */
+    public Role getRole() {
+        if (userRoles != null && !userRoles.isEmpty()) {
+            return userRoles.get(0).getRole();
+        }
+        return null;
+    }
 
     public enum UserStatus {
         ACTIVE,
