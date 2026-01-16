@@ -46,7 +46,7 @@ services:
 
   # 4. Backend Spring Boot Application
   backend:
-    image: tuanng205/smd-core-service:lastest
+    image: tuanng205/smd-core-service:latest
     container_name: smd_backend
     ports:
       - "${SERVER_PORT:-8080}:8080"
