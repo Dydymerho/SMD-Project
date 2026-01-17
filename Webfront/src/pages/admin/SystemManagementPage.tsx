@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { FileText, Download, ShieldAlert, Database, FileType } from 'lucide-react';
+import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './SystemManagementPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -8,7 +8,9 @@ import NotificationMenu from '../../components/NotificationMenu';
 interface UserData {
   id: string;
   name: string;
-  role: string;
+  username: string;
+  email: string;
+  roles: string[];
   status: string;
   createdDate: string;
 }
@@ -27,6 +29,14 @@ const SystemManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isAssignRoleOpen, setIsAssignRoleOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [filterRole, setFilterRole] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   // Demo data
   const stats = {
     totalUsers: 123,
@@ -35,28 +45,33 @@ const SystemManagementPage: React.FC = () => {
     totalSyllabi: 120,
   };
 
-  const users: UserData[] = [
+  const [users, setUsers] = useState<UserData[]>([
     {
       id: '001',
       name: 'Nguyễn Văn A',
-      role: 'Giảng viên',
+      username: 'vana_nguyen',
+      email: 'vana@school.edu.vn',
+      roles: ['Lecturer', 'Head of Department'],
       status: 'Hoạt động',
       createdDate: '15/12/2025',
     },
     {
       id: '002',
-      name: 'Nguyễn Văn B',
-      role: 'Sinh viên',
-      status: 'Đã khóa',
-      createdDate: '15/12/2025',
-    },
-  ];
+      name: 'Trần Thị B',
+      username: 'thib_tran',
+      email: 'thib@school.edu.vn',
+      roles: ['Student'],
+      status: 'Hoạt động',
+      createdDate: '10/01/2026',
+    }
+  ]);
+  
   const [formData, setFormData] = useState({
     name: '',
     username: '',
     email: '',
     password: '',
-    role: 'Giảng viên',
+    roles: [] as string[],
     status: 'Hoạt động',
   });
 
@@ -71,6 +86,15 @@ const SystemManagementPage: React.FC = () => {
     { id: 'L1', time: '2026-01-13 14:20', user: 'Admin_Hùng', action: 'Thay đổi quyền', detail: 'Nâng quyền HoD cho User Nguyễn Văn A' },
     { id: 'L2', time: '2026-01-13 15:05', user: 'Hệ thống', action: 'Cập nhật Workflow', detail: 'Kích hoạt luồng phê duyệt 3 bước mới' },
     { id: 'L3', time: '2026-01-13 16:30', user: 'Admin_Hùng', action: 'Khóa tài khoản', detail: 'Khóa tài khoản sinh viên 002 do vi phạm' },
+  ];
+
+  const SYSTEM_ROLES = [
+    'Admin System',
+    'Lecturer',
+    'Head of Department',
+    'Principal',
+    'Academic Affairs (AA)',
+    'Student'
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -91,7 +115,7 @@ const SystemManagementPage: React.FC = () => {
 
     setFormData({
       name: '', username: '', email: '', password: '', 
-      role: 'Giảng viên', status: 'ACTIVE'
+      roles: ['Giảng viên'], status: 'ACTIVE'
     });
   };
 
@@ -100,6 +124,68 @@ const SystemManagementPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (name === 'password') setPasswordError('');
   };
+
+  const handleRoleToggle = (role: string, target: 'form' | 'edit') => {
+    if (target === 'form') {
+      setFormData(prev => ({
+        ...prev,
+        roles: prev.roles.includes(role) 
+          ? prev.roles.filter(r => r !== role) 
+          : [...prev.roles, role]
+      }));
+    } else if (currentUser) {
+      setCurrentUser(prev => prev ? ({
+        ...prev,
+        roles: prev.roles.includes(role)
+          ? prev.roles.filter(r => r !== role)
+          : [...prev.roles, role]
+      }) : null);
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    const matchRole = filterRole === 'All' || u.roles.includes(filterRole);
+    const matchStatus = filterStatus === 'All' || u.status === filterStatus;
+    return matchRole && matchStatus;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedUserIds.length === users.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(users.map(u => u.id));
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleFilterChange = (type: 'role' | 'status', value: string) => {
+    if (type === 'role') setFilterRole(value);
+    if (type === 'status') setFilterStatus(value);
+    setCurrentPage(1);
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  if (e.target === e.currentTarget) {
+    setIsModalOpen(false);
+    setIsAssignRoleOpen(false);
+  }
+};
 
   return (
     <div className="system-management-page">
@@ -132,7 +218,7 @@ const SystemManagementPage: React.FC = () => {
 
         <div className="sidebar-footer">
           <button onClick={logout} className="logout-btn">
-            Thu gọn
+            Đăng xuất
           </button>
         </div>
       </aside>
@@ -196,6 +282,116 @@ const SystemManagementPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            <div className="content-section">
+            <div className="section-header">
+              <h2>Quản lý người dùng</h2>
+              <button className="add-button" onClick={() => setIsModalOpen(true)}>+ Thêm người dùng</button>
+            </div>
+
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã người dùng</th>
+                    <th>Tên người dùng</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.id}</td>
+                      <td>{user.name}</td>
+                      <td>{user.roles}</td>
+                      <td>
+                        <span className={`status-badge ${user.status === 'Hoạt động' ? 'active' : 'inactive'}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td>{user.createdDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Modal Popup */}
+            {isModalOpen && (
+              <div className="modal-overlay" onClick={handleOverlayClick}>
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h3>Thêm người dùng mới</h3>
+                    <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
+                  </div>
+                  <form onSubmit={handleSubmit} className="user-form">
+                    <div className="form-group">
+                      <label>Họ và tên</label>
+                      <input type="text" name="name" placeholder="Nhập họ tên người dùng" value={formData.name}
+                        onChange={handleInputChange}required />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Tên đăng nhập (username)</label>
+                        <input 
+                          type="text" 
+                          name="username"
+                          placeholder="vana_nguyen" 
+                          value={formData.username}
+                          onChange={handleInputChange}
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Email</label>
+                        <input 
+                          type="email" 
+                          name="email"
+                          placeholder="example@school.edu.vn" 
+                          onChange={handleInputChange}
+                          required 
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Mật khẩu tạm thời</label>
+                      <input 
+                        type="password" 
+                        name="password"
+                        placeholder="••••••••" 
+                        className={passwordError ? 'input-error' : ''}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required 
+                      />
+                      {passwordError && <span className="error-message">{passwordError}</span>}
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Vai trò</label>
+                        <select name="role" value={formData.roles} onChange={handleInputChange}>
+                          <option value="Giảng viên">Giảng viên</option>
+                          <option value="Sinh viên">Sinh viên</option>
+                          <option value="Quản trị viên">Quản trị viên</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Trạng thái</label>
+                        <select name="status" value={formData.status} onChange={handleInputChange}>
+                          <option value="Hoạt động">Hoạt động</option>
+                          <option value="Đã khóa">Khóa tài khoản</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>Hủy</button>
+                      <button type="submit" className="submit-btn">Tạo người dùng</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
           </>
         )}
 
@@ -280,116 +476,238 @@ const SystemManagementPage: React.FC = () => {
             </div>
           </div>
         )}
+
         {activeTab === 'users' && (
-          <div className="content-section">
-            <div className="section-header">
-              <h2>Quản lý người dùng</h2>
+          <div className="users-management-container">
+            <div className="section-header-main">
+              <h2>Quản lý người dùng hệ thống</h2>
+            </div>
+
+            {/* 1. Bộ lọc nâng cao */}
+            <div className="filter-bar">
+              <div className="filter-left-group">
+                <div className="filter-group">
+                  <Filter size={18} />
+                  <select value={filterRole} onChange={(e) => handleFilterChange('role', e.target.value)}>
+                    <option value="All">Tất cả vai trò</option>
+                    <option value="Admin System">Quản trị viên</option>
+                    <option value="Lecturer">Giảng viên</option>
+                    <option value="Head of Department">Trưởng khoa (HoD)</option>
+                    <option value="Academic Affair (AA)">Phòng đào tạo (AA)</option>
+                    <option value="Student">Sinh viên</option>
+                  </select>
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="Hoạt động">Hoạt động</option>
+                    <option value="Đã khóa">Đã khóa</option>
+                  </select>
+                </div>
+
+                {/* 2. Tính năng hàng loạt (Chỉ hiện khi có người dùng được chọn) */}
+                {selectedUserIds.length > 0 && (
+                  <div className="bulk-actions">
+                    <span>Đang chọn {selectedUserIds.length} người dùng:</span>
+                    <button className="bulk-btn lock"><Lock size={14}/> Khóa tài khoản</button>
+                    <button className="bulk-btn reset"><RotateCcw size={14}/> Reset mật khẩu</button>
+                  </div>
+                )}
+              </div>
               <button className="add-button" onClick={() => setIsModalOpen(true)}>+ Thêm người dùng</button>
             </div>
 
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Mã người dùng</th>
-                    <th>Tên người dùng</th>
-                    <th>Vai trò</th>
-                    <th>Trạng thái</th>
-                    <th>Ngày tạo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.id}</td>
-                      <td>{user.name}</td>
-                      <td>{user.role}</td>
-                      <td>
-                        <span className={`status-badge ${user.status === 'Hoạt động' ? 'active' : 'inactive'}`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td>{user.createdDate}</td>
+            <div className="content-section">
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedUserIds.length === users.length} 
+                          onChange={toggleSelectAll} 
+                        />
+                      </th>
+                      <th>Mã số</th>
+                      <th>Người dùng</th>
+                      <th>Vai trò</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Modal Popup */}
-            {isModalOpen && (
-              <div className="modal-overlay">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h3>Thêm người dùng mới</h3>
-                    <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
+                  </thead>
+                  <tbody>
+                    {currentItems.map((u) => (
+                      <tr key={u.id} className={selectedUserIds.includes(u.id) ? 'row-selected' : ''}>
+                        <td>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedUserIds.includes(u.id)} 
+                            onChange={() => toggleSelectUser(u.id)} 
+                          />
+                        </td>
+                        <td>{u.id}</td>
+                        <td>
+                          <div className="user-cell">
+                            <div className="user-avatar-small">{u.name.charAt(0)}</div>
+                            <div>
+                              <div className="font-bold">{u.name}</div>
+                              <div className="text-muted">{u.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="roles-list-tags">
+                            {u.roles.map(r => <span key={r} className="role-tag">{r}</span>)}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${u.status === 'Hoạt động' ? 'active' : 'inactive'}`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td>
+                          <button className="edit-role-btn" onClick={() => { setCurrentUser(u); setIsAssignRoleOpen(true); }}>
+                            <ShieldCheck size={16} /> Sửa vai trò
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="pagination-wrapper">
+                  <span className="pagination-info">
+                    Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredUsers.length)} trên {filteredUsers.length} người dùng
+                  </span>
+                  <div className="pagination-btns">
+                    <button 
+                      disabled={currentPage === 1} 
+                      onClick={() => handlePageChange(currentPage - 1)}
+                    >
+                      Trước
+                    </button>
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button 
+                        key={i} 
+                        className={currentPage === i + 1 ? 'active' : ''}
+                        onClick={() => handlePageChange(i + 1)}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => handlePageChange(currentPage + 1)}
+                    >
+                      Tiếp
+                    </button>
                   </div>
-                  <form onSubmit={handleSubmit} className="user-form">
-                    <div className="form-group">
-                      <label>Họ và tên</label>
-                      <input type="text" name="name" placeholder="Nhập họ tên người dùng" value={formData.name}
-                        onChange={handleInputChange}required />
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Tên đăng nhập (username)</label>
-                        <input 
-                          type="text" 
-                          name="username"
-                          placeholder="vana_nguyen" 
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Email</label>
-                        <input 
-                          type="email" 
-                          name="email"
-                          placeholder="example@school.edu.vn" 
-                          onChange={handleInputChange}
-                          required 
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label>Mật khẩu tạm thời</label>
-                      <input 
-                        type="password" 
-                        name="password"
-                        placeholder="••••••••" 
-                        className={passwordError ? 'input-error' : ''}
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required 
-                      />
-                      {passwordError && <span className="error-message">{passwordError}</span>}
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Vai trò</label>
-                        <select name="role" value={formData.role} onChange={handleInputChange}>
-                          <option value="Giảng viên">Giảng viên</option>
-                          <option value="Sinh viên">Sinh viên</option>
-                          <option value="Quản trị viên">Quản trị viên</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Trạng thái</label>
-                        <select name="status" value={formData.status} onChange={handleInputChange}>
-                          <option value="Hoạt động">Hoạt động</option>
-                          <option value="Đã khóa">Khóa tài khoản</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>Hủy</button>
-                      <button type="submit" className="submit-btn">Tạo người dùng</button>
-                    </div>
-                  </form>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
+
+        {/* 3. Modal Chỉnh sửa vai trò */}
+        {isAssignRoleOpen && currentUser && (
+          <div className="modal-overlay" onClick={handleOverlayClick}>
+            <div className="modal-content role-edit-modal">
+              <div className="modal-header">
+                <h3>Chỉnh sửa vai trò: {currentUser.name}</h3>
+                <button className="close-btn" onClick={() => setIsAssignRoleOpen(false)}><X /></button>
+              </div>
+              <div className="modal-body">
+                <p className="description">Tick chọn để thêm hoặc bớt các vai trò cho tài khoản này.</p>
+                <div className="roles-grid-selection">
+                  {SYSTEM_ROLES.map(role => (
+                    <label key={role} className="checkbox-item card-style">
+                      <input 
+                        type="checkbox" 
+                        checked={currentUser.roles.includes(role)}
+                        onChange={() => handleRoleToggle(role, 'edit')}
+                      />
+                      <div className="role-name-info">{role}</div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="cancel-btn" onClick={() => setIsAssignRoleOpen(false)}>Hủy</button>
+                <button className="submit-btn">Lưu thay đổi</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal Create User */}
+        {isModalOpen && (
+          <div className="modal-overlay" onClick={handleOverlayClick}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Thêm người dùng mới</h3>
+                <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
+              </div>
+              <form onSubmit={handleSubmit} className="user-form">
+                <div className="form-group">
+                  <label>Họ và tên</label>
+                  <input type="text" name="name" placeholder="Nhập họ tên người dùng" value={formData.name}
+                    onChange={handleInputChange}required />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Tên đăng nhập (username)</label>
+                    <input 
+                      type="text" name="username" placeholder="vana_nguyen" value={formData.username} 
+                      onChange={handleInputChange} required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input 
+                      type="email" name="email" placeholder="example@school.edu.vn" 
+                      onChange={handleInputChange}
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Mật khẩu tạm thời</label>
+                  <input 
+                    type="password" 
+                    name="password"
+                    placeholder="••••••••" 
+                    className={passwordError ? 'input-error' : ''}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required 
+                  />
+                  {passwordError && <span className="error-message">{passwordError}</span>}
+                </div>
+                <div className="form-group full-width">
+                  <label>Vai trò</label>
+                  <div className="roles-grid-selection">
+                    {SYSTEM_ROLES.map(role => (
+                      <label key={role} className="checkbox-item">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.roles.includes(role)}
+                          onChange={() => handleRoleToggle(role, 'form')}
+                        />
+                        <span>{role}</span>
+                      </label>
+                  ))}
+                </div>
+                <div className="form-group">
+                  <label>Trạng thái</label>
+                  <select name="status" value={formData.status} onChange={handleInputChange}>
+                    <option value="Hoạt động">Hoạt động</option>
+                    <option value="Đã khóa">Khóa tài khoản</option>
+                  </select>
+                </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>Hủy</button>
+                  <button type="submit" className="submit-btn">Tạo người dùng</button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>
