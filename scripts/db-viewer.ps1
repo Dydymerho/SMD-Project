@@ -84,7 +84,7 @@ if ($Command -eq "menu") {
             }
             "10" {
                 Write-Host "`nCLOs (Course Learning Outcomes):" -ForegroundColor Green
-                Run-Query "SELECT clo.clo_id, s.syllabus_id, c.course_code, clo.clo_code, clo.description FROM clo clo LEFT JOIN syllabus s ON clo.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY clo.clo_id;"
+                Run-Query "SELECT clo.clo_id, s.syllabus_id, c.course_code, clo.clo_code, clo.clo_description FROM clo clo LEFT JOIN syllabus s ON clo.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY clo.clo_id;"
             }
             "11" {
                 Write-Host "`nPLOs (Program Learning Outcomes):" -ForegroundColor Green
@@ -100,7 +100,7 @@ if ($Command -eq "menu") {
             }
             "14" {
                 Write-Host "`nSession Plans:" -ForegroundColor Green
-                Run-Query "SELECT sp.session_plan_id, s.syllabus_id, c.course_code, sp.session_number, sp.topic, sp.teaching_method FROM session_plan sp LEFT JOIN syllabus s ON sp.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY sp.session_plan_id;"
+                Run-Query "SELECT sp.session_id, s.syllabus_id, c.course_code, sp.week_no, sp.topic, sp.teaching_method FROM session_plan sp LEFT JOIN syllabus s ON sp.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY sp.session_id;"
             }
             "15" {
                 Write-Host "`nCourse Relations:" -ForegroundColor Green
@@ -120,11 +120,11 @@ if ($Command -eq "menu") {
             }
             "19" {
                 Write-Host "`nSyllabus Audit Logs (Last 20):" -ForegroundColor Green
-                Run-Query "SELECT sal.log_id, s.syllabus_id, c.course_code, u.username as user, sal.action, sal.field_name, sal.created_at FROM syllabus_audit_log sal LEFT JOIN syllabus s ON sal.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id LEFT JOIN \`"user\`" u ON sal.user_id = u.user_id ORDER BY sal.log_id DESC LIMIT 20;"
+                Run-Query "SELECT sal.id, s.syllabus_id, c.course_code, sal.action_type, sal.performed_by, sal.performed_by_role, sal.old_status, sal.new_status, sal.timestamp FROM syllabus_audit_logs sal LEFT JOIN syllabus s ON sal.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY sal.id DESC LIMIT 20;"
             }
             "20" {
                 Write-Host "`nAI Tasks:" -ForegroundColor Green
-                Run-Query "SELECT ai.task_id, s.syllabus_id, c.course_code, ai.task_type, ai.task_status, ai.created_at FROM ai_task ai LEFT JOIN syllabus s ON ai.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY ai.task_id DESC LIMIT 20;"
+                Run-Query "SELECT ai.ai_task_id, s.syllabus_id, c.course_code, ai.task_type, ai.status, ai.result_summary, ai.created_at FROM ai_task ai LEFT JOIN syllabus s ON ai.syllabus_id = s.syllabus_id LEFT JOIN course c ON s.course_id = c.course_id ORDER BY ai.ai_task_id DESC LIMIT 20;"
             }
             "21" {
                 $query = Read-Host "Enter SQL query"
