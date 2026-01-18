@@ -37,6 +37,9 @@ const SystemManagementPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [isParamModalOpen, setIsParamModalOpen] = useState(false);
+  const [paramModalType, setParamModalType] = useState<'department' | 'course'>('department');
+  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   // Demo data
   const stats = {
     totalUsers: 123,
@@ -96,6 +99,12 @@ const SystemManagementPage: React.FC = () => {
     'Academic Affairs (AA)',
     'Student'
   ];
+
+  const [workflowSteps, setWorkflowSteps] = useState([
+    { id: 1, name: 'Giảng viên soạn thảo', role: 'Lecturer', order: 1 },
+    { id: 2, name: 'Trưởng bộ môn duyệt', role: 'Head of Department', order: 2 },
+    { id: 3, name: 'Phòng đào tạo kiểm tra', role: 'Academic Affairs', order: 3 },
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +187,35 @@ const SystemManagementPage: React.FC = () => {
     if (type === 'role') setFilterRole(value);
     if (type === 'status') setFilterStatus(value);
     setCurrentPage(1);
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedItemIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault(); 
+    if (draggedItemIndex === null || draggedItemIndex === index) return;
+    const newSteps = [...workflowSteps];
+    const draggedItem = newSteps[draggedItemIndex];
+    newSteps.splice(draggedItemIndex, 1);
+    newSteps.splice(index, 0, draggedItem);
+    const updatedSteps = newSteps.map((step, idx) => ({
+      ...step,
+      order: idx + 1
+    }));
+    setDraggedItemIndex(index);
+    setWorkflowSteps(updatedSteps);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItemIndex(null);
+    console.log("Quy trình mới đã được lưu:", workflowSteps);
+  };
+
+  const openParamModal = (type: 'department' | 'course') => {
+    setParamModalType(type);
+    setIsParamModalOpen(true);
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -316,81 +354,6 @@ const SystemManagementPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-            {/* Modal Popup */}
-            {isModalOpen && (
-              <div className="modal-overlay" onClick={handleOverlayClick}>
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h3>Thêm người dùng mới</h3>
-                    <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
-                  </div>
-                  <form onSubmit={handleSubmit} className="user-form">
-                    <div className="form-group">
-                      <label>Họ và tên</label>
-                      <input type="text" name="name" placeholder="Nhập họ tên người dùng" value={formData.name}
-                        onChange={handleInputChange}required />
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Tên đăng nhập (username)</label>
-                        <input 
-                          type="text" 
-                          name="username"
-                          placeholder="vana_nguyen" 
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Email</label>
-                        <input 
-                          type="email" 
-                          name="email"
-                          placeholder="example@school.edu.vn" 
-                          onChange={handleInputChange}
-                          required 
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label>Mật khẩu tạm thời</label>
-                      <input 
-                        type="password" 
-                        name="password"
-                        placeholder="••••••••" 
-                        className={passwordError ? 'input-error' : ''}
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required 
-                      />
-                      {passwordError && <span className="error-message">{passwordError}</span>}
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Vai trò</label>
-                        <select name="role" value={formData.roles} onChange={handleInputChange}>
-                          <option value="Giảng viên">Giảng viên</option>
-                          <option value="Sinh viên">Sinh viên</option>
-                          <option value="Quản trị viên">Quản trị viên</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Trạng thái</label>
-                        <select name="status" value={formData.status} onChange={handleInputChange}>
-                          <option value="Hoạt động">Hoạt động</option>
-                          <option value="Đã khóa">Khóa tài khoản</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>Hủy</button>
-                      <button type="submit" className="submit-btn">Tạo người dùng</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </div>
           </>
         )}
@@ -606,7 +569,92 @@ const SystemManagementPage: React.FC = () => {
           </div>
         )}
 
-        {/* 3. Modal Chỉnh sửa vai trò */}
+        {activeTab === 'syllabi' && (
+          <div className="syllabi-management-container">
+            <div className="section-header-main">
+              <h2>Cấu hình & Quản lý giáo trình</h2>
+            </div>
+
+            <div className="syllabi-status-grid">
+              <div className="status-mini-card draft">
+                <span className="dot"></span>
+                <div className="info">
+                  <div className="label">Bản nháp</div>
+                  <div className="count">45</div>
+                </div>
+              </div>
+              <div className="status-mini-card pending">
+                <span className="dot"></span>
+                <div className="info">
+                  <div className="label">Chờ phê duyệt</div>
+                  <div className="count">12</div>
+                </div>
+              </div>
+              <div className="status-mini-card completed">
+                <span className="dot"></span>
+                <div className="info">
+                  <div className="label">Đã hoàn tất</div>
+                  <div className="count">128</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="management-flex-layout">
+              <div className="content-section workflow-config">
+                <div className="section-header">
+                  <h3><RotateCcw size={18} /> Cấu hình luồng phê duyệt</h3>
+                  <button className="text-btn">Chỉnh sửa</button>
+                </div>
+                <div className="workflow-steps-vertical">
+                  {workflowSteps.map((step, index) => (
+                    <div key={step.id} className={`workflow-step-item ${draggedItemIndex === index ? 'dragging' : ''}`}
+                    draggable onDragStart={() => handleDragStart(index)} onDragOver={(e) => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+                      <div className="drag-handle">⠿</div>
+                      <div className="step-number">{step.order}</div>
+                      <div className="step-content">
+                        <div className="step-name">{step.name}</div>
+                        <div className="step-role-badge">{step.role}</div>
+                      </div>
+                      {index < workflowSteps.length - 1 && <div className="step-connector"></div>}
+                    </div>
+                  ))}
+                </div>
+                <button className="add-param-link" onClick={() => openParamModal('department')}>+ Thêm bước phê duyệt</button>
+              </div>
+              <div className="content-section parameters-config">
+                <div className="section-header">
+                  <h3><Database size={18} /> Danh mục hệ thống</h3>
+                </div>
+                <div className="parameter-tabs">
+                  <div className="parameter-card">
+                    <h4>Khoa & Viện</h4>
+                    <ul className="parameter-list">
+                      <li>Khoa Công nghệ thông tin <span className="count">12 giảng viên</span></li>
+                      <li>Khoa Kinh tế số <span className="count">8 giảng viên</span></li>
+                      <li>Viện Đào tạo Quốc tế <span className="count">5 giảng viên</span></li>
+                    </ul>
+                    <button className="add-param-link" onClick={() => openParamModal('department')}>+ Thêm khoa mới</button>
+                  </div>
+                  
+                  <div className="parameter-card">
+                    <h4>Học phần (Courses)</h4>
+                    <div className="search-mini">
+                      <input type="text" placeholder="Tìm mã học phần..." />
+                    </div>
+                    <ul className="parameter-list scrollable">
+                      <li>IT001 - Lập trình C++</li>
+                      <li>IT002 - Cấu trúc dữ liệu</li>
+                      <li>EC005 - Kinh tế vĩ mô</li>
+                    </ul>
+                    <button className="add-param-link">+ Thêm học phần</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Chỉnh sửa vai trò */}
         {isAssignRoleOpen && currentUser && (
           <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="modal-content role-edit-modal">
@@ -707,6 +755,34 @@ const SystemManagementPage: React.FC = () => {
                   <button type="submit" className="submit-btn">Tạo người dùng</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {isParamModalOpen && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsParamModalOpen(false)}>
+            <div className="modal-content param-modal">
+              <div className="modal-header">
+                <h3>{paramModalType === 'department' ? 'Thêm Khoa/Viện mới' : 'Thêm Học phần mới'}</h3>
+                <button className="close-btn" onClick={() => setIsParamModalOpen(false)}>&times;</button>
+              </div>
+              <div className="param-modal-body">
+                <form onSubmit={(e) => { e.preventDefault(); setIsParamModalOpen(false); }}>
+                  <div className="form-group">
+                    <label>{paramModalType === 'department' ? 'Tên Khoa/Viện' : 'Tên học phần'}</label>
+                    <input type="text" placeholder="Nhập tên..." required />
+                  </div>
+                  {paramModalType === 'course' && (
+                    <div className="form-group">
+                      <label>Mã học phần</label>
+                      <input type="text" placeholder="Ví dụ: IT001" required />
+                    </div>
+                  )}
+                  <div className="modal-footer">
+                    <button type="button" className="cancel-btn" onClick={() => setIsParamModalOpen(false)}>Hủy</button>
+                    <button type="submit" className="submit-btn">Xác nhận thêm</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
