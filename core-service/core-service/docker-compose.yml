@@ -13,11 +13,14 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init:/docker-entrypoint-initdb.d
     networks:
       - smd_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-smd_db}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,6 +33,11 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     networks:
       - smd_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 3. Elasticsearch
   elasticsearch:
@@ -43,6 +51,12 @@ services:
       - "${ELASTICSEARCH_PORT:-9200}:9200"
     networks:
       - smd_net
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # 4. Backend Spring Boot Application
   backend:
@@ -63,6 +77,10 @@ services:
       - ./uploads:/app/uploads
     depends_on:
       postgresdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     networks:
       - smd_net
