@@ -1,5 +1,5 @@
 :root {
-  --primary-color: #5d5fef; /* Màu tím chủ đạo từ ảnh 1 */
+  --primary-color: #30c4b0; 
   --sidebar-bg: #ffffff;
   --bg-light: #f8f9fa;
   --text-main: #333;
@@ -17,13 +17,13 @@
 .logo-placeholder {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #a5f3fc 0%, #5d5fef 100%);
+  background: linear-gradient(135deg, #a5f3fc 0%, #008f81 100%);
   border-radius: 8px;
 }
 
 .sidebar {
   width: 250px;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); /* Màu tím gradient */
+  background: #008f81;
   color: white;
   display: flex;
   flex-direction: column;
@@ -346,5 +346,5 @@
 }
 
 .view-detail-btn:hover {
-  background: #4a4cd9;
+  background: #008f81;
 }

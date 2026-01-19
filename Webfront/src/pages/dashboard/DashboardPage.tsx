@@ -113,7 +113,7 @@ const DashboardPage: React.FC = () => {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="logo">📚</div>
+          <div className="logo"></div>
           <h2>SMD System</h2>
           <p>Hệ thống quản lý & tra cứu Giáo trình</p>
         </div>

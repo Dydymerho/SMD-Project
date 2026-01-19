@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
       <div className="login-container">
         <div className="login-header">
           <div className="logo">
-            <div className="logo-icon">📚</div>
+            <div className="logo-icon"></div>
           </div>
           <h1>SMD System</h1>
           <p>Hệ thống quản lý & tra cứu Giáo trình</p>

@@ -7,7 +7,7 @@
 /* Sidebar Styles */
 .sidebar {
   width: 250px;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  background: #008f81;
   color: white;
   display: flex;
   flex-direction: column;
@@ -242,7 +242,7 @@
 }
 
 .add-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4eada1;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -254,7 +254,7 @@
 
 .add-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 143, 129, 0.4);
 }
 
 /* Table Styles */
@@ -415,7 +415,7 @@
 
 .progress-bar .fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #4eada1;
   border-radius: 3px;
 }
 
@@ -521,7 +521,7 @@
 .user-avatar-small {
   width: 32px;
   height: 32px;
-  background: #764ba2;
+  background: #4eada1;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -547,8 +547,8 @@
 
 .assign-btn {
   background: none;
-  border: 1px solid #764ba2;
-  color: #764ba2;
+  border: 1px solid #4eada1;
+  color:#4eada1;
   padding: 6px 12px;
   border-radius: 6px;
   display: flex;
@@ -559,7 +559,7 @@
 }
 
 .assign-btn:hover {
-  background: #764ba2;
+  background: #4eada1;
   color: white;
 }
 
@@ -599,9 +599,9 @@
 }
 
 .pagination-btns button.active {
-  background: #764ba2;
+  background: #4eada1;
   color: white;
-  border-color: #764ba2;
+  border-color: #4eada1;
 }
 
 .pagination-btns button:disabled {
@@ -611,8 +611,8 @@
 }
 
 .pagination-btns button:hover:not(:disabled) {
-  border-color: #764ba2;
-  color: #764ba2;
+  border-color: #4eada1;
+  color: #4eada1;
 }
 
 .pagination-btns button.active:hover {
@@ -720,7 +720,7 @@
 .step-number {
   width: 28px;
   height: 28px;
-  background: #764ba2;
+  background: #4eada1;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -733,7 +733,7 @@
 .step-name { font-weight: 600; color: #334155; margin-bottom: 4px; }
 .step-role-badge {
   font-size: 11px;
-  background: #e2e8f0;
+  background: #d1e7e4;
   color: #475569;
   padding: 2px 8px;
   border-radius: 4px;
@@ -921,7 +921,7 @@
 
 .submit-btn {
   padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4eada1;
   border: none;
   border-radius: 8px;
   color: white;
@@ -936,8 +936,8 @@
 
 .edit-role-btn {
   background: white; 
-  border: 1px solid #764ba2; 
-  color: #764ba2;
+  border: 1px solid #4eada1; 
+  color: #4eada1;
   padding: 6px 12px; 
   border-radius: 6px; 
   display: flex; 
@@ -947,7 +947,7 @@
 }
 
 .edit-role-btn:hover { 
-  background: #764ba2; 
+  background: #4eada1; 
   color: white; 
 }
 

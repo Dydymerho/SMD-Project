@@ -7,7 +7,7 @@
 /* Sidebar Styles */
 .sidebar {
   width: 250px;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, #90f5e7 0%, #008f81 100%);
   color: white;
   display: flex;
   flex-direction: column;
@@ -420,7 +420,7 @@
 }
 
 .card-header.purple {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #90f5e7 0%, #008f81 100%);
 }
 
 .card-badge {
@@ -471,7 +471,7 @@
 .view-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #90f5e7 0%, #008f81 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -482,7 +482,7 @@
 
 .view-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(144, 245, 231, 0.4);
 }
 
 /* Responsive */
