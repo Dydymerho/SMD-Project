@@ -1,0 +1,81 @@
+.noti-menu-container {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 380px;
+  max-height: 500px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.noti-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1000;
+}
+
+.noti-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.noti-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mark-read-btn {
+  background: none; border: none;
+  color: #3b82f6; font-size: 13px;
+  cursor: pointer; padding: 0;
+}
+
+.noti-list {
+  overflow-y: auto;
+}
+
+.noti-item {
+  display: flex;
+  padding: 15px 20px;
+  gap: 15px;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.noti-item:hover { background-color: #f9fafb; }
+
+.noti-item.unread { background-color: #eff6ff; } /* Màu xanh nhạt cho thông báo chưa đọc */
+
+.noti-item-title {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.unread-dot {
+  width: 8px; height: 8px;
+  background-color: #3b82f6;
+  border-radius: 50%;
+}
+
+.noti-item-desc {
+  font-size: 13px; color: #666;
+  margin: 0 0 5px 0; line-height: 1.4;
+}
+
+.noti-item-time { font-size: 12px; color: #999; }
+
+/* Icon colors */
+.noti-icon.urgent { color: #f97316; }
+.noti-icon.success { color: #22c55e; }
+.noti-icon.comment { color: #eab308; }
