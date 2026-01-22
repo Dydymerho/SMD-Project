@@ -3,6 +3,7 @@ package com.smd.core.service;
 import com.smd.core.dto.NotificationResponse;
 import com.smd.core.dto.NotificationStats;
 import com.smd.core.entity.Notification;
+import com.smd.core.entity.ReviewComment;
 import com.smd.core.entity.Syllabus;
 import com.smd.core.entity.User;
 import com.smd.core.exception.ResourceNotFoundException;
@@ -355,4 +356,98 @@ public class NotificationService {
         notificationRepository.deleteOlderThan(cutoffDate);
         log.info("Deleted notifications older than {}", cutoffDate);
     }
+
+    /**
+     * Create notification when a comment is added to a syllabus
+     */
+    @Transactional
+    public void notifyCommentAdded(Syllabus syllabus, User commenter, ReviewComment comment) {
+        try {
+            log.info("Creating notification for new comment on syllabus {} by {}", 
+                syllabus.getSyllabusId(), commenter.getUsername());
+            
+            // Notify syllabus lecturer (if not the commenter)
+            User lecturer = syllabus.getLecturer();
+            if (lecturer != null && !lecturer.getUserId().equals(commenter.getUserId())) {
+                Notification lecturerNotification = Notification.builder()
+                    .recipient(lecturer)
+                    .syllabus(syllabus)
+                    .type(Notification.NotificationType.COMMENT_ADDED)
+                    .title("New Comment on Your Syllabus")
+                    .message(String.format("%s commented on your syllabus: %s (%s) v%d",
+                        commenter.getFullName(),
+                        syllabus.getCourse().getCourseName(),
+                        syllabus.getCourse().getCourseCode(),
+                        syllabus.getVersionNo()))
+                    .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                    .triggeredBy(commenter.getUsername())
+                    .isRead(false)
+                    .build();
+                
+                notificationRepository.save(lecturerNotification);
+                log.info("Notification sent to lecturer {}", lecturer.getUsername());
+            }
+            
+            // Notify HOD (if not the commenter)
+            if (syllabus.getCourse() != null && syllabus.getCourse().getDepartment() != null) {
+                User hod = syllabus.getCourse().getDepartment().getHeadOfDepartment();
+                if (hod != null && !hod.getUserId().equals(commenter.getUserId())) {
+                    Notification hodNotification = Notification.builder()
+                        .recipient(hod)
+                        .syllabus(syllabus)
+                        .type(Notification.NotificationType.COMMENT_ADDED)
+                        .title("New Comment on Syllabus")
+                        .message(String.format("%s commented on syllabus: %s (%s) v%d",
+                            commenter.getFullName(),
+                            syllabus.getCourse().getCourseName(),
+                            syllabus.getCourse().getCourseCode(),
+                            syllabus.getVersionNo()))
+                        .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                        .triggeredBy(commenter.getUsername())
+                        .isRead(false)
+                        .build();
+                    
+                    notificationRepository.save(hodNotification);
+                    log.info("Notification sent to HOD {}", hod.getUsername());
+                }
+            }
+            
+            // Notify Academic Affairs users if syllabus is in their review stage
+            if (syllabus.getCurrentStatus() != null && 
+                (syllabus.getCurrentStatus().equals("PENDING_APPROVAL") || 
+                syllabus.getCurrentStatus().equals("APPROVED"))) {
+                
+                List<User> aaUsers = userRepository.findByRole_RoleName("ACADEMIC_AFFAIRS");
+                for (User aaUser : aaUsers) {
+                    if (!aaUser.getUserId().equals(commenter.getUserId())) {
+                        Notification aaNotification = Notification.builder()
+                            .recipient(aaUser)
+                            .syllabus(syllabus)
+                            .type(Notification.NotificationType.COMMENT_ADDED)
+                            .title("New Comment on Syllabus Under Review")
+                            .message(String.format("%s commented on syllabus: %s (%s) v%d",
+                                commenter.getFullName(),
+                                syllabus.getCourse().getCourseName(),
+                                syllabus.getCourse().getCourseCode(),
+                                syllabus.getVersionNo()))
+                            .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                            .triggeredBy(commenter.getUsername())
+                            .isRead(false)
+                            .build();
+                        
+                        notificationRepository.save(aaNotification);
+                    }
+                }
+                log.info("Notifications sent to {} Academic Affairs users", aaUsers.size());
+            }
+            
+            log.info("✅ Comment notification processing completed for syllabus {}", syllabus.getSyllabusId());
+            
+        } catch (Exception e) {
+            log.error("❌ Error creating comment notification for syllabus {}: {}", 
+                syllabus.getSyllabusId(), e.getMessage(), e);
+            // Don't throw exception to avoid breaking the comment creation
+        }
+    }
 }
+
