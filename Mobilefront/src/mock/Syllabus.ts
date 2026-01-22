@@ -15,8 +15,9 @@ export interface Syllabus {
     aiSummary?: string;   // AI Summary
     credits?: number;     // Số tín chỉ
     prerequisites?: string[]; // Môn học cần hoàn thành trước đó
+    studentmission?: string[]; // Nhiệm vụ học tập của sinh viên 
     clos?: string[];      // Chuẩn đầu ra khóa học (CLOs)
-    target?: string;    // Mục tiêu học phần
+    target?: string[];    // Mục tiêu học phần
     cloPloLinks?: CloPloMap[]; // Liên kết CLO → PLO
     subjectRelationship?: {
         type: 'tree' | 'text';
@@ -72,10 +73,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Cung cấp kiến thức cơ bản về lập trình với ngôn ngữ C, xây dựng tư duy lập trình.',
         credits: 3,
         prerequisites: [],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Xây dựng nền tảng tư duy lập trình cơ bản',
+            'Nắm vững cú pháp và cấu trúc ngôn ngữ C',
+            'Phát triển kỹ năng giải quyết vấn đề thông qua lập trình',
+            'Chuẩn bị cho các môn học lập trình nâng cao'
+        ],
         clos: [
-            'CLO1 – Hiểu và áp dụng cú pháp cơ bản của ngôn ngữ C',
-            'CLO2 – Viết chương trình với các cấu trúc điều khiển cơ bản',
-            'CLO3 – Sử dụng hàm và mảng trong giải quyết bài toán'
+            'Hiểu và áp dụng cú pháp cơ bản của ngôn ngữ C',
+            'Viết chương trình với các cấu trúc điều khiển cơ bản',
+            'Sử dụng hàm và mảng trong giải quyết bài toán'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO1', 'PLO2'] },
@@ -122,10 +134,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Xây dựng nền tảng toán học về đại số tuyến tính và ma trận.',
         credits: 3,
         prerequisites: [],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Cung cấp công cụ toán học cơ bản cho các môn kỹ thuật',
+            'Phát triển tư duy logic và khả năng phân tích',
+            'Rèn luyện kỹ năng giải quyết bài toán đại số tuyến tính',
+            'Chuẩn bị nền tảng cho môn Xác suất thống kê'
+        ],
         clos: [
-            'CLO1 – Tính toán với ma trận và định thức',
-            'CLO2 – Giải hệ phương trình tuyến tính',
-            'CLO3 – Hiểu khái niệm không gian vector'
+            'Tính toán với ma trận và định thức',
+            'Giải hệ phương trình tuyến tính',
+            'Hiểu khái niệm không gian vector'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO1', 'PLO7'] },
@@ -172,10 +195,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Cung cấp kiến thức về kiến trúc phần cứng máy tính và lập trình assembly.',
         credits: 3,
         prerequisites: ['IT101'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Hiểu rõ kiến trúc và hoạt động cơ bản của máy tính',
+            'Nắm vững nguyên lý làm việc của CPU, bộ nhớ và hệ thống I/O',
+            'Phát triển kỹ năng lập trình assembly cơ bản',
+            'Chuẩn bị cho các môn học về hệ điều hành và mạng máy tính'
+        ],
         clos: [
-            'CLO1 – Hiểu kiến trúc cơ bản của máy tính',
-            'CLO2 – Phân tích hoạt động của CPU và bộ nhớ',
-            'CLO3 – Viết chương trình assembly đơn giản'
+            'Hiểu kiến trúc cơ bản của máy tính',
+            'Phân tích hoạt động của CPU và bộ nhớ',
+            'Viết chương trình assembly đơn giản'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO4', 'PLO8'] },
@@ -222,10 +256,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Phát triển kỹ năng tiếng Anh chuyên ngành CNTT cho môi trường làm việc quốc tế.',
         credits: 2,
         prerequisites: ['EN101'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Xây dựng vốn từ vựng chuyên ngành CNTT',
+            'Nâng cao kỹ năng đọc hiểu tài liệu kỹ thuật tiếng Anh',
+            'Phát triển kỹ năng viết email và báo cáo chuyên nghiệp',
+            'Rèn luyện kỹ năng thuyết trình kỹ thuật bằng tiếng Anh'
+        ],
         clos: [
-            'CLO1 – Hiểu và sử dụng từ vựng chuyên ngành CNTT',
-            'CLO2 – Đọc và dịch tài liệu kỹ thuật tiếng Anh',
-            'CLO3 – Viết email và báo cáo chuyên nghiệp'
+            'Hiểu và sử dụng từ vựng chuyên ngành CNTT',
+            'Đọc và dịch tài liệu kỹ thuật tiếng Anh',
+            'Viết email và báo cáo chuyên nghiệp'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO11', 'PLO12'] },
@@ -272,10 +317,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Nền tảng toán học cho machine learning và phân tích dữ liệu.',
         credits: 3,
         prerequisites: ['TH101'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Cung cấp nền tảng toán học cho các thuật toán Machine Learning',
+            'Phát triển kỹ năng phân tích và xử lý dữ liệu thống kê',
+            'Nắm vững các phương pháp ước lượng và kiểm định giả thuyết',
+            'Ứng dụng xác suất thống kê trong giải quyết bài toán thực tế'
+        ],
         clos: [
-            'CLO1 – Tính toán xác suất cơ bản',
-            'CLO2 – Hiểu và áp dụng các phân phối xác suất',
-            'CLO3 – Thực hiện phân tích thống kê cơ bản'
+            'Tính toán xác suất cơ bản',
+            'Hiểu và áp dụng các phân phối xác suất',
+            'Thực hiện phân tích thống kê cơ bản'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO7', 'PLO9'] },
@@ -322,10 +378,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Đào tạo chuyên sâu về các phương pháp và công cụ kiểm thử phần mềm.',
         credits: 3,
         prerequisites: ['SE101', 'OOP236'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Nắm vững các nguyên lý và quy trình kiểm thử phần mềm',
+            'Phát triển kỹ năng thiết kế test case hiệu quả',
+            'Thành thạo công cụ kiểm thử tự động',
+            'Áp dụng kiểm thử trong phát triển phần mềm thực tế'
+        ],
         clos: [
-            'CLO1 – Hiểu các nguyên lý và mức độ kiểm thử',
-            'CLO2 – Thiết kế test case hiệu quả',
-            'CLO3 – Áp dụng công cụ kiểm thử tự động'
+            'Hiểu các nguyên lý và mức độ kiểm thử',
+            'Thiết kế test case hiệu quả',
+            'Áp dụng công cụ kiểm thử tự động'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO4', 'PLO6'] },
@@ -372,10 +439,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Chuyên sâu về quản trị và tối ưu hiệu suất cơ sở dữ liệu.',
         credits: 3,
         prerequisites: ['CT101', 'TH202'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Thành thạo kỹ thuật thiết kế và tối ưu cơ sở dữ liệu',
+            'Nắm vững quản lý transaction và kiểm soát đồng thời',
+            'Phát triển kỹ năng tối ưu hiệu suất truy vấn',
+            'Ứng dụng quản trị CSDL trong môi trường doanh nghiệp'
+        ],
         clos: [
-            'CLO1 – Thiết kế database chuẩn hóa',
-            'CLO2 – Viết truy vấn SQL phức tạp',
-            'CLO3 – Quản lý transaction và concurrency'
+            'Thiết kế database chuẩn hóa',
+            'Viết truy vấn SQL phức tạp',
+            'Quản lý transaction và concurrency'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO5', 'PLO8'] },
@@ -422,10 +500,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Hiểu biết sâu về kiến trúc mạng, giao thức và bảo mật.',
         credits: 3,
         prerequisites: ['IT102'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Hiểu rõ kiến trúc mạng và các giao thức truyền thông',
+            'Thành thạo cấu hình và quản trị mạng cơ bản',
+            'Nắm vững nguyên lý bảo mật mạng',
+            'Phát triển kỹ năng xử lý sự cố mạng'
+        ],
         clos: [
-            'CLO1 – Hiểu mô hình OSI và TCP/IP',
-            'CLO2 – Cấu hình mạng cơ bản',
-            'CLO3 – Phân tích vấn đề bảo mật mạng'
+            'Hiểu mô hình OSI và TCP/IP',
+            'Cấu hình mạng cơ bản',
+            'Phân tích vấn đề bảo mật mạng'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO6', 'PLO10'] },
@@ -472,10 +561,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Đào tạo phương pháp quản lý dự án phần mềm theo chuẩn quốc tế.',
         credits: 3,
         prerequisites: ['SE101'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Nắm vững quy trình quản lý dự án phần mềm chuyên nghiệp',
+            'Phát triển kỹ năng lập kế hoạch và ước lượng dự án',
+            'Thành thạo phương pháp Agile và Scrum',
+            'Nâng cao kỹ năng quản lý nhóm và giao tiếp'
+        ],
         clos: [
-            'CLO1 – Lập kế hoạch dự án phần mềm',
-            'CLO2 – Ước lượng chi phí và thời gian',
-            'CLO3 – Áp dụng agile methodology'
+            'Lập kế hoạch dự án phần mềm',
+            'Ước lượng chi phí và thời gian',
+            'Áp dụng agile methodology'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO9', 'PLO12'] },
@@ -522,10 +622,21 @@ export const SYLLABUS_CONTENT: Syllabus[] = [
         aiSummary: 'Kiến thức tổng quan về hệ thống thông tin doanh nghiệp và quản lý dữ liệu.',
         credits: 3,
         prerequisites: ['DB301', 'SE101'],
+        studentmission: [
+            '- Sinh viên phải tham dự tối thiểu 80% số tiết của học phần',
+            '- Làm và nộp các bài tập / báo cáo / làm việc nhóm / thuyết trình....đúng thời gian quy định',
+            '- Tự nghiên cứu các vấn đề được giao ở nhà hoặc thư viện',
+            '- Hoàn thành các bài đánh giá quá trình; kết thúc học phần.'],
+        target: [
+            'Hiểu rõ kiến trúc và vai trò của hệ thống thông tin doanh nghiệp',
+            'Nắm vững các hệ thống ERP, CRM và SCM',
+            'Phát triển kỹ năng phân tích và đề xuất giải pháp BI',
+            'Ứng dụng IT governance trong quản lý doanh nghiệp'
+        ],
         clos: [
-            'CLO1 – Hiểu kiến trúc hệ thống doanh nghiệp',
-            'CLO2 – Phân tích nhu cầu hệ thống ERP',
-            'CLO3 – Đánh giá giải pháp business intelligence'
+            'Hiểu kiến trúc hệ thống doanh nghiệp',
+            'Phân tích nhu cầu hệ thống ERP',
+            'Đánh giá giải pháp business intelligence'
         ],
         cloPloLinks: [
             { clo: 'CLO1', plos: ['PLO10', 'PLO13'] },
