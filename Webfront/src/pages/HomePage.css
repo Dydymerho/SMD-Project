@@ -1,0 +1,38 @@
+.home-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.home-header h1 {
+  font-size: 36px;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.home-header p {
+  font-size: 18px;
+  color: #666;
+}
+
+.home-content h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 24px;
+}
+
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}

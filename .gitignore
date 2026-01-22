@@ -1,1 +1,13 @@
+HEAD
+venv/
+env/
+.env
+__pycache__/
+*.pyc
+temp_uploads/
+.DS_Store
+.vscode/
+.idea/
+
 node_modules
+f052d257f9c42479dcbdee993443f62d4357dbbd
