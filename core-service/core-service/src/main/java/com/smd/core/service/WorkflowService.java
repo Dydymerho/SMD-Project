@@ -42,6 +42,9 @@ public class WorkflowService {
     @Autowired
     private AuditLogService auditLogService;
     
+    @Autowired
+    private NotificationService notificationService;
+    
     /**
      * LECTURER: Submit syllabus for review (DRAFT -> PENDING_REVIEW)
      */
@@ -82,6 +85,9 @@ public class WorkflowService {
             SyllabusStatus.PENDING_REVIEW.name(),
             request.getComment()
         );
+        
+        // Send notification to HOD
+        notificationService.notifySyllabusSubmitted(syllabus, username);
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -129,6 +135,9 @@ public class WorkflowService {
             request.getComment()
         );
         
+        // Send notifications (to lecturer and AA)
+        notificationService.notifyHODApproved(syllabus, username);
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -174,6 +183,9 @@ public class WorkflowService {
             SyllabusStatus.DRAFT.name(),
             request.getComment()
         );
+        
+        // Send notification to lecturer
+        notificationService.notifyHODRejected(syllabus, username, request.getComment());
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -221,6 +233,9 @@ public class WorkflowService {
             request.getComment()
         );
         
+        // Send notifications (to lecturer and Principal)
+        notificationService.notifyAAApproved(syllabus, username);
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -266,6 +281,9 @@ public class WorkflowService {
             SyllabusStatus.PENDING_REVIEW.name(),
             request.getComment()
         );
+        
+        // Send notification to lecturer
+        notificationService.notifyAARejected(syllabus, username, request.getComment());
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
@@ -314,6 +332,9 @@ public class WorkflowService {
             request.getComment()
         );
         
+        // Send notification to lecturer
+        notificationService.notifySyllabusPublished(syllabus, username);
+        
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 
             previousStatus, 
@@ -359,6 +380,9 @@ public class WorkflowService {
             SyllabusStatus.PENDING_APPROVAL.name(),
             request.getComment()
         );
+        
+        // Send notification to lecturer
+        notificationService.notifyPrincipalRejected(syllabus, username, request.getComment());
         
         return WorkflowTransitionResponse.fromSyllabus(
             syllabus, 

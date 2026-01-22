@@ -22,6 +22,13 @@ public class Department {
     @Column(name = "dept_name", nullable = false)
     private String deptName;
 
+    // Head of Department reference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "head_of_department_id")
+    @ToString.Exclude
+    @JsonIgnoreProperties({"department", "userRoles", "syllabuses", "reviewComments", "workflowHistories", "notifications", "passwordHash"})
+    private User headOfDepartment;
+
     // Relationships
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     @ToString.Exclude
@@ -35,6 +42,6 @@ public class Department {
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     @ToString.Exclude
-    @JsonIgnoreProperties({"department", "roles"})
+    @JsonIgnoreProperties({"department", "userRoles", "syllabuses", "reviewComments", "workflowHistories", "notifications", "passwordHash"})
     private List<User> users;
 }
