@@ -1,6 +1,6 @@
 import styles from "./SubjectDetailScreen.styles"
 import type React from "react"
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, Alert, } from "react-native"
 import { type RouteProp, useRoute } from "@react-navigation/native"
 import { SYLLABUS_CONTENT } from "../../mock/Syllabus"
 import LinearGradient from "react-native-linear-gradient"
@@ -20,7 +20,6 @@ const ActionTag = ({ label, onPress }: { label: string; onPress?: () => void }) 
         <Text style={styles.tagText}>{label}</Text>
     </TouchableOpacity>
 )
-
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={styles.section}>
         <Text style={styles.sectionTitle}>{title}</Text>
@@ -58,8 +57,7 @@ export default function SubjectDetailScreen() {
             {/* ===== HEADER ===== */}
             <LinearGradient
                 colors={["#4F1CFF", "#2D5BFF"]}
-                style={styles.header}
-            >
+                style={styles.header}>
                 <Text style={styles.code}>{syllabus.code}</Text>
                 <Text style={styles.title}>{syllabus.name}</Text>
                 <Text style={styles.subtitle}>{syllabus.department}</Text>
@@ -69,12 +67,9 @@ export default function SubjectDetailScreen() {
                     <ActionTag label="Thông báo" />
                 </View> */}
             {/* ===== COURSE DESCRIPTION ===== */}
-
             <Section title="Mô tả tóm tắt học phần">
                 <Text style={styles.bullet}>{syllabus.aiSummary}</Text>
             </Section>
-
-
             {/* ===== COURSE INFO ===== */}
             <Section title="Thông tin khóa học">
                 <InfoRow label="Khoa" value={syllabus.department} />
@@ -84,39 +79,63 @@ export default function SubjectDetailScreen() {
                 <InfoRow label="Phiên bản" value={String(syllabus.version)} />
                 <InfoRow label="Ngày xuất bản" value={syllabus.datePublished} />
             </Section>
-            {/* <Section title="Mục tiêu học phần">
-                {syllabus.target?.map((obj, index))}
-            </Section> */}
-            {/* ===== CLO LIST ===== */}
-            <Section title="Chuẩn đầu ra khóa học (CLOs)">
-                {syllabus.clos?.map((clo, index) => (
-                    <Bullet key={index} text={clo} />
+            <Section title="Mục tiêu học phần">
+                {syllabus.target?.map((item, index) => (
+                    <View key={index} style={styles.outcomeItem}>
+                        <View style={styles.outcomeBadge}>
+                            <Text style={styles.outcomeBadgeText}>
+                                CO {index + 1}
+                            </Text>
+                        </View>
+
+                        <Text style={styles.outcomeText}>
+                            {item}
+                        </Text>
+                    </View>
                 ))}
             </Section>
+            <Section title="Chuẩn đầu ra khóa học">
+                {syllabus.clos?.map((item, index) => (
+                    <View key={index} style={styles.outcomeItem}>
+                        <View style={styles.outcomeBadge}>
+                            <Text style={styles.outcomeBadgeText}>
+                                CL{index + 1}
+                            </Text>
+                        </View>
 
-            {/* ===== CLO → PLO ===== */}
-            <Section title="Liên kết CLO → PLO">
-                {syllabus.cloPloLinks?.map((item, index) => (
-                    <Text key={index} style={styles.mapping}>
-                        {item.clo} → {item.plos.join(", ")}
-                    </Text>
+                        <Text style={styles.outcomeText}>
+                            {item}
+                        </Text>
+                    </View>
                 ))}
             </Section>
-
             {/* ===== SUBJECT RELATIONSHIP ===== */}
-            <Section title="Cây quan hệ môn học">
-                <Text style={styles.treeTitle}>Môn tiên quyết</Text>
-                {Array.isArray(syllabus.prerequisites) && syllabus.prerequisites.length > 0 ? (
-                    syllabus.prerequisites.map((code: string) => (
-                        <TouchableOpacity key={code}>
-                            <Text style={styles.linkText}>• {code}</Text>
-                        </TouchableOpacity>
-                    ))
-                ) : (
-                    <Text style={styles.linkText}>Không có</Text>
-                )}
-            </Section>
+            <Section title="Liên hệ giữa CĐR học phần và CĐR CTĐ">
+                {syllabus.cloPloLinks?.map((item, index) => (
+                    <View key={index} style={styles.cloCard}>
+                        <Text style={styles.cloTitle}>{item.clo}</Text>
 
+                        <View style={styles.ploRow}>
+                            {item.plos.map((plo) => (
+                                <View key={plo} style={styles.ploBadge}>
+                                    <Text style={styles.ploText}>{plo} ✓</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                ))}
+            </Section>
+            {
+                syllabus.studentmission && (
+                    <Section title="Nhiệm vụ của sinh viên">
+                        {syllabus.studentmission.map((item, index) => (
+                            <View key={index} style={styles.teachingPlanRow}>
+                                <Text style={styles.missions}>{item}</Text>
+                            </View>
+                        ))}
+                    </Section>
+                )
+            }
             {/* ===== TEACHING PLAN ===== */}
             {
                 syllabus.teachingPlan && (
@@ -131,14 +150,14 @@ export default function SubjectDetailScreen() {
                     </Section>
                 )
             }
-
+            {/*STUDENT MISSIONS*/}
             {/* ===== ASSESSMENT ===== */}
             {
                 syllabus.assessments && (
-                    <Section title="Phương pháp đánh giá">
+                    <Section title="Phương thức kiểm tra và đánh giá">
                         {syllabus.assessments.map((item, index) => (
                             <Text key={index} style={styles.bullet}>
-                                • {item.type}: {item.weight}%
+                                {item.type}: {item.weight}%
                             </Text>
                         ))}
                     </Section>
@@ -151,16 +170,15 @@ export default function SubjectDetailScreen() {
                     <Section title="Tài liệu học tập">
                         {syllabus.materials.map((item, index) => (
                             <Text key={index} style={styles.bullet}>
-                                • {item.name} – {item.author} ({item.type})
+                                {`[${index + 1}]`} {item.name} – {item.author} ({item.type})
                             </Text>
                         ))}
                     </Section>
                 )
             }
-
             {/* ===== REPORT ===== */}
             <TouchableOpacity style={styles.reportBtn}>
-                <Text style={styles.reportText}>⚠ Báo cáo vấn đề</Text>
+                <Text style={styles.reportText}>Báo cáo vấn đề</Text>
             </TouchableOpacity>
         </ScrollView >
     )

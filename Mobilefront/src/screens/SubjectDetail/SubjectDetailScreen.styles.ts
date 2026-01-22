@@ -9,6 +9,8 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: 40,
     paddingHorizontal: 16,
+    paddingRight: 18,
+    paddingLeft: 18,
   },
 
   /* ===== HEADER ===== */
@@ -73,9 +75,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: "uppercase",
   },
-  summarySection: {
-
+  outcomeItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
   },
+
+  outcomeBadge: {
+    backgroundColor: "#E6F0FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+
+  outcomeBadgeText: {
+    color: "#2D5BFF",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  outcomeText: {
+    flex: 1,
+    color: "#333",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
   /* ===== INFO ROW ===== */
   infoRow: {
     flexDirection: "row",
@@ -97,7 +128,12 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
   },
-
+  missionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#333',
+    textAlign: 'justify',
+  },
   /* ===== BULLET ===== */
   bullet: {
     fontSize: 16,
@@ -117,24 +153,27 @@ const styles = StyleSheet.create({
     borderLeftColor: "#3B82F6",
   },
   week: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: "#3B82F6",
     marginBottom: 4,
     textTransform: "uppercase",
   },
   topic: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     color: "#0F172A",
     marginBottom: 4,
   },
   method: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#64748B",
     fontWeight: "400",
   },
-
+  missions: {
+    fontSize: 16,
+    color: "#0F172A",
+  },
   /* ===== TREE & MAPPING ===== */
   treeTitle: {
     fontSize: 16,
@@ -157,6 +196,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 20,
     fontWeight: "400",
+  },
+  cloCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+
+  cloTitle: {
+    fontWeight: "700",
+    fontSize: 15,
+    marginBottom: 8,
+  },
+
+  ploRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
+  ploBadge: {
+    backgroundColor: "#E6F0FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  ploText: {
+    color: "#2D5BFF",
+    fontWeight: "600",
+    fontSize: 12,
   },
 
   /* ===== REPORT BUTTON ===== */

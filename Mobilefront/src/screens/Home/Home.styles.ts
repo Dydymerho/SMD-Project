@@ -10,6 +10,8 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
         paddingBottom: 100,
+        paddingLeft: 8,
+        paddingRight: 8,
     },
     header: {
         paddingHorizontal: 24,
