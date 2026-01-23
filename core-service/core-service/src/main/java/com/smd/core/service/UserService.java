@@ -26,11 +26,11 @@ public class UserService {
                 response.setEmail(user.getEmail());
                 response.setStatus(user.getStatus().toString());
 
-                if (user.getUserRoles() != null) {
-                response.setRoles(user.getUserRoles().stream()
-                    .map(ur -> ur.getRole().getName())
-                    .collect(Collectors.toList()));
-            }
+                if (user.getRoles() != null) {
+                    response.setRoles(user.getRoles().stream()
+                        .map(ur -> ur.getRole().getName())
+                        .collect(Collectors.toList()));
+                }
                 return response;
             }).collect(Collectors.toList());
         } catch (Exception e) {
