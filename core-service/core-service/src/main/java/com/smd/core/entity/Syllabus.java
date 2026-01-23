@@ -115,6 +115,11 @@ public class Syllabus {
     @JsonIgnore
     private List<AITask> aiTasks;
 
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @JsonIgnore
+    private List<Notification> notifications;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

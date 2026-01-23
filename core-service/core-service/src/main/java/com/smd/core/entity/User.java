@@ -66,6 +66,11 @@ public class User {
     @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
 
+    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @JsonIgnore
+    private List<Notification> notifications;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
