@@ -5,12 +5,12 @@ interface User {
   username: string;
   name: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
-  status?: string;
+  email: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<User>;
+  login: (userData: any) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -36,56 +36,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string): Promise<User> => {
-    // Demo authentication - replace with actual API call
-    const demoUsers: { [key: string]: { password: string; user: User } } = {
-      '001': {
-        password: 'admin123',
-        user: {
-          id: '001',
-          username: '001',
-          name: 'Admin',
-          role: 'ADMIN',
-          status: 'Hoạt động',
-        },
-      },
-      '002': {
-        password: 'teacher123',
-        user: {
-          id: '002',
-          username: '002',
-          name: 'Nguyễn Văn A',
-          role: 'TEACHER',
-          status: 'Hoạt động',
-        },
-      },
-      '003': {
-        password: 'student123',
-        user: {
-          id: '003',
-          username: '003',
-          name: 'Nguyễn Văn B',
-          role: 'STUDENT',
-          status: 'Hoạt động',
-        },
-      },
+ const login = async (apiData: any): Promise<void> => {
+  try {
+    const mappedUser: User = {
+      id: (apiData.id || apiData.userID || '').toString(), 
+      username: apiData.username,
+      name: apiData.fullName || apiData.fullFullName || apiData.username,
+      role: apiData.username === 'admin' ? 'ADMIN' : 'TEACHER',
+      email: apiData.email
     };
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const account = demoUsers[username];
-    if (!account || account.password !== password) {
-      throw new Error('Mã người dùng hoặc mật khẩu không đúng');
-    }
-
-    // Save to localStorage
-    localStorage.setItem('user', JSON.stringify(account.user));
-    localStorage.setItem('token', 'demo-token-' + username);
-
-    setUser(account.user);
-    return account.user;
-  };
+    
+    setUser(mappedUser);
+    localStorage.setItem('user', JSON.stringify(mappedUser));
+  } catch (error) {
+    console.error("Lỗi khi map dữ liệu user:", error);
+    throw error;
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('user');

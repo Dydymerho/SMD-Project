@@ -16,5 +16,6 @@ public class UserRoleResponse {
     private String username;
     private String fullName;
     private List<String> roles;
+    private String status;
     private String message;
 }

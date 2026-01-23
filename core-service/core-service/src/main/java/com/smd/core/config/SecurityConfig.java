@@ -40,6 +40,9 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                // CẬP NHẬT: Chỉ cho phép ADMIN truy cập các API quản lý hệ thống
+                .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/audit-logs/**").hasRole("ADMIN")
                 // Swagger UI endpoints
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // All other requests need authentication

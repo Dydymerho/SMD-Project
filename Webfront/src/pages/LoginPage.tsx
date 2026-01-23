@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axiosClient from '../api/axiosClient';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -17,18 +18,31 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const user = await login(username, password);
-      
-      // Điều hướng dựa trên vai trò
-      if (user.role === 'ADMIN') {
-        navigate('/admin/system-management');
-      } else if (user.role === 'TEACHER') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/dashboard');
+      const response = await axiosClient.post('/auth/login', {
+        username: username,
+        password: password
+      });
+
+      const data = response.data;
+      if (data && data.token) {
+        // 1. Lưu token trước
+        localStorage.setItem('token', data.token);
+        
+        // 2. Sau đó mới gọi login context để map user
+        await login(data);
+        
+        // 3. Điều hướng
+        if (data.username === 'admin') {
+          navigate('/admin/system-management');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      // In lỗi ra console để debug chính xác lỗi gì (CORS, 401, hay lỗi code)
+      console.error("Login Error:", err);
+      const message = err.response?.data?.message || 'Có lỗi xảy ra trong quá trình đăng nhập.';
+      setError(message);
     } finally {
       setLoading(false);
     }
