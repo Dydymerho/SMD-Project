@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axiosClient from '../api/axiosClient';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -17,18 +18,27 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const user = await login(username, password);
-      
-      // Điều hướng dựa trên vai trò
-      if (user.role === 'ADMIN') {
-        navigate('/admin/system-management');
-      } else if (user.role === 'TEACHER') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/dashboard');
+      const response = await axiosClient.post('/auth/login', {
+        username: username,
+        password: password
+      });
+
+      const data = response.data;
+      if (data && data.token) {
+        localStorage.setItem('token', data.token);
+        await login(data);
+        if (data.username === 'admin') {
+          navigate('/admin/system-management');
+        } else if (data.username === 'student') {
+          navigate('/student/dashboard');
+        } else {
+          alert('Vai trò không hợp lệ');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      console.error("Login Error:", err);
+      const message = err.response?.data?.message || 'Có lỗi xảy ra trong quá trình đăng nhập.';
+      setError(message);
     } finally {
       setLoading(false);
     }

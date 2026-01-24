@@ -1,4 +1,12 @@
 {
   "java.configuration.updateBuildConfiguration": "automatic",
+<<<<<<< HEAD
   "java.compile.nullAnalysis.mode": "automatic"
 }
+=======
+  "dataworkspace.excludedProjects": [
+    "Syllabus/Syllabus.sqlproj"
+  ],
+  "liveServer.settings.multiRootWorkspaceName": "SMD-Project"
+}
+>>>>>>> 700667ba5b20b78c88ee2da25dfd69d4a1724dc1

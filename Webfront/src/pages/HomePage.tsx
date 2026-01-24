@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import SubjectCard from '../components/SubjectCard';
-import { getSubjects } from '../services/api';
+import { getCourses } from '../services/api';
 import './HomePage.css';
 
-interface Subject {
+interface Course {
   id: string;
   name: string;
   code: string;
@@ -13,19 +13,19 @@ interface Subject {
 }
 
 const HomePage: React.FC = () => {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSubjects();
+    loadCourses();
   }, []);
 
-  const loadSubjects = async () => {
+  const loadCourses = async () => {
     try {
-      const data = await getSubjects();
-      setSubjects(data);
+      const data = await getCourses();
+      setCourses(data);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      console.error('Error loading courses:', error);
     } finally {
       setLoading(false);
     }
@@ -46,14 +46,14 @@ const HomePage: React.FC = () => {
             <p>Đang tải...</p>
           ) : (
             <div className="subjects-grid">
-              {subjects.map((subject) => (
+              {courses.map((course) => (
                 <SubjectCard
-                  key={subject.id}
-                  id={subject.id}
-                  name={subject.name}
-                  code={subject.code}
-                  credits={subject.credits}
-                  description={subject.description}
+                  key={course.id}
+                  id={course.id}
+                  name={course.name}
+                  code={course.code}
+                  credits={course.credits}
+                  description={course.description}
                 />
               ))}
             </div>
