@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import LinearGradient from 'react-native-linear-gradient'
 import {
     View,
@@ -13,10 +14,11 @@ import {
     KeyboardAvoidingView,
     Platform,
     Dimensions,
+    ActivityIndicator,
 } from "react-native"
-import { Mail, Lock, ArrowRight, Github, Chrome } from "lucide-react-native"
+import { Mail, Lock, ArrowRight } from "lucide-react-native"
+import { authApi } from "../../../../backend/api/authApi" // Adjust the import path as needed
 
-const { width } = Dimensions.get("window")
 
 type LoginScreenProps = {
     setIsLoggedIn: (value: boolean) => void
@@ -26,13 +28,60 @@ export default function LoginScreen({ setIsLoggedIn }: LoginScreenProps) {
     const [email, setEmail] = React.useState("")
     const [password, setPassword] = React.useState("")
     const [isFocused, setIsFocused] = React.useState<string | null>(null)
+    const [isLoading, setIsLoading] = React.useState(false)
 
-    const handleLogin = () => {
-        if (email.trim() && password.trim()) {
-            setIsLoggedIn(true)
-        } else {
-            Alert.alert("Thông báo", "Vui lòng nhập đầy đủ Email và Mật khẩu để tiếp tục.")
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            Alert.alert("Thông báo", "Vui lòng nhập đầy đủ Email và Mật khẩu.")
+            return
         }
+
+        setIsLoading(true)
+
+        try {
+            // Gọi API đăng nhập
+            const res = await authApi.login(email, password)
+
+            console.log("📦 API RESPONSE:", res)
+
+            // Lưu token vào AsyncStorage
+            if (res.token) {
+                await AsyncStorage.setItem("AUTH_TOKEN", res.token)
+                console.log("✅ Token saved:", res.token)
+
+                // Đăng nhập thành công
+                setIsLoggedIn(true)
+            } else {
+                throw new Error("Token không tồn tại trong response")
+            }
+
+        } catch (error: any) {
+            console.log("❌ Login error:", error)
+
+            // Hiển thị thông báo lỗi
+            let errorMessage = "Đã có lỗi xảy ra khi đăng nhập"
+
+            if (error.response) {
+                // Lỗi từ server (4xx, 5xx)
+                errorMessage = error.response.data?.message || "Sai tài khoản hoặc mật khẩu"
+            } else if (error.request) {
+                // Lỗi không nhận được response
+                errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
+            } else {
+                // Lỗi khác
+                errorMessage = error.message || errorMessage
+            }
+
+            Alert.alert("Đăng nhập thất bại", errorMessage)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleSubmit = () => {
+        // Bỏ qua nếu đang loading
+        if (isLoading) return
+        handleLogin()
     }
 
     return (
@@ -43,7 +92,10 @@ export default function LoginScreen({ setIsLoggedIn }: LoginScreenProps) {
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
             />
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.inner}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.inner}
+            >
                 <View style={styles.headerSection}>
                     <View style={styles.logoContainer}>
                         <View style={styles.logoSquare}>
@@ -68,6 +120,7 @@ export default function LoginScreen({ setIsLoggedIn }: LoginScreenProps) {
                             onBlur={() => setIsFocused(null)}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            editable={!isLoading}
                         />
                     </View>
 
@@ -82,16 +135,34 @@ export default function LoginScreen({ setIsLoggedIn }: LoginScreenProps) {
                             onFocus={() => setIsFocused("password")}
                             onBlur={() => setIsFocused(null)}
                             secureTextEntry
+                            editable={!isLoading}
+                            onSubmitEditing={handleSubmit} // Cho phép submit bằng phím Enter
                         />
                     </View>
 
-                    <TouchableOpacity style={styles.forgotPassword}>
-                        <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+                    <TouchableOpacity
+                        style={styles.forgotPassword}
+                        disabled={isLoading}
+                    >
+                        <Text style={[styles.forgotPasswordText, isLoading && styles.disabledText]}>
+                            Quên mật khẩu?
+                        </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-                        <Text style={styles.loginButtonText}>Đăng nhập</Text>
-                        <ArrowRight size={20} color="#fff" />
+                    <TouchableOpacity
+                        style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                        onPress={handleSubmit}
+                        activeOpacity={0.8}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                            <>
+                                <Text style={styles.loginButtonText}>Đăng nhập</Text>
+                                <ArrowRight size={20} color="#fff" />
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
@@ -206,55 +277,17 @@ const styles = StyleSheet.create({
         shadowRadius: 15,
         elevation: 8,
     },
+    loginButtonDisabled: {
+        backgroundColor: "#93c5fd",
+        opacity: 0.8,
+    },
     loginButtonText: {
         color: "#fff",
         fontSize: 18,
         fontWeight: "700",
         marginRight: 10,
     },
-    dividerContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginVertical: 32,
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: "#e2e8f0",
-    },
-    dividerText: {
-        marginHorizontal: 15,
-        color: "#94a3b8",
-        fontSize: 13,
-        fontWeight: "500",
-    },
-    socialContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 20,
-    },
-    socialButton: {
-        width: 60,
-        height: 60,
-        borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: "#e2e8f0",
-        backgroundColor: "#fff",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    footerSection: {
-        flexDirection: "row",
-        justifyContent: "center",
-        marginTop: 40,
-    },
-    footerText: {
-        color: "#64748b",
-        fontSize: 15,
-    },
-    signUpText: {
-        color: "#2563eb",
-        fontSize: 15,
-        fontWeight: "700",
+    disabledText: {
+        opacity: 0.5,
     },
 })
