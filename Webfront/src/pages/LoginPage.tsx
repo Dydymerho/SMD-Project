@@ -25,21 +25,17 @@ const LoginPage: React.FC = () => {
 
       const data = response.data;
       if (data && data.token) {
-        // 1. Lưu token trước
         localStorage.setItem('token', data.token);
-        
-        // 2. Sau đó mới gọi login context để map user
         await login(data);
-        
-        // 3. Điều hướng
         if (data.username === 'admin') {
           navigate('/admin/system-management');
+        } else if (data.username === 'student') {
+          navigate('/student/dashboard');
         } else {
-          navigate('/dashboard');
+          alert('Vai trò không hợp lệ');
         }
       }
     } catch (err: any) {
-      // In lỗi ra console để debug chính xác lỗi gì (CORS, 401, hay lỗi code)
       console.error("Login Error:", err);
       const message = err.response?.data?.message || 'Có lỗi xảy ra trong quá trình đăng nhập.';
       setError(message);

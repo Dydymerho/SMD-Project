@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import SearchInput from '../components/SearchInput';
 import SubjectCard from '../components/SubjectCard';
-import { searchSubjects } from '../services/api';
+import { searchCourses } from '../services/api';
 import './SearchPage.css';
 
-interface Subject {
+interface Course {
   id: string;
   name: string;
   code: string;
@@ -15,7 +15,7 @@ interface Subject {
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<Subject[]>([]);
+  const [results, setResults] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -25,7 +25,7 @@ const SearchPage: React.FC = () => {
     setLoading(true);
     setSearched(true);
     try {
-      const data = await searchSubjects(searchQuery);
+      const data = await searchCourses(searchQuery);
       setResults(data);
     } catch (error) {
       console.error('Error searching:', error);
@@ -58,14 +58,14 @@ const SearchPage: React.FC = () => {
               <>
                 <h2>Kết quả tìm kiếm ({results.length})</h2>
                 <div className="results-grid">
-                  {results.map((subject) => (
+                  {results.map((course) => (
                     <SubjectCard
-                      key={subject.id}
-                      id={subject.id}
-                      name={subject.name}
-                      code={subject.code}
-                      credits={subject.credits}
-                      description={subject.description}
+                      key={course.id}
+                      id={course.id}
+                      name={course.name}
+                      code={course.code}
+                      credits={course.credits}
+                      description={course.description}
                     />
                   ))}
                 </div>
