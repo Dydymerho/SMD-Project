@@ -31,8 +31,8 @@ export const getCourseById = async (id: string) => {
 };
 
 export const searchCourses = async (query: string) => {
-  const response = await axiosClient.get("/courses/search", {
-    params: { q: query },
+  const response = await axiosClient.get("/syllabuses/search", {
+    params: { keyword: query },
   });
   return response.data;
 };

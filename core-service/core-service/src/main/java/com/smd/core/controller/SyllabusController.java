@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/syllabuses")
+@RequestMapping("/api/syllabuses")
 @Tag(name = "Syllabus Management", description = "APIs for managing syllabuses")
 public class SyllabusController {
     @Autowired
@@ -55,7 +55,7 @@ public class SyllabusController {
 
     @GetMapping("/search")
     public ResponseEntity<List<Syllabus>> search(@RequestParam String keyword) {
-        // URL dạng: /api/v1/syllabuses/search?keyword=Java
+        // URL dạng: /api/syllabuses/search?keyword=Java
         return ResponseEntity.ok(syllabusService.search(keyword));
     }
     
