@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { getSubjectById } from '../services/api';
+import { getCourseById } from '../services/api';
 import './SubjectDetailPage.css';
 
-interface SubjectDetail {
+interface CourseDetail {
   id: string;
   name: string;
   code: string;
@@ -14,23 +14,23 @@ interface SubjectDetail {
   prerequisites?: string[];
 }
 
-const SubjectDetailPage: React.FC = () => {
+const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [subject, setSubject] = useState<SubjectDetail | null>(null);
+  const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
-      loadSubjectDetail(id);
+      loadCourseDetail(id);
     }
   }, [id]);
 
-  const loadSubjectDetail = async (subjectId: string) => {
+  const loadCourseDetail = async (courseId: string) => {
     try {
-      const data = await getSubjectById(subjectId);
-      setSubject(data);
+      const data = await getCourseById(courseId);
+      setCourse(data);
     } catch (error) {
-      console.error('Error loading subject:', error);
+      console.error('Error loading course:', error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ const SubjectDetailPage: React.FC = () => {
     );
   }
 
-  if (!subject) {
+  if (!course) {
     return (
       <div className="subject-detail-page">
         <Navbar />
@@ -64,36 +64,36 @@ const SubjectDetailPage: React.FC = () => {
       <div className="detail-container">
         <div className="detail-header">
           <div className="detail-title">
-            <h1>{subject.name}</h1>
-            <span className="detail-code">{subject.code}</span>
+            <h1>{course.name}</h1>
+            <span className="detail-code">{course.code}</span>
           </div>
           <div className="detail-credits">
-            <span>{subject.credits} tín chỉ</span>
+            <span>{course.credits} tín chỉ</span>
           </div>
         </div>
 
         <div className="detail-content">
           <section className="detail-section">
             <h2>Mô tả</h2>
-            <p>{subject.description}</p>
+            <p>{course.description}</p>
           </section>
 
-          {subject.prerequisites && subject.prerequisites.length > 0 && (
+          {course.prerequisites && course.prerequisites.length > 0 && (
             <section className="detail-section">
               <h2>Môn học tiên quyết</h2>
               <ul>
-                {subject.prerequisites.map((prereq, index) => (
+                {course.prerequisites.map((prereq, index) => (
                   <li key={index}>{prereq}</li>
                 ))}
               </ul>
             </section>
           )}
 
-          {subject.syllabus && (
+          {course.syllabus && (
             <section className="detail-section">
               <h2>Đề cương</h2>
               <div className="syllabus-content">
-                {subject.syllabus}
+                {course.syllabus}
               </div>
             </section>
           )}
@@ -103,4 +103,4 @@ const SubjectDetailPage: React.FC = () => {
   );
 };
 
-export default SubjectDetailPage;
+export default CourseDetailPage;

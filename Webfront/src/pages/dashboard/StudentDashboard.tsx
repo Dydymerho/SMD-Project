@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronLeft, Loader2, Home, Star } from 'lucide-react';
-import { searchSubjects } from '../../services/api';
+import { getRecommendedCourses, searchCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 
-interface Subject {
+interface Course {
   id: string;
   name: string;
   code: string;
@@ -20,16 +20,11 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [courses, setCourses] = useState<Subject[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-
-// dữ liệu giả
-  const recommendedCourses: Subject[] = [
-    { id: '1', name: 'Kỹ thuật lập trình', code: 'CS301', credits: 4, description: 'Quản lý tài nguyên hệ thống và logic giải thuật chuyên sâu.', department: 'CNTT' },
-    { id: '2', name: 'Cấu trúc dữ liệu', code: 'CS302', credits: 3, description: 'Các cấu trúc lưu trữ và tối ưu hóa tìm kiếm dữ liệu.', department: 'CNTT' },
-  ];
 
   const goToProfile = () => {
     navigate('../profile');
@@ -40,10 +35,10 @@ const StudentDashboard: React.FC = () => {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
-    setSearched(true);
     try {
-      const data = await searchSubjects(searchQuery);
+      const data = await searchCourses(searchQuery);
       setCourses(data);
+      setSearched(true);
     } catch (error) {
       console.error('Lỗi khi tìm kiếm môn học:', error);
       setCourses([]);
@@ -58,6 +53,18 @@ const StudentDashboard: React.FC = () => {
       setCourses([]);
     }
   }, [searchQuery, searched]);
+
+  useEffect(() => {
+    const fetchRecommended = async () => {
+      try {
+        const data = await getRecommendedCourses();
+        setRecommendedCourses(data);
+      } catch (error) {
+        console.error('Lỗi lấy môn học đề xuất:', error);
+      }
+    };
+    fetchRecommended();
+  }, []);
 
   return (
     <div className="smd-container">

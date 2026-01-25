@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './SystemManagementPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import axiosClient from '../../api/axiosClient';
 
 interface UserData {
   id: string;
@@ -24,6 +25,12 @@ interface AuditLog {
 }
 
 const SystemManagementPage: React.FC = () => {
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, totalSyllabi: 0, dataUsage: '0 GB' });
+  const [loading, setLoading] = useState(true);
+
+
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,35 +47,33 @@ const SystemManagementPage: React.FC = () => {
   const [isParamModalOpen, setIsParamModalOpen] = useState(false);
   const [paramModalType, setParamModalType] = useState<'department' | 'course'>('department');
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-  // Demo data
-  const stats = {
-    totalUsers: 123,
-    activeToday: 1234,
-    dataUsage: '12 GB',
-    totalSyllabi: 120,
-  };
 
-  const [users, setUsers] = useState<UserData[]>([
-    {
-      id: '001',
-      name: 'Nguyễn Văn A',
-      username: 'vana_nguyen',
-      email: 'vana@school.edu.vn',
-      roles: ['Lecturer', 'Head of Department'],
-      status: 'Hoạt động',
-      createdDate: '15/12/2025',
-    },
-    {
-      id: '002',
-      name: 'Trần Thị B',
-      username: 'thib_tran',
-      email: 'thib@school.edu.vn',
-      roles: ['Student'],
-      status: 'Hoạt động',
-      createdDate: '10/01/2026',
+  const fetchSystemData = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosClient.get('/users');
+      const mappedData = response.data.map((u: any) => ({
+            id: u.userId.toString(),
+            name: u.fullName,
+            username: u.username,
+            email: u.email,
+            roles: u.roles, 
+            status: u.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa',
+            createdDate: u.createdAt || 'N/A'
+        }));
+
+      setUsers(mappedData);
+    } catch (error) {
+        console.error("Không thể lấy danh sách người dùng:", error);
+    } finally {
+        setLoading(false);
     }
-  ]);
-  
+};
+
+useEffect(() => {
+    fetchSystemData();
+}, []);
+
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -83,12 +88,6 @@ const SystemManagementPage: React.FC = () => {
     { hour: '08:00', users: 450 }, { hour: '12:00', users: 980 },
     { hour: '16:00', users: 1200 }, { hour: '20:00', users: 600 },
     { hour: '23:59', users: 300 },
-  ];
-
-  const auditLogs: AuditLog[] = [
-    { id: 'L1', time: '2026-01-13 14:20', user: 'Admin_Hùng', action: 'Thay đổi quyền', detail: 'Nâng quyền HoD cho User Nguyễn Văn A' },
-    { id: 'L2', time: '2026-01-13 15:05', user: 'Hệ thống', action: 'Cập nhật Workflow', detail: 'Kích hoạt luồng phê duyệt 3 bước mới' },
-    { id: 'L3', time: '2026-01-13 16:30', user: 'Admin_Hùng', action: 'Khóa tài khoản', detail: 'Khóa tài khoản sinh viên 002 do vi phạm' },
   ];
 
   const SYSTEM_ROLES = [
@@ -224,7 +223,7 @@ const SystemManagementPage: React.FC = () => {
     setIsAssignRoleOpen(false);
   }
 };
-
+  if (loading) return <div className="loading-spinner">Đang tải dữ liệu hệ thống...</div>;
   return (
     <div className="system-management-page">
       {/* Sidebar */}
@@ -338,17 +337,30 @@ const SystemManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.id}</td>
-                      <td>{user.name}</td>
-                      <td>{user.roles}</td>
+                  {currentItems.map((u) => (
+                    <tr key={u.id}>
+                      <td>{u.id}</td>
                       <td>
-                        <span className={`status-badge ${user.status === 'Hoạt động' ? 'active' : 'inactive'}`}>
-                          {user.status}
+                        <div className="user-cell">
+                          <div className="user-avatar-small">{u.name?.charAt(0) || 'U'}</div>
+                          <div>
+                            <div className="font-bold">{u.name}</div>
+                            <div className="text-muted">{u.username}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="roles-list-tags">
+                          {/* Mapping dựa trên mảng roles của UserRoleResponse */}
+                          {u.roles.map(r => <span key={r} className="role-tag">{r}</span>)}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${u.status === 'Hoạt động' ? 'active' : 'inactive'}`}>
+                          {u.status}
                         </span>
                       </td>
-                      <td>{user.createdDate}</td>
+                      <td>{u.createdDate}</td>
                     </tr>
                   ))}
                 </tbody>
