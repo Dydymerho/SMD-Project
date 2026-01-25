@@ -1,5 +1,5 @@
 server:
-  port: 9361
+  port: 9090
 
 spring:
   application:
@@ -9,7 +9,7 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "http://localhost:3000"
+            allowedOrigins: "*"
             allowedMethods:
               - GET
               - POST
@@ -17,7 +17,7 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
-            allowCredentials: true
+            allowCredentials: false
       routes:
         - id: core-service-route
           uri: http://localhost:8080
@@ -29,4 +29,4 @@ eureka:
     
 logging:
   level:
-    org.springframework.cloud.gateway: TRACE
+    org.springframework.cloud.gateway: INFO
