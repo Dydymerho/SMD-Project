@@ -4,7 +4,7 @@ interface User {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  role: 'ADMIN' | 'LECTURER' | 'STUDENT';
   email: string;
 }
 
@@ -14,7 +14,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isTeacher: boolean;
+  isLecturer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: (apiData.id || apiData.userID || '').toString(), 
       username: apiData.username,
       name: apiData.fullName || apiData.fullFullName || apiData.username,
-      role: apiData.username === 'admin' ? 'ADMIN' : 'TEACHER',
+      role: apiData.username === 'admin' ? 'ADMIN' : 'LECTURER',
       email: apiData.email
     };
     
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'ADMIN',
-    isTeacher: user?.role === 'TEACHER',
+    isLecturer: user?.role === 'LECTURER',
   };
 
   if (isLoading) {

@@ -11,12 +11,15 @@ import ProfilePage from './pages/ProfilePage';
 import SystemManagementPage from './pages/admin/SystemManagementPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import CreateSyllabusPage from './pages/CreateSyllabusPage';
+import EditSyllabusPage from './pages/EditSyllabusPage';
+import CompareVersionsPage from './pages/CompareVersionsPage';
+import SyllabusReviewPage from './pages/SyllabusReviewPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <div className="App">
           <Routes>
             {/* Public Routes */}
@@ -33,22 +36,56 @@ function App() {
               }
             />
 
-            {/* Teacher Dashboard */}
+            {/* Dashboard - Routes to appropriate dashboard based on role */}
             <Route
-              path="/teacher/dashboard"
+              path="/dashboard"
               element={
-                <PrivateRoute allowedRoles={['TEACHER']}>
+                <PrivateRoute>
                   <DashboardPage />
                 </PrivateRoute>
               }
             />
 
-            {/* Teacher Routes */}
+            {/* Lecturer Dashboard */}
+            <Route
+              path="/lecturer/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <DashboardPage />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Lecturer Routes */}
             <Route
               path="/syllabus/create"
               element={
-                <PrivateRoute allowedRoles={['TEACHER']}>
+                <PrivateRoute allowedRoles={['LECTURER']}>
                   <CreateSyllabusPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/syllabus/edit/:id"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <EditSyllabusPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/syllabus/compare/:id"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <CompareVersionsPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/syllabus/review/:id"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <SyllabusReviewPage />
                 </PrivateRoute>
               }
             />
