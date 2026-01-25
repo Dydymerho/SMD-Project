@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronLeft, Loader2, Home, Star } from 'lucide-react';
-import { getRecommendedCourses, searchCourses } from '../../services/api';
+import { getCourses, searchCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
+import { useAuth } from '../../context/AuthContext';
 
 interface Course {
   id: string;
@@ -21,10 +22,11 @@ const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
-  const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const { user } = useAuth();
 
   const goToProfile = () => {
     navigate('../profile');
@@ -55,15 +57,16 @@ const StudentDashboard: React.FC = () => {
   }, [searchQuery, searched]);
 
   useEffect(() => {
-    const fetchRecommended = async () => {
-      try {
-        const data = await getRecommendedCourses();
-        setRecommendedCourses(data);
-      } catch (error) {
-        console.error('Lỗi lấy môn học đề xuất:', error);
-      }
-    };
-    fetchRecommended();
+  const fetchAllCourses = async () => {
+    setLoading(true);
+    try {
+      const data = await getCourses();
+      setAllCourses(data);
+    } catch (error) {
+      console.error('Lỗi lấy môn học đề xuất:', error);
+    }
+  };
+  fetchAllCourses();
   }, []);
 
   return (
@@ -112,8 +115,8 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="user-profile" onClick={goToProfile} style={{ cursor: 'pointer' }}>
               <div className="user-info">
-                <p className="user-name">Nguyễn Văn B</p>
-                <p className="user-role">Sinh viên</p>
+                <p className="user-name">{user?.name || 'Người dùng'}</p>
+                <p className="user-role">{user?.role || 'Sinh viên'}</p>
               </div>
               <div className="user-avatar">
                 <User size={20} />
@@ -126,7 +129,7 @@ const StudentDashboard: React.FC = () => {
           {activeTab === 'home' ? (
             <div className="home-content">
               <div className="content-title">
-                <h1>Chào mừng trở lại, Văn B! 👋</h1>
+                <h1>Chào mừng trở lại, {user?.name?.split(' ').pop() || 'Bạn'}! 👋</h1>
                 <p>Khám phá các giáo trình được đề xuất dành riêng cho bạn</p>
               </div>
 
@@ -136,7 +139,7 @@ const StudentDashboard: React.FC = () => {
                   <h2>Giáo trình được đề xuất</h2>
                 </div>
                 <div className="course-grid">
-                  {recommendedCourses.map((course) => (
+                  {allCourses.map((course) => (
                     <div key={course.id} className="course-card">
                       <div className="course-card-header">
                         <span>{course.code}</span>

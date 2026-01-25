@@ -33,11 +33,11 @@ export const searchCourses = async (query: string) => {
   });
   return response.data;
 };
-
+/*
 export const getRecommendedCourses = async () => {
   const response = await axiosClient.get('/courses/recommended');
   return response.data;
-};
+};  */
 
 // Syllabus API
 export const getSyllabusByCourseId = async (courseId: string) => {

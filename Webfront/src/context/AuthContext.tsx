@@ -38,11 +38,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
  const login = async (apiData: any): Promise<void> => {
   try {
+    let assignedRole: 'ADMIN' | 'TEACHER' | 'STUDENT' = 'STUDENT';
+
+    if (apiData.username === 'admin') {
+      assignedRole = 'ADMIN';
+    } else if (apiData.username.toLowerCase().startsWith('gv')) {
+      assignedRole = 'TEACHER';
+    }
+    
     const mappedUser: User = {
       id: (apiData.id || apiData.userID || '').toString(), 
       username: apiData.username,
-      name: apiData.fullName || apiData.fullFullName || apiData.username,
-      role: apiData.username === 'admin' ? 'ADMIN' : 'TEACHER',
+      name: apiData.fullName || apiData.username,
+      role: assignedRole,
       email: apiData.email
     };
     
