@@ -1,24 +1,27 @@
-import axiosClient from '../api/axiosClient';
+import axiosClient from "../api/axiosClient";
 
 // Authentication API
 export const login = async (username: string, password: string) => {
-  const response = await axiosClient.post('/auth/login', { username, password });
+  const response = await axiosClient.post("/auth/login", {
+    username,
+    password,
+  });
   return response.data;
 };
 
 export const logout = async () => {
-  const response = await axiosClient.post('/auth/logout');
+  const response = await axiosClient.post("/auth/logout");
   return response.data;
 };
 
 export const getCurrentUser = async () => {
-  const response = await axiosClient.get('/auth/me');
+  const response = await axiosClient.get("/auth/me");
   return response.data;
 };
 
 // Courses API
 export const getCourses = async () => {
-  const response = await axiosClient.get('/courses');
+  const response = await axiosClient.get("/courses");
   return response.data;
 };
 
@@ -28,14 +31,14 @@ export const getCourseById = async (id: string) => {
 };
 
 export const searchCourses = async (query: string) => {
-  const response = await axiosClient.get('/courses/search', {
+  const response = await axiosClient.get("/courses/search", {
     params: { q: query },
   });
   return response.data;
 };
 
 export const getRecommendedCourses = async () => {
-  const response = await axiosClient.get('/courses/recommended');
+  const response = await axiosClient.get("/courses");
   return response.data;
 };
 
@@ -46,17 +49,17 @@ export const getSyllabusByCourseId = async (courseId: string) => {
 };
 
 export const getMySyllabi = async () => {
-  const response = await axiosClient.get('/syllabus/my-syllabi');
+  const response = await axiosClient.get("/syllabus/my-syllabi");
   return response.data;
 };
 
 export const getPendingSyllabi = async () => {
-  const response = await axiosClient.get('/syllabus/pending');
+  const response = await axiosClient.get("/syllabus/pending");
   return response.data;
 };
 
 export const getApprovedSyllabi = async () => {
-  const response = await axiosClient.get('/syllabus/approved');
+  const response = await axiosClient.get("/syllabus/approved");
   return response.data;
 };
 
@@ -66,18 +69,20 @@ export const approveSyllabus = async (syllabusId: string) => {
 };
 
 export const rejectSyllabus = async (syllabusId: string, reason: string) => {
-  const response = await axiosClient.post(`/syllabus/${syllabusId}/reject`, { reason });
+  const response = await axiosClient.post(`/syllabus/${syllabusId}/reject`, {
+    reason,
+  });
   return response.data;
 };
 
 // Admin API
 export const getUsers = async () => {
-  const response = await axiosClient.get('/admin/users');
+  const response = await axiosClient.get("/admin/users");
   return response.data;
 };
 
 export const createUser = async (userData: any) => {
-  const response = await axiosClient.post('/admin/users', userData);
+  const response = await axiosClient.post("/admin/users", userData);
   return response.data;
 };
 
@@ -92,7 +97,7 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const getSystemStats = async () => {
-  const response = await axiosClient.get('/admin/stats');
+  const response = await axiosClient.get("/admin/stats");
   return response.data;
 };
 
