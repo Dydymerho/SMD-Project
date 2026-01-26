@@ -1,18 +1,32 @@
 import axiosClient from '../api/axiosClient';
+// import { Syllabus } from '../types';
+
+export interface Syllabus {
+  syllabusId: number;
+  course: {
+    courseId: number;
+    courseCode: string;
+    courseName: string;
+    credits: number;
+  };
+  program: { programName: string };
+  lecturer: { fullName: string };
+  versionNotes: string;
+}
 
 // Authentication API
 export const login = async (username: string, password: string) => {
-  const response = await axiosClient.post('/auth/login', { username, password });
+  const response = await axiosClient.post('/v1/auth/login', { username, password });
   return response.data;
 };
 
 export const logout = async () => {
-  const response = await axiosClient.post('/auth/logout');
+  const response = await axiosClient.post('/v1/auth/logout');
   return response.data;
 };
 
 export const getCurrentUser = async () => {
-  const response = await axiosClient.get('/auth/me');
+  const response = await axiosClient.get('/v1/auth/me');
   return response.data;
 };
 
@@ -23,21 +37,23 @@ export const getCourses = async () => {
 };
 
 export const getCourseById = async (id: string) => {
-  const response = await axiosClient.get(`/Courses/${id}`);
+  const response = await axiosClient.get(`/courses/${id}`);
   return response.data;
 };
 
-export const searchCourses = async (query: string) => {
-  const response = await axiosClient.get('/courses/search', {
-    params: { q: query },
-  });
-  return response.data;
-};
+// TODO: Backend không có /search endpoint cho courses, chỉ có search syllabuses
+// export const searchCourses = async (query: string) => {
+//   const response = await axiosClient.get('/v1/courses/search', {
+//     params: { q: query },
+//   });
+//   return response.data;
+// };
 
+/*
 export const getRecommendedCourses = async () => {
   const response = await axiosClient.get('/courses/recommended');
   return response.data;
-};
+};  */
 
 // Syllabus API
 export const getSyllabusByCourseId = async (courseId: string) => {
@@ -67,6 +83,13 @@ export const approveSyllabus = async (syllabusId: string) => {
 
 export const rejectSyllabus = async (syllabusId: string, reason: string) => {
   const response = await axiosClient.post(`/syllabus/${syllabusId}/reject`, { reason });
+  return response.data;
+};
+
+export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
+  const response = await axiosClient.get(`/v1/syllabuses/search`, {
+    params: { query }
+  });
   return response.data;
 };
 

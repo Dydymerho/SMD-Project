@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axiosClient from '../api/axiosClient';
+import { login as loginApi } from '../services/api';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -18,12 +18,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axiosClient.post('/auth/login', {
-        username: username,
-        password: password
-      });
-
-      const data = response.data;
+      const data = await loginApi(username, password);
       if (data && data.token) {
         localStorage.setItem('token', data.token);
         await login(data);

@@ -2,18 +2,33 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronLeft, Loader2, Home, Star } from 'lucide-react';
-import { getRecommendedCourses, searchCourses } from '../../services/api';
+import { getCourses, searchSyllabuses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 
 interface Course {
-  id: string;
-  name: string;
-  code: string;
+  courseId: number;
+  courseName: string;
+  courseCode: string;
   credits: number;
-  description: string;
-  department?: string;
-  dean?: string;
-  semester?: string;
+  department?: {
+    departmentId: number;
+    deptName: string; 
+  };
+}
+
+interface Syllabus {
+  syllabusId: number;
+  course: Course;
+  program: {
+    programName: string;
+  };
+  lecturer: {
+    fullName: string;
+  };
+  academicYear: string;
+  versionNo: number;
+  currentStatus: string;
+  versionNotes: string;
 }
 
 const StudentDashboard: React.FC = () => {
@@ -21,7 +36,8 @@ const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
-  const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [syllabi, setSyllabi] = useState<Syllabus[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -32,21 +48,19 @@ const StudentDashboard: React.FC = () => {
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!searchQuery.trim()) return;
-
     setLoading(true);
     try {
-      const data = await searchCourses(searchQuery);
-      setCourses(data);
+      const data = await searchSyllabuses(searchQuery) as Syllabus[];
+      setSyllabi(data);
       setSearched(true);
+      setActiveTab('search');
     } catch (error) {
-      console.error('Lỗi khi tìm kiếm môn học:', error);
-      setCourses([]);
+      console.error('Lỗi tìm kiếm giáo trình:', error);
+      setSyllabi([]);
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (searchQuery === '' && searched) {
       setSearched(false);
@@ -55,15 +69,27 @@ const StudentDashboard: React.FC = () => {
   }, [searchQuery, searched]);
 
   useEffect(() => {
-    const fetchRecommended = async () => {
+    const fetchAllCourses = async () => {
       try {
-        const data = await getRecommendedCourses();
-        setRecommendedCourses(data);
+        const data = await getCourses();
+        console.log('API Response:', data);
+        const mappedData = data.map((item: any) => ({
+          courseId: item.courseId,
+          courseName: item.courseName,
+          courseCode: item.courseCode,
+          credits: item.credits,
+          department: item.department ? {
+            departmentId: item.department.departmentId,
+            deptName: item.department.deptName
+          } : undefined
+        }));
+        console.log('Mapped Data:', mappedData);
+        setAllCourses(mappedData);
       } catch (error) {
         console.error('Lỗi lấy môn học đề xuất:', error);
       }
     };
-    fetchRecommended();
+    fetchAllCourses();
   }, []);
 
   return (
@@ -133,20 +159,40 @@ const StudentDashboard: React.FC = () => {
               <div className="recommendation-section">
                 <div className="section-header">
                   <Star size={20} color="#f1c40f" fill="#f1c40f" />
-                  <h2>Giáo trình được đề xuất</h2>
+                  <h2>Khóa học được đề xuất</h2>
                 </div>
                 <div className="course-grid">
-                  {recommendedCourses.map((course) => (
-                    <div key={course.id} className="course-card">
+                  {allCourses.map((course) => (
+                    <div key={course.courseId} className="course-card">
                       <div className="course-card-header">
-                        <span>{course.code}</span>
-                        <h3>{course.name}</h3>
+                        <span>{course.courseCode}</span>
+                        <h3>{course.courseName}</h3>
                       </div>
                       <div className="course-card-body">
                         <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
-                        <p className="line-clamp">{course.description}</p>
+                        <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
                       </div>
-                      <button className="view-detail-btn">Xem ngay</button>
+                      <button className="view-detail-btn" onClick={() => navigate(`/subject/${course.courseId}`)}>Xem ngay</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="course-grid">
+                  {syllabi.map((s) => (
+                    <div key={s.syllabusId} className="course-card">
+                      <div className="course-card-header">
+                        <span>{s.course?.courseCode}</span>
+                        <h3>{s.course?.courseName}</h3>
+                      </div>
+                      <div className="course-card-body">
+                        <p><strong>Giảng viên:</strong> {s.lecturer?.fullName}</p>
+                        <p><strong>Phiên bản:</strong> {s.versionNo}</p>
+                      </div>
+                      <button 
+                        className="view-detail-btn"
+                        onClick={() => navigate(`/subject/${s.course?.courseId}?syllabusId=${s.syllabusId}`)}
+                      >
+                        Xem giáo trình
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -196,18 +242,14 @@ const StudentDashboard: React.FC = () => {
 
               <div className="course-grid">
                 {courses.map((course) => (
-                  <div key={course.id} className="course-card">
+                  <div key={course.courseId} className="course-card">
                     <div className="course-card-header">
-                      <span>{course.code}</span>
-                      <h3>{course.name}</h3>
+                      <span>{course.courseCode}</span>
+                      <h3>{course.courseName}</h3>
                     </div>
                     <div className="course-card-body">
-                      <p><strong>Viện:</strong> {course.department || 'Đang cập nhật'}</p>
+                      <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
                       <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
-                      <div className="course-intro">
-                        <h5>Giới thiệu học phần</h5>
-                        <p className="line-clamp">{course.description}</p>
-                      </div>
                     </div>
                     <button className="view-detail-btn">Xem chi tiết</button>
                   </div>
