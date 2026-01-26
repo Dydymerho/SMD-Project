@@ -1,62 +1,45 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { getCourseById } from '../services/api';
+import { getCourseById, getSyllabusByCourseId } from '../services/api';
 import './SubjectDetailPage.css';
 
 interface CourseDetail {
-  id: string;
-  name: string;
-  code: string;
+  courseId: number;
+  courseName: string;
+  courseCode: string;
   credits: number;
   description: string;
-  syllabus?: string;
-  prerequisites?: string[];
 }
 
 const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [searchParams] = useSearchParams();
+  const syllabusId = searchParams.get('syllabusId');
+  const [course, setCourse] = useState<any>(null);
+  const [syllabus, setSyllabus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      loadCourseDetail(id);
-    }
-  }, [id]);
+    const loadData = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const courseData = await getCourseById(id);
+        setCourse(courseData);
+        const syllabusData = await getSyllabusByCourseId(id);
+        setSyllabus(syllabusData);
+      } catch (error) {
+        console.error('Lỗi tải dữ liệu:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [id, syllabusId]);
 
-  const loadCourseDetail = async (courseId: string) => {
-    try {
-      const data = await getCourseById(courseId);
-      setCourse(data);
-    } catch (error) {
-      console.error('Error loading course:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="subject-detail-page">
-        <Navbar />
-        <div className="detail-container">
-          <p>Đang tải...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <div className="subject-detail-page">
-        <Navbar />
-        <div className="detail-container">
-          <p>Không tìm thấy môn học</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="loading">Đang tải...</div>;
+  if (!course) return <div className="error">Không tìm thấy môn học</div>;
 
   return (
     <div className="subject-detail-page">
@@ -64,8 +47,8 @@ const CourseDetailPage: React.FC = () => {
       <div className="detail-container">
         <div className="detail-header">
           <div className="detail-title">
-            <h1>{course.name}</h1>
-            <span className="detail-code">{course.code}</span>
+            <h1>{course.courseName}</h1>
+            <span className="detail-code">{course.courseCode}</span>
           </div>
           <div className="detail-credits">
             <span>{course.credits} tín chỉ</span>
@@ -75,9 +58,9 @@ const CourseDetailPage: React.FC = () => {
         <div className="detail-content">
           <section className="detail-section">
             <h2>Mô tả</h2>
-            <p>{course.description}</p>
+            <p>{course.description || "Chưa có mô tả cho môn học này."}</p>
           </section>
-
+          {/*
           {course.prerequisites && course.prerequisites.length > 0 && (
             <section className="detail-section">
               <h2>Môn học tiên quyết</h2>
@@ -87,13 +70,19 @@ const CourseDetailPage: React.FC = () => {
                 ))}
               </ul>
             </section>
-          )}
+          )}  */}
 
-          {course.syllabus && (
+          {syllabus && (
             <section className="detail-section">
-              <h2>Đề cương</h2>
-              <div className="syllabus-content">
-                {course.syllabus}
+              <h2>Chi tiết giáo trình</h2>
+              <div className="syllabus-card">
+                <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
+                <p><strong>Năm học:</strong> {syllabus.academicYear}</p>
+                <p><strong>Phiên bản:</strong> {syllabus.versionNo}</p>
+                <div className="syllabus-notes">
+                  <h3>Nội dung chính:</h3>
+                  <p>{syllabus.versionNotes}</p>
+                </div>
               </div>
             </section>
           )}

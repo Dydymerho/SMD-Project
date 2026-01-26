@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getUsers } from '../../services/api';
 import './SystemManagementPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
-import axiosClient from '../../api/axiosClient';
 
 interface UserData {
   id: string;
@@ -51,20 +51,23 @@ const SystemManagementPage: React.FC = () => {
   const fetchSystemData = async () => {
     try {
       setLoading(true);
-      const response = await axiosClient.get('/users');
-      const mappedData = response.data.map((u: any) => ({
-            id: u.userId.toString(),
-            name: u.fullName,
-            username: u.username,
-            email: u.email,
-            roles: u.roles, 
-            status: u.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa',
-            createdDate: u.createdAt || 'N/A'
+      const data = await getUsers();
+      console.log('Users Response:', data);
+      const mappedData = data.map((u: any) => ({
+            id: u.userId?.toString() || u.id?.toString() || '',
+            name: u.fullName || u.name || '',
+            username: u.username || '',
+            email: u.email || '',
+            roles: u.roles || [], 
+            status: (u.status === 'ACTIVE' || u.status === 'Hoạt động') ? 'Hoạt động' : 'Đã khóa',
+            createdDate: u.createdAt || u.createdDate || 'N/A'
         }));
 
+      console.log('Mapped Users:', mappedData);
       setUsers(mappedData);
     } catch (error) {
         console.error("Không thể lấy danh sách người dùng:", error);
+        setUsers([]);
     } finally {
         setLoading(false);
     }
