@@ -8,8 +8,8 @@ spring:
     gateway:
       globalcors:
         cors-configurations:
-          '[/**]':
-            allowedOrigins: "*"
+          "[/**]":
+            allowedOrigins: "http://localhost:3000"
             allowedMethods:
               - GET
               - POST
@@ -22,11 +22,11 @@ spring:
         - id: core-service-route
           uri: http://localhost:8080
           predicates:
-            - Path=/api/v1/**
+            - Path=/api/**
 eureka:
   client:
     enabled: false
-    
+
 logging:
   level:
-    org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.gateway: TRACE

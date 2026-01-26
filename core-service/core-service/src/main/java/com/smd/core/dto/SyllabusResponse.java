@@ -17,6 +17,8 @@ public class SyllabusResponse {
     private String courseCode;
     private Long lecturerId;
     private String lecturerName;
+    private String lecturerEmail;
+    private String deptName;
     private String academicYear;
     private Integer versionNo;
     private String currentStatus;
@@ -31,6 +33,8 @@ public class SyllabusResponse {
     private LocalDateTime pdfUploadedAt;
     private Long programId;
     private String programName;
+    private String aiSumary;
+    private Integer credit;
     
     public static SyllabusResponse fromEntity(Syllabus syllabus) {
         return SyllabusResponse.builder()
@@ -38,8 +42,11 @@ public class SyllabusResponse {
                 .courseId(syllabus.getCourse().getCourseId())
                 .courseName(syllabus.getCourse().getCourseName())
                 .courseCode(syllabus.getCourse().getCourseCode())
+                .credit(syllabus.getCourse().getCredits())
                 .lecturerId(syllabus.getLecturer().getUserId())
                 .lecturerName(syllabus.getLecturer().getFullName())
+                .lecturerEmail(syllabus.getLecturer().getEmail())
+                .deptName(syllabus.getLecturer().getDepartment().getDeptName())
                 .academicYear(syllabus.getAcademicYear())
                 .versionNo(syllabus.getVersionNo())
                 .currentStatus(syllabus.getCurrentStatus().name())
@@ -54,6 +61,7 @@ public class SyllabusResponse {
                 .pdfUploadedAt(syllabus.getPdfUploadedAt())
                 .programId(syllabus.getProgram() != null ? syllabus.getProgram().getProgramId() : null)
                 .programName(syllabus.getProgram() != null ? syllabus.getProgram().getProgramName() : null)
+                .aiSumary(syllabus.getAiTasks().get(syllabus.getAiTasks().size() - 1).getResultSummary())
                 .build();
     }
 }

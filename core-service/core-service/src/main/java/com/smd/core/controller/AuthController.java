@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
@@ -18,7 +18,7 @@ public class AuthController {
 
     /**
      * Login endpoint
-     * POST /api/v1/auth/login
+     * POST /api/auth/login
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -28,7 +28,7 @@ public class AuthController {
 
     /**
      * Register endpoint
-     * POST /api/v1/auth/register
+     * POST /api/auth/register
      */
     @PostMapping("/register")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -38,7 +38,7 @@ public class AuthController {
 
     /**
      * Test authenticated endpoint
-     * GET /api/v1/auth/me
+     * GET /api/auth/me
      */
     @GetMapping("/me")
     public ResponseEntity<String> getCurrentUser() {

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/syllabuses/{syllabusId}/comments")
+@RequestMapping("/api/syllabuses/{syllabusId}/comments")
 @RequiredArgsConstructor
 @Tag(name = "Review Comments", description = "APIs for managing syllabus review comments")
 @SecurityRequirement(name = "bearerAuth")
