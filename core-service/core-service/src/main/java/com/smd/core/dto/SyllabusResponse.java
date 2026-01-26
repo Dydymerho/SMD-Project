@@ -46,7 +46,8 @@ public class SyllabusResponse {
                 .lecturerId(syllabus.getLecturer().getUserId())
                 .lecturerName(syllabus.getLecturer().getFullName())
                 .lecturerEmail(syllabus.getLecturer().getEmail())
-                .deptName(syllabus.getLecturer().getDepartment().getDeptName())
+                .deptName((syllabus.getCourse() != null && syllabus.getCourse().getDepartment() != null)?
+        syllabus.getCourse().getDepartment().getDeptName() : null)
                 .academicYear(syllabus.getAcademicYear())
                 .versionNo(syllabus.getVersionNo())
                 .currentStatus(syllabus.getCurrentStatus().name())
@@ -61,7 +62,8 @@ public class SyllabusResponse {
                 .pdfUploadedAt(syllabus.getPdfUploadedAt())
                 .programId(syllabus.getProgram() != null ? syllabus.getProgram().getProgramId() : null)
                 .programName(syllabus.getProgram() != null ? syllabus.getProgram().getProgramName() : null)
-                .aiSumary(syllabus.getAiTasks().get(syllabus.getAiTasks().size() - 1).getResultSummary())
+                .aiSumary((syllabus.getAiTasks() != null && !syllabus.getAiTasks().isEmpty())?
+            syllabus.getAiTasks().get(syllabus.getAiTasks().size() - 1).getResultSummary(): null)
                 .build();
     }
 }
