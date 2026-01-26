@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Pressable } from 'react-native';
+import { Image, View, Text, ScrollView, TouchableOpacity, StatusBar, FlatList, RefreshControl, ActivityIndicator } from "react-native"
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import styles from './styles';
-import { useState } from 'react';
-import { SYLLABUS_CONTENT } from '../../mock/Syllabus';
-import { MOCK_PROFILE } from '../../mock/profile';
-
+import { useState, useEffect } from 'react';
+import { Profile } from '../../../../backend/api/types/Profile';
+import { ProfileApi } from '../../../../backend/api/ProfileApi';
 const Section = ({
     title,
     children
@@ -76,11 +75,60 @@ const BottomNavItem = ({
 ===================== */
 
 export default function ProfileScreen() {
-    const profile = MOCK_PROFILE;
-    const syllabus = SYLLABUS_CONTENT;
     const [showCourseList, setShowCourseList] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const COURSE_LIMIT = 4;
-    const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
+    // const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+    const fetchProfile = async () => {
+        try {
+            setError(null);
+            console.log("Đang gọi API...");
+            const res = await ProfileApi.getMyProfile();
+            setProfile(res.data);
+        } catch (error: any) {
+            console.error("Error fetching syllabus:", error);
+            console.error("Error message:", error.message);
+            console.error("Error response:", error.response?.data);
+            console.error("Error status:", error.response?.status);
+            console.error("Error config:", error.config?.url);
+
+            // Phân loại error chi tiết hơn
+            if (error.message === "Network Error") {
+                setError("Không có kết nối mạng. Vui lòng kiểm tra internet.");
+            } else if (error.response?.status === 404) {
+                setError("Không tìm thấy API endpoint. Vui lòng liên hệ quản trị viên.");
+            } else if (error.response?.status === 500) {
+                setError("Server đang gặp sự cố. Vui lòng thử lại sau.");
+            } else if (error.response?.status === 401) {
+                setError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+            } else {
+                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+            }
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchProfile();
+    };
+    if (loading) {
+        return <ActivityIndicator size="large" />;
+    }
+
+    if (!profile) {
+        return <Text>Không có dữ liệu hồ sơ</Text>;
+    }
+
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -93,7 +141,7 @@ export default function ProfileScreen() {
                         source={{ uri: profile.avatarUrl }}
                         style={styles.avatar}
                     />
-                    <Text style={styles.userName}>{profile.name}</Text>
+                    <Text style={styles.userName}>{profile.fullName}</Text>
                     <Text style={styles.userRole}>Sinh viên khóa 2024</Text>
                 </View>
 
@@ -117,7 +165,7 @@ export default function ProfileScreen() {
                 </Section>
 
                 {/* COURSES */}
-                <Section title="Các khóa học">
+                {/* <Section title="Các khóa học">
                     {displayShowAllCourses.map((subject, index) => (
                         <Bullet
                             key={index}
@@ -136,7 +184,7 @@ export default function ProfileScreen() {
                             </Text>
                         </TouchableOpacity>
                     )}
-                </Section>
+                </Section> */}
             </ScrollView>
         </View>
     );

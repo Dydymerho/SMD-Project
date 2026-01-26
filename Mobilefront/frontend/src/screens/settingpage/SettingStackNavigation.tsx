@@ -5,9 +5,9 @@ import AboutScreen from "./components/About/AboutScreen"
 
 // Định nghĩa param list cho toàn bộ Stack
 export type SettingStackParamList = {
-    SettingMain: undefined     // 👈 Tên screen chính
-    Terms: undefined          // 👈 Tên screen phải khớp
-    About: undefined          // 👈 Tên screen phải khớp
+    SettingMain: undefined
+    Terms: undefined
+    About: undefined
 }
 export type SettingStackProps = {
     setIsLoggedIn: (value: boolean) => void

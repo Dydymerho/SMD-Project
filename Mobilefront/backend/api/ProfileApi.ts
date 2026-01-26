@@ -1,8 +1,9 @@
 import axiosClient from "./axiosClient";
-import { Courses } from "./types/Courses";
+import { Profile } from "./types/Profile";
+import { AxiosResponse } from "axios";
 
-export const CourseApi = {
-    getMySyllabus(): Promise<Courses[]> {
-        return axiosClient.get("/auth/login");
+export const ProfileApi = {
+    getMyProfile(): Promise<AxiosResponse<Profile>> {
+        return axiosClient.get("/auth/me");
     },
 };

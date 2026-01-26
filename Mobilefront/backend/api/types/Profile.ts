@@ -1,5 +1,10 @@
 export type Profile = {
-    fullName: string;
-    email: string;
+    id?: number,
+    username: string,
+    avatarUrl?: string,
+    fullName: string,
+    email: string,
     studentId: string,
+    country: string,
+    timezone: string,
 }

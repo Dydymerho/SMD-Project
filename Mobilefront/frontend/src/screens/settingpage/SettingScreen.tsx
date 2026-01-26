@@ -4,8 +4,6 @@ import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Bell,
-  Globe,
-  Palette,
   Info,
   FileText,
   ChevronRight,
@@ -74,8 +72,6 @@ export default function SettingScreen() {
         onPress: async () => {
           try {
             await logout();
-            // RootNavigator sẽ tự động chuyển về LoginScreen
-            // khi isLoggedIn trong AuthContext thay đổi thành false
           } catch (error) {
             console.error('Logout error:', error);
             Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
@@ -143,7 +139,7 @@ export default function SettingScreen() {
           {/* APP INFO */}
           <View style={styles.appInfo}>
             <Text style={styles.appVersion}>Phiên bản 1.0.0</Text>
-            <Text style={styles.appCopyright}>© 2024 University App</Text>
+            <Text style={styles.appCopyright}>© 2025 University App</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
