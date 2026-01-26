@@ -1,5 +1,6 @@
 package com.smd.core.config;
 
+//
 import com.smd.core.entity.*;
 import com.smd.core.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -30,23 +31,28 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final CourseRepository courseRepository;
     private final SyllabusRepository syllabusRepository;
 
+    private final AiTaskRepository aiTaskRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        log.info("🚀 STARTING DATABASE SEEDING...");
+        log.info("STARTING DATABASE SEEDING...");
 
         // --- PHẦN 1: USER & ROLE ---
         initRoles();
+        initDepartmentsAndPrograms();
         initUsers();
 
         // --- PHẦN 2: ACADEMIC DATA (Thay thế init-course.sql) ---
-        initDepartmentsAndPrograms();
+        
         initCourses();
 
         // --- PHẦN 3: SYLLABUS DATA (Thay thế init-syllabus.sql) ---
         initSyllabi();
 
-        log.info("✅ DATABASE SEEDING COMPLETED.");
+        initAiTasks();
+
+        log.info("DATABASE SEEDING COMPLETED.");
     }
 
     // ==========================================
@@ -62,16 +68,29 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
+
     private void initUsers() {
         String commonPass = "Password123";
-        createUser("admin", "admin@smd.edu.vn", "System Administrator", commonPass, "ADMIN");
-        createUser("lecturer", "lecturer@smd.edu.vn", "Nguyen Van A", commonPass, "LECTURER");
-        createUser("lecturer2", "lecturer2@smd.edu.vn", "Tran Thi B", commonPass, "LECTURER");
-        createUser("head_dept", "head.dept@smd.edu.vn", "Head of IT Dept", commonPass, "HEAD_OF_DEPARTMENT");
-        createUser("student", "student@smd.edu.vn", "Le Van C", commonPass, "STUDENT");
+
+        // 1. Lấy Department đã tạo ở bước trước (ví dụ lấy Khoa CNTT)
+        Department itDept = departmentRepository.findAll().stream()
+                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin"))
+                .findFirst()
+                .orElse(null);
+
+        // 2. Tạo Admin (Không cần khoa -> truyền null)
+        createUser("admin", "admin@smd.edu.vn", "System Administrator", commonPass, "ADMIN", null);
+
+        // 3. Tạo Giảng viên & Sinh viên (Gán vào Khoa CNTT)
+        // Nếu itDept bị null thì user vẫn tạo được nhưng department sẽ null
+        createUser("lecturer", "lecturer@smd.edu.vn", "Nguyen Van A", commonPass, "LECTURER", itDept);
+        createUser("lecturer2", "lecturer2@smd.edu.vn", "Tran Thi B", commonPass, "LECTURER", itDept);
+        createUser("head_dept", "head.dept@smd.edu.vn", "Head of IT Dept", commonPass, "HEAD_OF_DEPARTMENT", itDept);
+        createUser("student", "student@smd.edu.vn", "Le Van C", commonPass, "STUDENT", itDept);
     }
 
-    private void createUser(String username, String email, String fullName, String rawPass, String roleName) {
+    // Sửa method này để nhận thêm tham số Department dept
+    private void createUser(String username, String email, String fullName, String rawPass, String roleName, Department dept) {
         if (userRepository.findByUsername(username).isPresent()) return;
 
         User user = User.builder()
@@ -80,14 +99,18 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .fullName(fullName)
                 .passwordHash(passwordEncoder.encode(rawPass))
                 .status(User.UserStatus.ACTIVE)
+                .department(dept) // <--- QUAN TRỌNG: Gán Department vào đây
                 .createdAt(LocalDateTime.now())
                 .build();
         User savedUser = userRepository.save(user);
 
         Role role = roleRepository.findByRoleName(roleName).orElseThrow();
         userRoleRepository.save(UserRole.builder().user(savedUser).role(role).build());
-        log.info("   + Created User: {}", username);
+        
+        log.info("   + Created User: {} - Dept: {}", username, (dept != null ? dept.getDeptName() : "None"));
     }
+
+    // ...
 
     // ==========================================
     // PHẦN 2: DEPARTMENT & PROGRAM & COURSE
@@ -135,31 +158,51 @@ public class DatabaseSeeder implements CommandLineRunner {
                 });
     }
 
-    private void initCourses() {
-        // Tìm Khoa CNTT để gán môn học
-        Department itDept = departmentRepository.findAll().stream()
-                .filter(d -> d.getDeptName().contains("Cong Nghe")).findFirst().orElse(null);
+    // Trong file src/main/java/com/smd/core/config/DatabaseSeeder.java
 
+    private void initCourses() {
+        // 1. Lấy Khoa CNTT chính xác theo tên đã tạo
+        Department itDept = departmentRepository.findAll().stream()
+                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin"))
+                .findFirst()
+                .orElse(null);
+        
+        // 2. Lấy Khoa Kinh Tế (nếu muốn tạo thêm môn cho khoa này)
+        Department ecoDept = departmentRepository.findAll().stream()
+                .filter(d -> d.getDeptName().equals("Khoa Quan Tri Kinh Doanh"))
+                .findFirst()
+                .orElse(null);
+
+        // 3. Tạo các môn học cho Khoa CNTT
         if (itDept != null) {
             createCourse("PRF192", "Programming Fundamentals", 3, itDept);
             createCourse("PRO192", "Object-Oriented Programming", 3, itDept);
-            createCourse("JPD113", "Java Programming", 3, itDept);
+            createCourse("JPD113", "Java Programming", 3, itDept); // Môn này dùng để test Syllabus
             createCourse("SWE201", "Introduction to Software Engineering", 3, itDept);
+            createCourse("DBI202", "Database Systems", 3, itDept);
+        } else {
+            log.warn("⚠ Không tìm thấy 'Khoa Cong Nghe Thong Tin'. Không thể tạo môn học CNTT.");
+        }
+
+        // 4. Tạo môn học cho Khoa Kinh Tế (Ví dụ thêm)
+        if (ecoDept != null) {
+            createCourse("ECO111", "Microeconomics", 3, ecoDept);
         }
     }
 
     private void createCourse(String code, String name, int credits, Department department) {
+        // Kiểm tra môn học đã tồn tại chưa để tránh trùng lặp
         if (courseRepository.findByCourseCode(code).isPresent()) return;
 
         Course course = Course.builder()
                 .courseCode(code)
                 .courseName(name)
                 .credits(credits)
-                .department(department)
+                .department(department) // GẮN KHOA VÀO ĐÂY
                 .build();
         
         courseRepository.save(course);
-        log.info("   + Created Course: {} - {}", code, name);
+        log.info("   + Created Course: {} - {} (Dept: {})", code, name, department.getDeptName());
     }
 
     // ==========================================
@@ -211,5 +254,57 @@ public class DatabaseSeeder implements CommandLineRunner {
         syllabusRepository.save(syllabus);
         log.info("   + Created Syllabus for course: {} - Year: {} - Version: {}", 
                 course.getCourseCode(), academicYear, versionNo);
+    }
+
+    // 3. THÊM ĐOẠN CODE NÀY XUỐNG CUỐI CÙNG CLASS
+    private void initAiTasks() {
+        // Lấy Syllabus của môn Java (JPD113) để gán dữ liệu mẫu
+        courseRepository.findByCourseCode("JPD113").ifPresent(course -> {
+            syllabusRepository.findLatestVersionByCourseAndYear(course.getCourseId(), "2024-2025")
+                .ifPresent(syllabus -> {
+                    
+                    // Dữ liệu mẫu cho AI Summary (Kết quả generate CLO)
+                    String aiSummaryContent = "Dựa trên mô tả môn học, AI đề xuất 5 chuẩn đầu ra (CLOs):\n" +
+                            "1. [CLO-1] Hiểu rõ các nguyên lý cơ bản của lập trình hướng đối tượng (OOP) trong Java.\n" +
+                            "2. [CLO-2] Vận dụng được các cấu trúc dữ liệu và giải thuật cơ bản.\n" +
+                            "3. [CLO-3] Xây dựng được ứng dụng console hoàn chỉnh quản lý sinh viên.\n" +
+                            "4. [CLO-4] Phân tích và xử lý ngoại lệ (Exception Handling) hiệu quả.\n" +
+                            "5. [CLO-5] Áp dụng các Best Practices về Clean Code trong Java.";
+
+                    createAITaskIfNotFound(
+                        syllabus, 
+                        AITask.TaskType.GENERATE_CLO, 
+                        AITask.TaskStatus.COMPLETED, 
+                        aiSummaryContent
+                    );
+
+                    // // Dữ liệu mẫu cho Task đang chạy (để test trạng thái loading)
+                    // createAITaskIfNotFound(
+                    //     syllabus,
+                    //     AITask.TaskType.SUGGEST_ASSESSMENT,
+                    //     AITask.TaskStatus.IN_PROGRESS,
+                    //     null
+                    // );
+                });
+        });
+    }
+
+    private void createAITaskIfNotFound(Syllabus syllabus, AITask.TaskType type, AITask.TaskStatus status, String resultSummary) {
+        // Kiểm tra xem đã có task loại này cho syllabus chưa
+        List<AITask> existingTasks = aiTaskRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId());
+        boolean exists = existingTasks.stream().anyMatch(t -> t.getTaskType() == type);
+
+        if (!exists) {
+            AITask task = AITask.builder()
+                    .syllabus(syllabus)
+                    .taskType(type)
+                    .status(status)
+                    .resultSummary(resultSummary) // Đây chính là dữ liệu sẽ hiện ở field aiResultSummary
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            
+            aiTaskRepository.save(task);
+            log.info("   + Created AI Task: {} for Syllabus {}", type, syllabus.getCourse().getCourseCode());
+        }
     }
 }

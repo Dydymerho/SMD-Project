@@ -69,7 +69,7 @@ public class NotificationService {
                     syllabus.getCourse().getCourseCode(),
                     syllabus.getVersionNo(),
                     submittedBy))
-                .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                 .triggeredBy(submittedBy)
                 .isRead(false)
                 .build();
@@ -107,7 +107,7 @@ public class NotificationService {
                     syllabus.getCourse().getCourseName(),
                     syllabus.getCourse().getCourseCode(),
                     syllabus.getVersionNo()))
-                .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                 .triggeredBy(approvedBy)
                 .isRead(false)
                 .build();
@@ -156,7 +156,7 @@ public class NotificationService {
                     syllabus.getCourse().getCourseName(),
                     syllabus.getCourse().getCourseCode(),
                     syllabus.getVersionNo()))
-                .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                 .triggeredBy(approvedBy)
                 .isRead(false)
                 .build();
@@ -250,7 +250,7 @@ public class NotificationService {
             .type(type)
             .title(title)
             .message(message)
-            .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+            .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
             .triggeredBy(triggeredBy)
             .isRead(false)
             .build();
@@ -379,7 +379,7 @@ public class NotificationService {
                         syllabus.getCourse().getCourseName(),
                         syllabus.getCourse().getCourseCode(),
                         syllabus.getVersionNo()))
-                    .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                    .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                     .triggeredBy(commenter.getUsername())
                     .isRead(false)
                     .build();
@@ -402,7 +402,7 @@ public class NotificationService {
                             syllabus.getCourse().getCourseName(),
                             syllabus.getCourse().getCourseCode(),
                             syllabus.getVersionNo()))
-                        .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                        .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                         .triggeredBy(commenter.getUsername())
                         .isRead(false)
                         .build();
@@ -430,7 +430,7 @@ public class NotificationService {
                                 syllabus.getCourse().getCourseName(),
                                 syllabus.getCourse().getCourseCode(),
                                 syllabus.getVersionNo()))
-                            .actionUrl("/api/v1/syllabuses/" + syllabus.getSyllabusId())
+                            .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId())
                             .triggeredBy(commenter.getUsername())
                             .isRead(false)
                             .build();

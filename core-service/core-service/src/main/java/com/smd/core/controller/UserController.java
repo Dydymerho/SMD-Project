@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/users")
 @Tag(name = "User Management", description = "APIs for managing users")
 public class UserController {
 
@@ -23,7 +23,7 @@ public class UserController {
 
     /**
      * Get all users
-     * GET /api/v1/users
+     * GET /api/users
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'HEAD_OF_DEPARTMENT', 'ACADEMIC_AFFAIRS')")
@@ -35,7 +35,7 @@ public class UserController {
 
     /**
      * Get user by ID
-     * GET /api/v1/users/{id}
+     * GET /api/users/{id}
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'HEAD_OF_DEPARTMENT', 'ACADEMIC_AFFAIRS')")
@@ -47,7 +47,7 @@ public class UserController {
 
     /**
      * Update user
-     * PUT /api/v1/users/{id}
+     * PUT /api/users/{id}
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -61,7 +61,7 @@ public class UserController {
 
     /**
      * Delete user
-     * DELETE /api/v1/users/{id}
+     * DELETE /api/users/{id}
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
