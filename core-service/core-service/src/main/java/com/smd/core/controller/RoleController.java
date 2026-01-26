@@ -1,6 +1,7 @@
 package com.smd.core.controller;
 
 import com.smd.core.dto.AssignRoleRequest;
+import com.smd.core.dto.RoleResponse;
 import com.smd.core.dto.UserRoleResponse;
 import com.smd.core.entity.Role;
 import com.smd.core.service.RoleService;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/roles")
@@ -30,8 +32,12 @@ public class RoleController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Roles retrieved successfully")
     })
-    public ResponseEntity<List<Role>> getAllRoles() {
-        return ResponseEntity.ok(roleService.getAllRoles());
+    public ResponseEntity<List<RoleResponse>> getAllRoles() {
+        List<Role> roles = roleService.getAllRoles();
+        List<RoleResponse> response = roles.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -40,10 +46,11 @@ public class RoleController {
         @ApiResponse(responseCode = "200", description = "Role created successfully"),
         @ApiResponse(responseCode = "400", description = "Role already exists")
     })
-    public ResponseEntity<Role> createRole(
+    public ResponseEntity<RoleResponse> createRole(
             @Parameter(description = "Role name to create (e.g., ADMIN, LECTURER)")
             @RequestParam String roleName) {
-        return ResponseEntity.ok(roleService.createRole(roleName));
+        Role role = roleService.createRole(roleName);
+        return ResponseEntity.ok(convertToDto(role));
     }
 
     @PostMapping("/assign")
@@ -104,5 +111,12 @@ public class RoleController {
     public ResponseEntity<String> initializeDefaultRoles() {
         roleService.initializeDefaultRoles();
         return ResponseEntity.ok("Default roles initialized successfully");
+    }
+
+    private RoleResponse convertToDto(Role role) {
+        return RoleResponse.builder()
+            .roleId(role.getRoleId())
+            .roleName(role.getRoleName())
+            .build();
     }
 }
