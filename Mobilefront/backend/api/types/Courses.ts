@@ -3,8 +3,8 @@ export type Courses = {
     courseCode: string;
     courseName: string;
     deptName: string;
-    username: string;
-    credits: number;
+    lecturerName: string;
+    credit: number;
     academicYear: string;
-    aiSummary: string;
+    aiSumary: string;
 };
