@@ -60,8 +60,17 @@ public class SyllabusController {
     }
     
     @GetMapping
-    public ResponseEntity<List<Syllabus>> getAll() {
-        return ResponseEntity.ok(syllabusService.getAllSyllabuses());
+    public ResponseEntity<List<SyllabusResponse>> getAll() { // 1. Sửa kiểu trả về
+        // 2. Lấy danh sách Entity từ Service
+        List<Syllabus> list = syllabusService.getAllSyllabuses();
+        
+        // 3. Convert từng Entity sang DTO
+        List<SyllabusResponse> response = list.stream()
+                .map(SyllabusResponse::fromEntity)
+                .collect(Collectors.toList());
+        
+        // 4. Trả về danh sách DTO
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
