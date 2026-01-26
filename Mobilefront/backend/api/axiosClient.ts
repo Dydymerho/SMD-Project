@@ -42,7 +42,7 @@ axiosClient.interceptors.response.use(
         // ❌ Unauthorized → logout
         if (status === 401) {
             await AsyncStorage.removeItem("AUTH_TOKEN");
-            // TODO: navigate to Login
+
         }
 
         return Promise.reject(error);
