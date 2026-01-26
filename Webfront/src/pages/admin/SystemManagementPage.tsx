@@ -1,8 +1,8 @@
+import { getUsers, getRecentAuditLogs, createUser, lockUser, unlockUser, assignRoleToUser, getUserRoles, removeRoleFromUser, getAllRoles } from '../../services/api';
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getUsers } from '../../services/api';
 import './SystemManagementPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 
@@ -30,7 +30,6 @@ const SystemManagementPage: React.FC = () => {
   const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, totalSyllabi: 0, dataUsage: '0 GB' });
   const [loading, setLoading] = useState(true);
 
-
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,6 +39,8 @@ const SystemManagementPage: React.FC = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isAssignRoleOpen, setIsAssignRoleOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [originalRoles, setOriginalRoles] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [filterRole, setFilterRole] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,28 +55,94 @@ const SystemManagementPage: React.FC = () => {
       const data = await getUsers();
       console.log('Users Response:', data);
       const mappedData = data.map((u: any) => ({
-            id: u.userId?.toString() || u.id?.toString() || '',
-            name: u.fullName || u.name || '',
-            username: u.username || '',
-            email: u.email || '',
-            roles: u.roles || [], 
-            status: (u.status === 'ACTIVE' || u.status === 'Hoạt động') ? 'Hoạt động' : 'Đã khóa',
-            createdDate: u.createdAt || u.createdDate || 'N/A'
+        id: u.userId?.toString() || u.id?.toString() || '',
+        name: u.fullName || u.name || '',
+        username: u.username || '',
+        email: u.email || '',
+        roles: Array.isArray(u.roles) && u.roles.length > 0 ? u.roles : (u.roleName ? [u.roleName] : []),
+        status: (u.status === 'ACTIVE' || u.status === 'Hoạt động') ? 'Hoạt động' : 'Đã khóa',
+        createdDate: u.createdAt || u.createdDate || 'N/A'
         }));
 
-      console.log('Mapped Users:', mappedData);
-      setUsers(mappedData);
+      // Try to enrich each user with their full roles list from /roles/user/{id}
+      const usersWithRoles = await Promise.all(mappedData.map(async (usr: UserData) => {
+        try {
+          const resp = await getUserRoles(usr.id);
+          const rolesFromApi = resp && resp.roles ? resp.roles : usr.roles || [];
+          return { ...usr, roles: rolesFromApi };
+        } catch (err) {
+          return usr; // fallback
+        }
+      }));
+
+      console.log('Mapped Users with Roles:', usersWithRoles);
+      setUsers(usersWithRoles);
+      const totalUsers = usersWithRoles.length;
+      const activeUsers = usersWithRoles.filter((u: UserData) => u.status === 'Hoạt động').length;
+
+      setStats({
+        totalUsers: totalUsers,
+        activeToday: activeUsers,
+        totalSyllabi: 0,
+        dataUsage: '0 GB'
+      });
     } catch (error) {
         console.error("Không thể lấy danh sách người dùng:", error);
         setUsers([]);
+        setStats({ totalUsers: 0, activeToday: 0, totalSyllabi: 0, dataUsage: '0 GB' });
     } finally {
         setLoading(false);
     }
 };
 
 useEffect(() => {
-    fetchSystemData();
+  const init = async () => {
+    try {
+      const rolesResp = await getAllRoles();
+      const roleNames = Array.isArray(rolesResp) ? rolesResp.map((r: any) => r.roleName || r) : [];
+      setAvailableRoles(roleNames);
+    } catch (err) {
+      console.warn('Không thể tải danh sách roles:', err);
+    }
+    await fetchSystemData();
+    await fetchAuditLogs();
+  };
+  init();
 }, []);
+
+  const fetchAuditLogs = async () => {
+    try {
+      const data = await getRecentAuditLogs(7);
+      console.log('Audit Logs Response:', data);
+      const mappedLogs = data.map((log: any) => ({
+        id: log.id?.toString() || '',
+        time: log.timestamp || log.createdAt || new Date().toLocaleString('vi-VN'),
+        user: log.performedBy || 'Unknown',
+        action: log.actionType || 'Unknown',
+        detail: log.comments || `${log.oldStatus || ''} → ${log.newStatus || ''}`
+      }));
+      console.log('Mapped Audit Logs:', mappedLogs);
+      setAuditLogs(mappedLogs);
+    } catch (error) {
+      console.error("Không thể lấy audit logs:", error);
+      setAuditLogs([]);
+    }
+  };
+
+    const openRoleModal = async (user: UserData) => {
+      try {
+        setIsAssignRoleOpen(true);
+        const resp = await getUserRoles(user.id);
+        const rolesFromApi = (resp && resp.roles) ? resp.roles : user.roles || [];
+        setCurrentUser({ ...user, roles: rolesFromApi });
+        setOriginalRoles(rolesFromApi || []);
+      } catch (error) {
+        console.error('Không thể tải vai trò người dùng:', error);
+        setCurrentUser(user);
+        setOriginalRoles(user.roles || []);
+        setIsAssignRoleOpen(true);
+      }
+    };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -93,22 +160,13 @@ useEffect(() => {
     { hour: '23:59', users: 300 },
   ];
 
-  const SYSTEM_ROLES = [
-    'Admin System',
-    'Lecturer',
-    'Head of Department',
-    'Principal',
-    'Academic Affairs (AA)',
-    'Student'
-  ];
-
   const [workflowSteps, setWorkflowSteps] = useState([
     { id: 1, name: 'Giảng viên soạn thảo', role: 'Lecturer', order: 1 },
     { id: 2, name: 'Trưởng bộ môn duyệt', role: 'Head of Department', order: 2 },
     { id: 3, name: 'Phòng đào tạo kiểm tra', role: 'Academic Affairs', order: 3 },
   ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const password = formData.password;
@@ -121,13 +179,43 @@ useEffect(() => {
     }
 
     setPasswordError('');
-    console.log('Dữ liệu hợp lệ, đang gửi...', formData);
-    setIsModalOpen(false);
+    
+    try {
+      const newUserData = {
+        fullName: formData.name,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        status: formData.status === 'Hoạt động' ? 'ACTIVE' : 'SUSPENDED'
+      };
 
-    setFormData({
-      name: '', username: '', email: '', password: '', 
-      roles: ['Giảng viên'], status: 'ACTIVE'
-    });
+      console.log('Tạo người dùng:', newUserData);
+      const createdUser = await createUser(newUserData);
+      console.log('Người dùng được tạo:', createdUser);
+
+      if (formData.roles.length > 0 && createdUser.userId) {
+        for (const role of formData.roles) {
+          try {
+            console.log(`Gán role ${role} cho người dùng ${createdUser.userId}`);
+            await assignRoleToUser(createdUser.userId.toString(), role);
+          } catch (err) {
+            console.error(`Lỗi khi gán role ${role}:`, err);
+          }
+        }
+      }
+
+      await fetchSystemData();
+      console.log('Tạo người dùng thành công!');
+      setIsModalOpen(false);
+
+      setFormData({
+        name: '', username: '', email: '', password: '', 
+        roles: [], status: 'Hoạt động'
+      });
+    } catch (error) {
+      console.error('Lỗi khi tạo người dùng:', error);
+      setPasswordError('Lỗi khi tạo người dùng. Vui lòng thử lại!');
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -151,6 +239,121 @@ useEffect(() => {
           ? prev.roles.filter(r => r !== role)
           : [...prev.roles, role]
       }) : null);
+    }
+  };
+
+  const handleAssignRoleSubmit = async () => {
+    if (!currentUser) {
+      console.log('Không có người dùng nào được chọn!');
+      return;
+    }
+
+    try {
+      console.log(`Cập nhật vai trò cho người dùng: ${currentUser.name}`);
+
+      const newRoles = currentUser.roles || [];
+      const rolesToAdd = newRoles.filter(r => !originalRoles.includes(r));
+      const rolesToRemove = originalRoles.filter(r => !newRoles.includes(r));
+
+      for (const role of rolesToAdd) {
+        try {
+          await assignRoleToUser(currentUser.id, role);
+          console.log(`Đã gán vai trò ${role} cho ${currentUser.name}`);
+        } catch (err: any) {
+          if (err?.response?.status === 409) {
+            console.warn(`Vai trò ${role} đã tồn tại cho ${currentUser.name}, bỏ qua (409).`);
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      for (const role of rolesToRemove) {
+        try {
+          await removeRoleFromUser(currentUser.id, role);
+          console.log(`Đã gỡ vai trò ${role} khỏi ${currentUser.name}`);
+        } catch (err: any) {
+          if (err?.response?.status === 404) {
+            console.warn(`Vai trò ${role} không tồn tại cho ${currentUser.name}, bỏ qua (404).`);
+            continue;
+          }
+          console.error(`Lỗi khi gỡ vai trò ${role}:`, err);
+        }
+      }
+
+      await fetchSystemData();
+
+      setIsAssignRoleOpen(false);
+      setCurrentUser(null);
+      setOriginalRoles([]);
+
+      console.log('Cập nhật vai trò hoàn tất!');
+    } catch (error) {
+      console.error('Lỗi khi cập nhật vai trò:', error);
+    }
+  };
+
+  const handleBulkLockUsers = async () => {
+    if (selectedUserIds.length === 0) {
+      console.log('Vui lòng chọn người dùng!');
+      return;
+    }
+
+    try {
+      console.log(`Khóa ${selectedUserIds.length} tài khoản...`);
+      for (const userId of selectedUserIds) {
+        const userToLock = users.find(u => u.id === userId);
+        if (userToLock) {
+          await lockUser(userId, userToLock.name, userToLock.email);
+          console.log(`Đã khóa tài khoản: ${userId}`);
+        }
+      }
+      setSelectedUserIds([]);
+      await fetchSystemData();
+      console.log('Khóa tài khoản thành công!');
+    } catch (error) {
+      console.error('Lỗi khi khóa tài khoản:', error);
+    }
+  };
+
+  const handleBulkUnlockUsers = async () => {
+    if (selectedUserIds.length === 0) {
+      console.log('Vui lòng chọn người dùng!');
+      return;
+    }
+
+    try {
+      console.log(`Mở khóa ${selectedUserIds.length} tài khoản...`);
+      for (const userId of selectedUserIds) {
+        const userToUnlock = users.find(u => u.id === userId);
+        if (userToUnlock) {
+          await unlockUser(userId, userToUnlock.name, userToUnlock.email);
+          console.log(`Đã mở khóa tài khoản: ${userId}`);
+        }
+      }
+      setSelectedUserIds([]);
+      await fetchSystemData();
+      console.log('Mở khóa tài khoản thành công!');
+    } catch (error) {
+      console.error('Lỗi khi mở khóa tài khoản:', error);
+    }
+  };
+
+  const handleBulkResetPasswords = async () => {
+    if (selectedUserIds.length === 0) {
+      console.log('Vui lòng chọn người dùng!');
+      return;
+    }
+
+    try {
+      console.log(`Reset mật khẩu cho ${selectedUserIds.length} tài khoản...`);
+      console.warn('⚠️ Chức năng reset mật khẩu chưa được hỗ trợ bởi backend. Người dùng cần sử dụng tính năng "Quên mật khẩu".');
+      // Backend doesn't support password reset
+      // For now, just log and show message
+      setSelectedUserIds([]);
+      console.log('Vui lòng hướng dẫn người dùng sử dụng tính năng "Quên mật khẩu" để reset mật khẩu.');
+    } catch (error) {
+      console.error('Lỗi:', error);
     }
   };
 
@@ -468,11 +671,11 @@ useEffect(() => {
                   <Filter size={18} />
                   <select value={filterRole} onChange={(e) => handleFilterChange('role', e.target.value)}>
                     <option value="All">Tất cả vai trò</option>
-                    <option value="Admin System">Quản trị viên</option>
-                    <option value="Lecturer">Giảng viên</option>
-                    <option value="Head of Department">Trưởng khoa (HoD)</option>
-                    <option value="Academic Affair (AA)">Phòng đào tạo (AA)</option>
-                    <option value="Student">Sinh viên</option>
+                    <option value="ADMIN">Quản trị viên</option>
+                    <option value="LECTURER">Giảng viên</option>
+                    <option value="HEAD_OF_DEPARTMENT">Trưởng khoa (HoD)</option>
+                    <option value="ACADEMIC_AFFAIRS">Phòng đào tạo (AA)</option>
+                    <option value="STUDENT">Sinh viên</option>
                   </select>
                   <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="All">Tất cả trạng thái</option>
@@ -485,8 +688,25 @@ useEffect(() => {
                 {selectedUserIds.length > 0 && (
                   <div className="bulk-actions">
                     <span>Đang chọn {selectedUserIds.length} người dùng:</span>
-                    <button className="bulk-btn lock"><Lock size={14}/> Khóa tài khoản</button>
-                    <button className="bulk-btn reset"><RotateCcw size={14}/> Reset mật khẩu</button>
+                    {(() => {
+                      const selectedUsers = users.filter(u => selectedUserIds.includes(u.id));
+                      const allLocked = selectedUsers.every(u => u.status === 'Đã khóa');
+                      const allActive = selectedUsers.every(u => u.status === 'Hoạt động');
+                      
+                      if (allActive) {
+                        return <button className="bulk-btn lock" onClick={handleBulkLockUsers}><Lock size={14}/> Khóa tài khoản</button>;
+                      } else if (allLocked) {
+                        return <button className="bulk-btn unlock" onClick={handleBulkUnlockUsers}><Lock size={14}/> Mở khóa tài khoản</button>;
+                      } else {
+                        return (
+                          <>
+                            <button className="bulk-btn lock" onClick={handleBulkLockUsers}><Lock size={14}/> Khóa tài khoản</button>
+                            <button className="bulk-btn unlock" onClick={handleBulkUnlockUsers}><Lock size={14}/> Mở khóa tài khoản</button>
+                          </>
+                        );
+                      }
+                    })()}
+                    <button className="bulk-btn reset" onClick={handleBulkResetPasswords}><RotateCcw size={14}/> Reset mật khẩu</button>
                   </div>
                 )}
               </div>
@@ -543,7 +763,7 @@ useEffect(() => {
                           </span>
                         </td>
                         <td>
-                          <button className="edit-role-btn" onClick={() => { setCurrentUser(u); setIsAssignRoleOpen(true); }}>
+                          <button className="edit-role-btn" onClick={() => openRoleModal(u)}>
                             <ShieldCheck size={16} /> Sửa vai trò
                           </button>
                         </td>
@@ -680,21 +900,21 @@ useEffect(() => {
               <div className="modal-body">
                 <p className="description">Tick chọn để thêm hoặc bớt các vai trò cho tài khoản này.</p>
                 <div className="roles-grid-selection">
-                  {SYSTEM_ROLES.map(role => (
-                    <label key={role} className="checkbox-item card-style">
-                      <input 
-                        type="checkbox" 
-                        checked={currentUser.roles.includes(role)}
-                        onChange={() => handleRoleToggle(role, 'edit')}
+                  {availableRoles.map(role => (
+                    <label key={role} className="checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={formData.roles.includes(role)}
+                        onChange={() => handleRoleToggle(role, 'form')}
                       />
-                      <div className="role-name-info">{role}</div>
+                      <span>{role}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="modal-footer">
                 <button className="cancel-btn" onClick={() => setIsAssignRoleOpen(false)}>Hủy</button>
-                <button className="submit-btn">Lưu thay đổi</button>
+                <button className="submit-btn" onClick={handleAssignRoleSubmit}>Lưu thay đổi</button>
               </div>
             </div>
           </div>
@@ -746,7 +966,7 @@ useEffect(() => {
                 <div className="form-group full-width">
                   <label>Vai trò</label>
                   <div className="roles-grid-selection">
-                    {SYSTEM_ROLES.map(role => (
+                    {availableRoles.map(role => (
                       <label key={role} className="checkbox-item">
                         <input 
                           type="checkbox" 

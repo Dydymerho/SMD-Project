@@ -40,19 +40,6 @@ export const getCourseById = async (id: string) => {
   return response.data;
 };
 
-// TODO: Backend không có /search endpoint cho courses, chỉ có search syllabuses
-// export const searchCourses = async (query: string) => {
-//   const response = await axiosClient.get('/v1/courses/search', {
-//     params: { q: query },
-//   });
-//   return response.data;
-// };
-
-/*
-export const getRecommendedCourses = async () => {
-  const response = await axiosClient.get("/courses");
-  return response.data;
-};  */
 
 // Syllabus API
 export const getSyllabusByCourseId = async (courseId: string) => {
@@ -101,7 +88,13 @@ export const getUsers = async () => {
 };
 
 export const createUser = async (userData: any) => {
-  const response = await axiosClient.post("/users", userData);
+  const response = await axiosClient.post("/auth/register", {
+    username: userData.username,
+    password: userData.password,
+    fullName: userData.fullName,
+    email: userData.email,
+    departmentId: userData.departmentId || null
+  });
   return response.data;
 };
 
@@ -111,12 +104,87 @@ export const updateUser = async (userId: string, userData: any) => {
 };
 
 export const deleteUser = async (userId: string) => {
-  const response = await axiosClient.delete(`/admin/users/${userId}`);
+  const response = await axiosClient.delete(`/users/${userId}`);
+  return response.data;
+};
+
+export const lockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
+  const response = await axiosClient.put(`/users/${userId}`, { 
+    status: 'SUSPENDED',
+    fullName: userFullName || 'Unknown',
+    email: userEmail || 'unknown@example.com'
+  });
+  return response.data;
+};
+
+export const unlockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
+  const response = await axiosClient.put(`/users/${userId}`, { 
+    status: 'ACTIVE',
+    fullName: userFullName || 'Unknown',
+    email: userEmail || 'unknown@example.com'
+  });
+  return response.data;
+};
+
+export const resetPassword = async (userId: string, newPassword: string) => {
+  // Backend doesn't have password reset endpoint
+  // Instead, use auth/register or send notification
+  console.warn('Password reset not supported by backend. User should use "Forgot Password" feature.');
+  return Promise.resolve({ message: 'Please use forgot password feature' });
+};
+
+export const assignRoleToUser = async (userId: string, roleName: string) => {
+  const response = await axiosClient.post(`/roles/assign`, {
+    userId: parseInt(userId),
+    roleName: roleName
+  });
+  return response.data;
+};
+
+export const removeRoleFromUser = async (userId: string, roleName: string) => {
+  const response = await axiosClient.delete(`/roles/remove`, {
+    params: { userId: parseInt(userId), roleName }
+  });
+  return response.data;
+};
+
+export const getAllRoles = async () => {
+  const response = await axiosClient.get("/roles");
+  return response.data;
+};
+
+export const getUserRoles = async (userId: string) => {
+  const response = await axiosClient.get(`/roles/user/${userId}`);
   return response.data;
 };
 
 export const getSystemStats = async () => {
   const response = await axiosClient.get("/admin/stats");
+  return response.data;
+};
+
+// Audit Log API
+export const getRecentAuditLogs = async (days: number = 7) => {
+  const response = await axiosClient.get(`/syllabuses/audit-logs/recent`, {
+    params: { days }
+  });
+  return response.data;
+};
+
+export const getAuditLogsByUser = async (username: string) => {
+  const response = await axiosClient.get(`/syllabuses/audit-logs/user/${username}`);
+  return response.data;
+};
+
+export const getAuditLogsByDateRange = async (startDate: string, endDate: string) => {
+  const response = await axiosClient.get(`/syllabuses/audit-logs/date-range`, {
+    params: { startDate, endDate }
+  });
+  return response.data;
+};
+
+export const getAuditLogsBySyllabus = async (syllabusId: string) => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}/audit-logs`);
   return response.data;
 };
 
