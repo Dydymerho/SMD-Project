@@ -8,7 +8,7 @@ import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type { HomeStackParamList } from "../../navigation/HomeStack"
 import { CourseApi } from "../../../../backend/api/CourseApi"
-import { Courses } from "../../../../backend/api/types/Courses"
+import { Courses } from "../../../../backend/types/Courses"
 
 export default function HomeScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>()

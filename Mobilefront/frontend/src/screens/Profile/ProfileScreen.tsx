@@ -3,7 +3,7 @@ import { Image, View, Text, ScrollView, TouchableOpacity, StatusBar, FlatList, R
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import styles from './styles';
 import { useState, useEffect } from 'react';
-import { Profile } from '../../../../backend/api/types/Profile';
+import { Profile } from '../../../../backend/types/Profile';
 import { ProfileApi } from '../../../../backend/api/ProfileApi';
 const Section = ({
     title,
@@ -89,28 +89,23 @@ export default function ProfileScreen() {
     const fetchProfile = async () => {
         try {
             setError(null);
-            console.log("Đang gọi API...");
-            const res = await ProfileApi.getMyProfile();
-            setProfile(res.data);
-        } catch (error: any) {
-            console.error("Error fetching syllabus:", error);
-            console.error("Error message:", error.message);
-            console.error("Error response:", error.response?.data);
-            console.error("Error status:", error.response?.status);
-            console.error("Error config:", error.config?.url);
+            // ...
+            const res: any = await ProfileApi.getMyProfile();
 
-            // Phân loại error chi tiết hơn
-            if (error.message === "Network Error") {
-                setError("Không có kết nối mạng. Vui lòng kiểm tra internet.");
-            } else if (error.response?.status === 404) {
-                setError("Không tìm thấy API endpoint. Vui lòng liên hệ quản trị viên.");
-            } else if (error.response?.status === 500) {
-                setError("Server đang gặp sự cố. Vui lòng thử lại sau.");
-            } else if (error.response?.status === 401) {
-                setError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
-            } else {
-                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
-            }
+            // --- SỬA ĐOẠN NÀY ---
+            // Gộp dữ liệu từ res (chứa country, timezone) và res.user (chứa email, fullName...)
+            const mappedProfile: Profile = {
+                ...res.user,        // Lấy userId, fullName, email, username từ trong object 'user'
+                country: res.country,   // Lấy country từ bên ngoài
+                timezone: res.timezone, // Lấy timezone từ bên ngoài
+                // Map thêm các trường nếu tên không khớp, ví dụ:
+                // studentId: res.user.userId (nếu cần mapping id sang studentId)
+            };
+
+            setProfile(mappedProfile);
+
+        } catch (error: any) {
+            // ... xử lý lỗi
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -184,7 +179,7 @@ export default function ProfileScreen() {
                             </Text>
                         </TouchableOpacity>
                     )}
-                </Section> */}
+                </Section>  */}
             </ScrollView>
         </View>
     );

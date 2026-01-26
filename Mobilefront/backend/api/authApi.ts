@@ -1,6 +1,6 @@
 import axiosClient from './axiosClient';
-import { LoginResponse } from './types/auth';
-
+import { LoginResponse } from '../types/auth';
+import { AxiosResponse } from 'axios';
 export const authApi = {
   login: (username: string, password: string): Promise<LoginResponse> =>
     axiosClient.post('/auth/login', {
