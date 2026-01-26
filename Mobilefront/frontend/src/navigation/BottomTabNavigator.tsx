@@ -37,6 +37,7 @@ export default function BottomTabNavigator() {
                         Setting: focused ? 'settings' : 'settings-outline',
                         Profile: focused ? 'person' : 'person-outline',
                         Notification: focused ? 'notifications' : 'notifications-outline',
+
                     }
 
                     return (

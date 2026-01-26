@@ -1,6 +1,5 @@
 package com.smd.core.config;
 
-//
 import com.smd.core.entity.*;
 import com.smd.core.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,34 +29,50 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final DepartmentRepository departmentRepository;
     private final ProgramRepository programRepository;
     private final CourseRepository courseRepository;
-    private final SyllabusRepository syllabusRepository;
+    private final PLORepository ploRepository;
 
+    // 3. Syllabus Core Repositories
+    private final SyllabusRepository syllabusRepository;
     private final AiTaskRepository aiTaskRepository;
+
+    // 4. Syllabus Detail Repositories
+    private final MaterialRepository materialRepository;
+    private final SessionPlanRepository sessionPlanRepository;
+    private final AssessmentRepository assessmentRepository;
+    private final CLORepository cloRepository;
+
+    // 5. Interaction Repositories
+    private final ReviewCommentRepository reviewCommentRepository;
+    private final NotificationRepository notificationRepository;
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
         log.info("STARTING DATABASE SEEDING...");
 
-        // --- PHẦN 1: USER & ROLE ---
+        // --- BƯỚC 1: CẤU HÌNH CƠ BẢN ---
         initRoles();
         initDepartmentsAndPrograms();
-        initUsers();
+        initUsers(); // Đã thêm student vào đây
 
-        // --- PHẦN 2: ACADEMIC DATA (Thay thế init-course.sql) ---
-        
+        // --- BƯỚC 2: DỮ LIỆU ĐÀO TẠO ---
+        initPLOs();
         initCourses();
+        initCourseRelations();
 
-        // --- PHẦN 3: SYLLABUS DATA (Thay thế init-syllabus.sql) ---
+        // --- BƯỚC 3: SYLLABUS & CHI TIẾT ---
         initSyllabi();
+        initSyllabusDetails();
 
+        // --- BƯỚC 4: TƯƠNG TÁC ---
+        initInteractions();
         initAiTasks();
 
         log.info("DATABASE SEEDING COMPLETED.");
     }
 
     // ==========================================
-    // PHẦN 1: USER & ROLE INIT
+    // PHẦN 1: USER & ROLE
     // ==========================================
     private void initRoles() {
         String[] roles = {"ADMIN", "LECTURER", "HEAD_OF_DEPARTMENT", "ACADEMIC_AFFAIRS", "PRINCIPAL", "STUDENT"};
@@ -68,28 +84,34 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
-
     private void initUsers() {
         String commonPass = "Password123";
-
-        // 1. Lấy Department đã tạo ở bước trước (ví dụ lấy Khoa CNTT)
         Department itDept = departmentRepository.findAll().stream()
-                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin"))
-                .findFirst()
-                .orElse(null);
+                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin")).findFirst().orElse(null);
 
-        // 2. Tạo Admin (Không cần khoa -> truyền null)
+        // 1. Admin
         createUser("admin", "admin@smd.edu.vn", "System Administrator", commonPass, "ADMIN", null);
-
-        // 3. Tạo Giảng viên & Sinh viên (Gán vào Khoa CNTT)
-        // Nếu itDept bị null thì user vẫn tạo được nhưng department sẽ null
+        
+        // 2. Lecturers
         createUser("lecturer", "lecturer@smd.edu.vn", "Nguyen Van A", commonPass, "LECTURER", itDept);
         createUser("lecturer2", "lecturer2@smd.edu.vn", "Tran Thi B", commonPass, "LECTURER", itDept);
-        createUser("head_dept", "head.dept@smd.edu.vn", "Head of IT Dept", commonPass, "HEAD_OF_DEPARTMENT", itDept);
+        
+        // 3. Head of Department
+        createUser("head_dept", "head.dept@smd.edu.vn", "Truong Khoa IT", commonPass, "HEAD_OF_DEPARTMENT", itDept);
+        
+        // 4. Student (Đã thêm theo yêu cầu)
         createUser("student", "student@smd.edu.vn", "Le Van C", commonPass, "STUDENT", itDept);
+
+        // Cập nhật Head cho Department sau khi tạo user
+        if (itDept != null) {
+            Optional<User> head = userRepository.findByUsername("head_dept");
+            if (head.isPresent()) {
+                itDept.setHeadOfDepartment(head.get());
+                departmentRepository.save(itDept);
+            }
+        }
     }
 
-    // Sửa method này để nhận thêm tham số Department dept
     private void createUser(String username, String email, String fullName, String rawPass, String roleName, Department dept) {
         if (userRepository.findByUsername(username).isPresent()) return;
 
@@ -99,212 +121,250 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .fullName(fullName)
                 .passwordHash(passwordEncoder.encode(rawPass))
                 .status(User.UserStatus.ACTIVE)
-                .department(dept) // <--- QUAN TRỌNG: Gán Department vào đây
+                .department(dept)
                 .createdAt(LocalDateTime.now())
                 .build();
         User savedUser = userRepository.save(user);
 
         Role role = roleRepository.findByRoleName(roleName).orElseThrow();
         userRoleRepository.save(UserRole.builder().user(savedUser).role(role).build());
-        
-        log.info("   + Created User: {} - Dept: {}", username, (dept != null ? dept.getDeptName() : "None"));
+        log.info("   + Created User: {} ({})", username, roleName);
     }
 
-    // ...
-
     // ==========================================
-    // PHẦN 2: DEPARTMENT & PROGRAM & COURSE
+    // PHẦN 2: ACADEMIC DATA
     // ==========================================
     private void initDepartmentsAndPrograms() {
-        // Tạo Khoa CNTT (IT)
         Department itDept = createDepartmentIfNotFound("Khoa Cong Nghe Thong Tin");
-        
-        // Tạo các ngành thuộc Khoa CNTT
         createProgramIfNotFound("Ky thuat Phan mem", itDept);
         createProgramIfNotFound("An toan Thong tin", itDept);
-        createProgramIfNotFound("He thong Thong tin", itDept);
-
-        // Tạo Khoa Kinh Tế (Economics)
-        Department ecoDept = createDepartmentIfNotFound("Khoa Quan Tri Kinh Doanh");
-        createProgramIfNotFound("Quan tri Kinh doanh", ecoDept);
     }
 
     private Department createDepartmentIfNotFound(String deptName) {
-        // Tìm department theo tên
-        List<Department> depts = departmentRepository.findAll();
-        for (Department d : depts) {
-            if (d.getDeptName().equals(deptName)) return d;
-        }
-        
-        Department dept = Department.builder()
-                .deptName(deptName)
-                .build();
-        log.info("   + Created Department: {}", deptName);
-        return departmentRepository.save(dept);
+        return departmentRepository.findAll().stream()
+                .filter(d -> d.getDeptName().equals(deptName))
+                .findFirst()
+                .orElseGet(() -> departmentRepository.save(Department.builder().deptName(deptName).build()));
     }
 
     private Program createProgramIfNotFound(String programName, Department dept) {
-        // Kiểm tra sơ bộ tránh trùng lặp
         return programRepository.findAll().stream()
                 .filter(p -> p.getProgramName().equals(programName))
                 .findFirst()
-                .orElseGet(() -> {
-                    Program p = Program.builder()
-                            .programName(programName)
-                            .department(dept)
-                            .build();
-                    log.info("   + Created Program: {}", programName);
-                    return programRepository.save(p);
-                });
+                .orElseGet(() -> programRepository.save(Program.builder().programName(programName).department(dept).build()));
     }
 
-    // Trong file src/main/java/com/smd/core/config/DatabaseSeeder.java
+    private void initPLOs() {
+        Program seProgram = programRepository.findAll().stream()
+                .filter(p -> p.getProgramName().equals("Ky thuat Phan mem")).findFirst().orElse(null);
+
+        if (seProgram != null && ploRepository.findByProgram_ProgramId(seProgram.getProgramId()).isEmpty()) {
+            createPLO(seProgram, "PLO1", "Áp dụng kiến thức toán học, khoa học và kỹ thuật.");
+            createPLO(seProgram, "PLO2", "Thiết kế và tiến hành thực nghiệm, phân tích dữ liệu.");
+            createPLO(seProgram, "PLO3", "Thiết kế hệ thống, thành phần hoặc quy trình đáp ứng nhu cầu.");
+            createPLO(seProgram, "PLO4", "Hoạt động hiệu quả trong các nhóm đa ngành.");
+            createPLO(seProgram, "PLO5", "Nhận diện, diễn đạt và giải quyết các vấn đề kỹ thuật.");
+        }
+    }
+
+    private void createPLO(Program program, String code, String desc) {
+        ploRepository.save(PLO.builder()
+                .program(program).ploCode(code).ploDescription(desc)
+                .build());
+        log.info("   + Created PLO: {}", code);
+    }
 
     private void initCourses() {
-        // 1. Lấy Khoa CNTT chính xác theo tên đã tạo
         Department itDept = departmentRepository.findAll().stream()
-                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin"))
-                .findFirst()
-                .orElse(null);
-        
-        // 2. Lấy Khoa Kinh Tế (nếu muốn tạo thêm môn cho khoa này)
-        Department ecoDept = departmentRepository.findAll().stream()
-                .filter(d -> d.getDeptName().equals("Khoa Quan Tri Kinh Doanh"))
-                .findFirst()
-                .orElse(null);
+                .filter(d -> d.getDeptName().equals("Khoa Cong Nghe Thong Tin")).findFirst().orElse(null);
 
-        // 3. Tạo các môn học cho Khoa CNTT
         if (itDept != null) {
             createCourse("PRF192", "Programming Fundamentals", 3, itDept);
             createCourse("PRO192", "Object-Oriented Programming", 3, itDept);
-            createCourse("JPD113", "Java Programming", 3, itDept); // Môn này dùng để test Syllabus
-            createCourse("SWE201", "Introduction to Software Engineering", 3, itDept);
-            createCourse("DBI202", "Database Systems", 3, itDept);
-        } else {
-            log.warn("⚠ Không tìm thấy 'Khoa Cong Nghe Thong Tin'. Không thể tạo môn học CNTT.");
-        }
-
-        // 4. Tạo môn học cho Khoa Kinh Tế (Ví dụ thêm)
-        if (ecoDept != null) {
-            createCourse("ECO111", "Microeconomics", 3, ecoDept);
+            createCourse("JPD113", "Java Programming", 3, itDept);
         }
     }
 
-    private void createCourse(String code, String name, int credits, Department department) {
-        // Kiểm tra môn học đã tồn tại chưa để tránh trùng lặp
+    private void createCourse(String code, String name, int credits, Department dept) {
         if (courseRepository.findByCourseCode(code).isPresent()) return;
+        courseRepository.save(Course.builder().courseCode(code).courseName(name).credits(credits).department(dept).build());
+        log.info("   + Created Course: {}", code);
+    }
 
-        Course course = Course.builder()
-                .courseCode(code)
-                .courseName(name)
-                .credits(credits)
-                .department(department) // GẮN KHOA VÀO ĐÂY
-                .build();
-        
-        courseRepository.save(course);
-        log.info("   + Created Course: {} - {} (Dept: {})", code, name, department.getDeptName());
+    private void initCourseRelations() {
+        Optional<Course> prfOpt = courseRepository.findByCourseCode("PRF192");
+        Optional<Course> proOpt = courseRepository.findByCourseCode("PRO192");
+
+        if (prfOpt.isPresent() && proOpt.isPresent()) {
+            Course pro = proOpt.get();
+            Course prf = prfOpt.get();
+
+            if (pro.getPrerequisiteRelations() == null || pro.getPrerequisiteRelations().isEmpty()) {
+                CourseRelation relation = CourseRelation.builder()
+                        .course(pro)
+                        .relatedCourse(prf)
+                        .relationType(CourseRelation.RelationType.PREREQUISITE)
+                        .build();
+
+                List<CourseRelation> relations = new ArrayList<>();
+                relations.add(relation);
+                pro.setPrerequisiteRelations(relations);
+                
+                courseRepository.save(pro);
+                log.info("   + Created Relation: PRF192 is Prerequisite of PRO192");
+            }
+        }
     }
 
     // ==========================================
-    // PHẦN 3: SYLLABUS
+    // PHẦN 3: SYLLABUS & DETAILS
     // ==========================================
     private void initSyllabi() {
-        // Lấy giảng viên để làm người soạn
         User lecturer = userRepository.findByUsername("lecturer").orElse(null);
-        if (lecturer == null) return;
-
-        // Lấy program để gán cho syllabus
         Program seProgram = programRepository.findAll().stream()
                 .filter(p -> p.getProgramName().contains("Phan mem")).findFirst().orElse(null);
-        if (seProgram == null) return;
+        
+        if (lecturer == null || seProgram == null) return;
 
-        // Tạo Syllabus cho môn Java (JPD113)
-        Optional<Course> javaCourse = courseRepository.findByCourseCode("JPD113");
-        javaCourse.ifPresent(course -> {
-            createSyllabus("2024-2025", 1, course, lecturer, seProgram);
-        });
-
-        // Tạo Syllabus cho môn OOP (PRO192)
-        Optional<Course> oopCourse = courseRepository.findByCourseCode("PRO192");
-        oopCourse.ifPresent(course -> {
-            createSyllabus("2024-2025", 1, course, lecturer, seProgram);
-        });
+        createSyllabusBase("JPD113", "2024-2025", 1, lecturer, seProgram);
+        createSyllabusBase("PRO192", "2024-2025", 1, lecturer, seProgram);
     }
 
-    private void createSyllabus(String academicYear, Integer versionNo, Course course, User lecturer, Program program) {
-        // Check trùng lặp theo course và academicYear
-        boolean exists = syllabusRepository.findAll().stream()
-                .anyMatch(s -> s.getCourse().getCourseId().equals(course.getCourseId()) 
-                        && s.getAcademicYear().equals(academicYear)
-                        && s.getVersionNo().equals(versionNo));
-        if (exists) return;
+    private void createSyllabusBase(String courseCode, String year, int ver, User lecturer, Program program) {
+        Course course = courseRepository.findByCourseCode(courseCode).orElse(null);
+        if (course == null) return;
+
+        if (syllabusRepository.existsByCourse_CourseIdAndAcademicYearAndVersionNo(course.getCourseId(), year, ver)) return;
 
         Syllabus syllabus = Syllabus.builder()
-                .course(course)
-                .lecturer(lecturer)
-                .program(program)
-                .academicYear(academicYear)
-                .versionNo(versionNo)
+                .course(course).lecturer(lecturer).program(program)
+                .academicYear(year).versionNo(ver)
                 .currentStatus(Syllabus.SyllabusStatus.DRAFT)
                 .isLatestVersion(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now())
                 .build();
-
         syllabusRepository.save(syllabus);
-        log.info("   + Created Syllabus for course: {} - Year: {} - Version: {}", 
-                course.getCourseCode(), academicYear, versionNo);
+        log.info("   + Created Syllabus Base: {}", courseCode);
     }
 
-    // 3. THÊM ĐOẠN CODE NÀY XUỐNG CUỐI CÙNG CLASS
+    private void initSyllabusDetails() {
+        // Lấy Syllabus môn Java (JPD113)
+        Course javaCourse = courseRepository.findByCourseCode("JPD113").orElse(null);
+        if (javaCourse == null) return;
+
+        Optional<Syllabus> syllabusOpt = syllabusRepository.findLatestVersionByCourseAndYear(javaCourse.getCourseId(), "2024-2025");
+        
+        if (syllabusOpt.isPresent()) {
+            Syllabus syllabus = syllabusOpt.get();
+
+            // 1. Material
+            if (materialRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId()).isEmpty()) {
+                materialRepository.save(Material.builder().syllabus(syllabus).title("Core Java Volume I").author("Cay S. Horstmann").materialType(Material.MaterialType.TEXTBOOK).build());
+                materialRepository.save(Material.builder().syllabus(syllabus).title("Effective Java").author("Joshua Bloch").materialType(Material.MaterialType.REFERENCE_BOOK).build());
+                log.info("     > Added Materials");
+            }
+
+            // 2. Session Plans
+            if (sessionPlanRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId()).isEmpty()) {
+                sessionPlanRepository.save(SessionPlan.builder().syllabus(syllabus).weekNo(1).topic("Intro to Java").teachingMethod("Lecture").build());
+                sessionPlanRepository.save(SessionPlan.builder().syllabus(syllabus).weekNo(2).topic("OOP Concepts").teachingMethod("Lecture & Lab").build());
+                sessionPlanRepository.save(SessionPlan.builder().syllabus(syllabus).weekNo(3).topic("Exception Handling").teachingMethod("Workshop").build());
+                log.info("     > Added Session Plans");
+            }
+
+            // 3. Assessment
+            if (assessmentRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId()).isEmpty()) {
+                assessmentRepository.save(Assessment.builder().syllabus(syllabus).name("Progress Test 1").weightPercent(20f).criteria("Multiple Choice").build());
+                assessmentRepository.save(Assessment.builder().syllabus(syllabus).name("Practical Exam").weightPercent(40f).criteria("Coding").build());
+                assessmentRepository.save(Assessment.builder().syllabus(syllabus).name("Final Exam").weightPercent(40f).criteria("Multiple Choice").build());
+                log.info("     > Added Assessments");
+            }
+
+            // 4. CLO & Mapping
+            if (cloRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId()).isEmpty()) {
+                List<PLO> plos = ploRepository.findByProgram_ProgramId(syllabus.getProgram().getProgramId());
+                
+                // CLO 1
+                CLO clo1 = CLO.builder().syllabus(syllabus).cloCode("CLO1").cloDescription("Understand Java Syntax").build();
+                if (!plos.isEmpty()) {
+                    List<CLOPLOMapping> mappings = new ArrayList<>();
+                    mappings.add(CLOPLOMapping.builder().clo(clo1).plo(plos.get(0)).mappingLevel(CLOPLOMapping.MappingLevel.HIGH).build());
+                    clo1.setPloMappings(mappings);
+                }
+                cloRepository.save(clo1);
+
+                // CLO 2
+                CLO clo2 = CLO.builder().syllabus(syllabus).cloCode("CLO2").cloDescription("Apply OOP principles").build();
+                if (plos.size() > 1) {
+                    List<CLOPLOMapping> mappings = new ArrayList<>();
+                    mappings.add(CLOPLOMapping.builder().clo(clo2).plo(plos.get(1)).mappingLevel(CLOPLOMapping.MappingLevel.MEDIUM).build());
+                    clo2.setPloMappings(mappings);
+                }
+                cloRepository.save(clo2);
+                log.info("     > Added CLOs & Mappings");
+            }
+        }
+    }
+
+    // ==========================================
+    // PHẦN 4: INTERACTION & AI
+    // ==========================================
+    private void initInteractions() {
+        Course javaCourse = courseRepository.findByCourseCode("JPD113").orElse(null);
+        if (javaCourse == null) return;
+
+        Optional<Syllabus> syllabusOpt = syllabusRepository.findLatestVersionByCourseAndYear(javaCourse.getCourseId(), "2024-2025");
+        User headDept = userRepository.findByUsername("head_dept").orElse(null);
+        User lecturer = userRepository.findByUsername("lecturer").orElse(null);
+
+        if (syllabusOpt.isPresent() && headDept != null && lecturer != null) {
+            Syllabus syllabus = syllabusOpt.get();
+
+            // Review Comment
+            if (reviewCommentRepository.findBySyllabusOrderByCreatedAtDesc(syllabus).isEmpty()) {
+                reviewCommentRepository.save(ReviewComment.builder()
+                        .syllabus(syllabus)
+                        .user(headDept)
+                        .content("Cần bổ sung thêm tài liệu tham khảo mới hơn.")
+                        .createdAt(LocalDateTime.now().minusDays(1))
+                        .build());
+                log.info("   + Created Review Comment");
+            }
+
+            // Notification
+            if (notificationRepository.findByRecipientAndIsReadFalseOrderByCreatedAtDesc(lecturer).isEmpty()) {
+                notificationRepository.save(Notification.builder()
+                        .recipient(lecturer)
+                        .syllabus(syllabus)
+                        .type(Notification.NotificationType.COMMENT_ADDED)
+                        .title("Nhận xét mới")
+                        .message("Trưởng khoa đã thêm nhận xét vào đề cương JPD113.")
+                        .triggeredBy(headDept.getUsername())
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build());
+                log.info("   + Created Notification");
+            }
+        }
+    }
+
     private void initAiTasks() {
-        // Lấy Syllabus của môn Java (JPD113) để gán dữ liệu mẫu
-        courseRepository.findByCourseCode("JPD113").ifPresent(course -> {
-            syllabusRepository.findLatestVersionByCourseAndYear(course.getCourseId(), "2024-2025")
-                .ifPresent(syllabus -> {
-                    
-                    // Dữ liệu mẫu cho AI Summary (Kết quả generate CLO)
-                    String aiSummaryContent = "Dựa trên mô tả môn học, AI đề xuất 5 chuẩn đầu ra (CLOs):\n" +
-                            "1. [CLO-1] Hiểu rõ các nguyên lý cơ bản của lập trình hướng đối tượng (OOP) trong Java.\n" +
-                            "2. [CLO-2] Vận dụng được các cấu trúc dữ liệu và giải thuật cơ bản.\n" +
-                            "3. [CLO-3] Xây dựng được ứng dụng console hoàn chỉnh quản lý sinh viên.\n" +
-                            "4. [CLO-4] Phân tích và xử lý ngoại lệ (Exception Handling) hiệu quả.\n" +
-                            "5. [CLO-5] Áp dụng các Best Practices về Clean Code trong Java.";
+        Course javaCourse = courseRepository.findByCourseCode("JPD113").orElse(null);
+        if (javaCourse == null) return;
 
-                    createAITaskIfNotFound(
-                        syllabus, 
-                        AITask.TaskType.GENERATE_CLO, 
-                        AITask.TaskStatus.COMPLETED, 
-                        aiSummaryContent
-                    );
-
-                    // // Dữ liệu mẫu cho Task đang chạy (để test trạng thái loading)
-                    // createAITaskIfNotFound(
-                    //     syllabus,
-                    //     AITask.TaskType.SUGGEST_ASSESSMENT,
-                    //     AITask.TaskStatus.IN_PROGRESS,
-                    //     null
-                    // );
-                });
-        });
-    }
-
-    private void createAITaskIfNotFound(Syllabus syllabus, AITask.TaskType type, AITask.TaskStatus status, String resultSummary) {
-        // Kiểm tra xem đã có task loại này cho syllabus chưa
-        List<AITask> existingTasks = aiTaskRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId());
-        boolean exists = existingTasks.stream().anyMatch(t -> t.getTaskType() == type);
-
-        if (!exists) {
-            AITask task = AITask.builder()
-                    .syllabus(syllabus)
-                    .taskType(type)
-                    .status(status)
-                    .resultSummary(resultSummary) // Đây chính là dữ liệu sẽ hiện ở field aiResultSummary
-                    .createdAt(LocalDateTime.now())
-                    .build();
-            
-            aiTaskRepository.save(task);
-            log.info("   + Created AI Task: {} for Syllabus {}", type, syllabus.getCourse().getCourseCode());
+        Optional<Syllabus> syllabusOpt = syllabusRepository.findLatestVersionByCourseAndYear(javaCourse.getCourseId(), "2024-2025");
+        if (syllabusOpt.isPresent()) {
+            Syllabus syllabus = syllabusOpt.get();
+            if (aiTaskRepository.findBySyllabus_SyllabusId(syllabus.getSyllabusId()).isEmpty()) {
+                aiTaskRepository.save(AITask.builder()
+                        .syllabus(syllabus)
+                        .taskType(AITask.TaskType.GENERATE_CLO)
+                        .status(AITask.TaskStatus.COMPLETED)
+                        .resultSummary("AI generated 5 CLOs based on course description.")
+                        .createdAt(LocalDateTime.now())
+                        .build());
+                log.info("   + Created AI Task");
+            }
         }
     }
 }

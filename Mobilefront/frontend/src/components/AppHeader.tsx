@@ -58,7 +58,7 @@ export default function Header({ title, showRightIcon = false, onRightPress }: H
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: "#2D5BFF",
+        backgroundColor: "#008f81",
         paddingHorizontal: 20,
         paddingBottom: 20,
         flexDirection: "row",
