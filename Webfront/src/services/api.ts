@@ -96,17 +96,17 @@ export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
 
 // Admin API
 export const getUsers = async () => {
-  const response = await axiosClient.get("/admin/users");
+  const response = await axiosClient.get("/users");
   return response.data;
 };
 
 export const createUser = async (userData: any) => {
-  const response = await axiosClient.post("/admin/users", userData);
+  const response = await axiosClient.post("/users", userData);
   return response.data;
 };
 
 export const updateUser = async (userId: string, userData: any) => {
-  const response = await axiosClient.put(`/admin/users/${userId}`, userData);
+  const response = await axiosClient.put(`/users/${userId}`, userData);
   return response.data;
 };
 

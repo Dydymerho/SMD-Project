@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronLeft, Loader2, Home, Star } from 'lucide-react';
 import { getCourses, searchSyllabuses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
+import { useAuth } from '../../context/AuthContext';
 
 interface Course {
   courseId: number;
@@ -33,6 +34,7 @@ interface Syllabus {
 
 const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -119,9 +121,9 @@ const StudentDashboard: React.FC = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <button className="logout-btn">
+          <button onClick={logout} className="logout-btn">
             <ChevronLeft size={16} />
-            <span>Thu gọn</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
       </aside>
