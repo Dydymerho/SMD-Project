@@ -278,13 +278,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                         aiSummaryContent
                     );
 
-                    // Dữ liệu mẫu cho Task đang chạy (để test trạng thái loading)
-                    createAITaskIfNotFound(
-                        syllabus,
-                        AITask.TaskType.SUGGEST_ASSESSMENT,
-                        AITask.TaskStatus.IN_PROGRESS,
-                        null
-                    );
+                    // // Dữ liệu mẫu cho Task đang chạy (để test trạng thái loading)
+                    // createAITaskIfNotFound(
+                    //     syllabus,
+                    //     AITask.TaskType.SUGGEST_ASSESSMENT,
+                    //     AITask.TaskStatus.IN_PROGRESS,
+                    //     null
+                    // );
                 });
         });
     }
