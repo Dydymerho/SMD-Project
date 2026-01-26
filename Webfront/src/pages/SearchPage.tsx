@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import SearchInput from '../components/SearchInput';
 import SubjectCard from '../components/SubjectCard';
-import { searchCourses } from '../services/api';
+//import { searchCourses } from '../services/api';
 import './SearchPage.css';
 
 interface Course {
@@ -25,8 +25,8 @@ const SearchPage: React.FC = () => {
     setLoading(true);
     setSearched(true);
     try {
-      const data = await searchCourses(searchQuery);
-      setResults(data);
+      //const data = await searchCourses(searchQuery);
+      //setResults(data);
     } catch (error) {
       console.error('Error searching:', error);
     } finally {

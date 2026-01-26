@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingTop: 20,
         paddingBottom: 30,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#008f81",
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         shadowColor: "#000",
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     },
     subText: {
         fontSize: 16,
-        color: "#64748B",
+        color: "#000000",
         marginTop: 4,
         fontWeight: "500",
     },
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: "800",
-        color: "#3B82F6",
+        color: "#000000",
         textTransform: "uppercase",
         letterSpacing: 2,
         marginBottom: 20,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     cardHeader: {
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#30c4b0',
         padding: 16,
         borderTopLeftRadius: 12,
         borderTopRightRadius: 12,
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         fontWeight: '600',
-        color: '#1C1C1E',
+        color: '#ffffff',
     },
     cardBody: {
         padding: 16,

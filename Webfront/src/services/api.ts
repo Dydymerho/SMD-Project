@@ -1,11 +1,21 @@
-import axiosClient from "../api/axiosClient";
+import axiosClient from '../api/axiosClient';
+
+export interface Syllabus {
+  syllabusId: number;
+  course: {
+    courseId: number;
+    courseCode: string;
+    courseName: string;
+    credits: number;
+  };
+  program: { programName: string };
+  lecturer: { fullName: string };
+  versionNotes: string;
+}
 
 // Authentication API
 export const login = async (username: string, password: string) => {
-  const response = await axiosClient.post("/auth/login", {
-    username,
-    password,
-  });
+  const response = await axiosClient.post('/auth/login', { username, password });
   return response.data;
 };
 
@@ -26,21 +36,23 @@ export const getCourses = async () => {
 };
 
 export const getCourseById = async (id: string) => {
-  const response = await axiosClient.get(`/Courses/${id}`);
+  const response = await axiosClient.get(`/courses/${id}`);
   return response.data;
 };
 
-export const searchCourses = async (query: string) => {
-  const response = await axiosClient.get("/syllabuses/search", {
-    params: { keyword: query },
-  });
-  return response.data;
-};
+// TODO: Backend không có /search endpoint cho courses, chỉ có search syllabuses
+// export const searchCourses = async (query: string) => {
+//   const response = await axiosClient.get('/v1/courses/search', {
+//     params: { q: query },
+//   });
+//   return response.data;
+// };
 
+/*
 export const getRecommendedCourses = async () => {
   const response = await axiosClient.get("/courses");
   return response.data;
-};
+};  */
 
 // Syllabus API
 export const getSyllabusByCourseId = async (courseId: string) => {
@@ -75,19 +87,26 @@ export const rejectSyllabus = async (syllabusId: string, reason: string) => {
   return response.data;
 };
 
+export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
+  const response = await axiosClient.get(`/syllabuses/search`, {
+    params: { query }
+  });
+  return response.data;
+};
+
 // Admin API
 export const getUsers = async () => {
-  const response = await axiosClient.get("/admin/users");
+  const response = await axiosClient.get("/users");
   return response.data;
 };
 
 export const createUser = async (userData: any) => {
-  const response = await axiosClient.post("/admin/users", userData);
+  const response = await axiosClient.post("/users", userData);
   return response.data;
 };
 
 export const updateUser = async (userId: string, userData: any) => {
-  const response = await axiosClient.put(`/admin/users/${userId}`, userData);
+  const response = await axiosClient.put(`/users/${userId}`, userData);
   return response.data;
 };
 

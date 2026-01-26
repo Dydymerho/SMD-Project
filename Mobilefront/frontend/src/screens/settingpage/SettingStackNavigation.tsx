@@ -9,6 +9,9 @@ export type SettingStackParamList = {
     Terms: undefined          // 👈 Tên screen phải khớp
     About: undefined          // 👈 Tên screen phải khớp
 }
+export type SettingStackProps = {
+    setIsLoggedIn: (value: boolean) => void
+}
 
 const Stack = createNativeStackNavigator<SettingStackParamList>()
 

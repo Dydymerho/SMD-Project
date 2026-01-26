@@ -31,13 +31,13 @@ export default function HomeScreen() {
     const fetchSyllabus = async () => {
         try {
             setError(null);
-            console.log("🔄 Đang gọi API...");
+            console.log("Đang gọi API...");
             const data = await CourseApi.getMySyllabus();
-            console.log("✅ API thành công, data nhận được:", data);
-            console.log("📊 Số lượng môn học:", data.length);
+            console.log("API thành công, data nhận được:", data);
+            console.log("Số lượng môn học:", data.length);
             setCourses(data);
         } catch (error: any) {
-            console.error("❌ Error fetching syllabus:", error);
+            console.error("Error fetching syllabus:", error);
             console.error("Error message:", error.message);
             console.error("Error response:", error.response?.data);
             console.error("Error status:", error.response?.status);
@@ -116,7 +116,7 @@ export default function HomeScreen() {
             >
                 {/* Header Section */}
                 <View style={styles.header}>
-                    <Text style={styles.greeting}>Xin chào Tiến 👋</Text>
+                    <Text style={styles.greeting}>Xin chào Tiến</Text>
                     <Text style={styles.subText}>Học kỳ: HK1 — 2025</Text>
 
                     <View style={styles.searchWrapper}>
@@ -224,10 +224,10 @@ export default function HomeScreen() {
                                 key={`${subject.courseCode}-${subject.academicYear}`}
                                 code={subject.courseCode ?? ""}
                                 name={subject.courseName ?? ""}
-                                author={subject.username ?? ""}
+                                author={subject.lecturerName ?? ""}
                                 academicYear={subject.academicYear ?? ""}
-                                credits={subject.credits ?? 0}
-                                description={subject.aiSummary ?? ""}
+                                credits={subject.credit ?? 0}
+                                description={subject.aiSumary ?? ""}
                                 department={subject.deptName ?? ""}
                                 onPress={() =>
                                     navigation.navigate("SubjectDetail", {
@@ -438,7 +438,6 @@ function CourseItem({
                     <Icon name="library-books" size={16} color="#64748B" />
                     <Text style={styles.courseInfoText}>Tín chỉ: {credits}</Text>
                 </View>
-
                 {/* DESCRIPTION */}
                 {description && (
                     <View style={styles.descriptionBox}>
@@ -458,3 +457,4 @@ function CourseItem({
         </TouchableOpacity>
     )
 }
+
