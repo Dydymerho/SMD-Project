@@ -38,49 +38,17 @@ const InfoRow = ({
     </View>
 )
 
-const Bullet = ({ text, code }: { text: string; code: string }) => (
-    <TouchableOpacity style={styles.bullet} activeOpacity={0.8}>
-        <View style={styles.bulletIcon}>
-            <Icon name="book-open-page-variant" size={18} color="#3b82f6" />
-        </View>
-        <View>
-            <Text style={styles.bulletText}>{text}</Text>
-        </View>
-    </TouchableOpacity>
-)
 
-const BottomNavItem = ({
-    label,
-    iconName,
-    active
-}: {
-    label: string
-    iconName: string
-    active?: boolean
-}) => (
-    <TouchableOpacity style={styles.navItem}>
-        <Icon
-            name={iconName}
-            size={24}
-            color={active ? '#3b82f6' : '#94a3b8'}
-        />
-        <Text style={[styles.navText, active && styles.navTextActive]}>
-            {label}
-        </Text>
-    </TouchableOpacity>
-)
 
 /* =====================
         SCREEN
 ===================== */
 
 export default function ProfileScreen() {
-    const [showCourseList, setShowCourseList] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const COURSE_LIMIT = 4;
     // const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
 
     useEffect(() => {
@@ -123,6 +91,12 @@ export default function ProfileScreen() {
         return <Text>Không có dữ liệu hồ sơ</Text>;
     }
 
+    const getAvatarLetter = () => {
+        if (profile?.fullName) {
+            return profile.fullName.charAt(0).toUpperCase();
+        }
+        return "U";
+    };
 
     return (
         <View style={styles.container}>
@@ -131,28 +105,9 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 <View style={styles.heroCard}>
-                    {profile.avatarUrl ? (
-                        <Image
-                            source={{ uri: profile.avatarUrl }}
-                            style={styles.avatar}
-                        />
-                    ) : (
-
-                        <View style={[styles.avatar, {
-                            backgroundColor: '#e4e6eb',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            overflow: 'hidden'
-                        }]}>
-
-                            <Icon
-                                name="account"
-                                size={80}
-                                color="#bcc0c4"
-                                style={{ marginTop: 10 }}
-                            />
-                        </View>
-                    )}
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
+                    </View>
 
                     <Text style={styles.userName}>{profile.fullName}</Text>
                     <Text style={styles.userRole}>Sinh viên khóa 2024</Text>
