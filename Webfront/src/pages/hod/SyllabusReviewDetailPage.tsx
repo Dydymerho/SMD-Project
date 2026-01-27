@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, Eye, AlertTriangle, 
   Home, Users, Search, Bell, User, FileText, Clock, 
-  Edit, MessageSquare, TrendingUp, Zap
+  Edit, MessageSquare, TrendingUp, Zap, Loader, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getSyllabusDetailForReview, approveSyllabus, rejectSyllabus } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -50,6 +51,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [syllabus, setSyllabus] = useState<SyllabusDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Modals
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -58,6 +60,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionType, setRejectionType] = useState('content_error');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const notificationCount = 0;
 
   useEffect(() => {
     loadSyllabusDetail();
@@ -66,63 +69,14 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const loadSyllabusDetail = async () => {
     try {
       setLoading(true);
-      // TODO: Call API to fetch syllabus detail
-      // const data = await getSyllabusDetail(id);
-      // Mock data
-      setSyllabus({
-        id: id || '1',
-        courseCode: 'CS101',
-        courseName: 'Lập trình cơ bản',
-        credits: 3,
-        lecturer: {
-          name: 'Nguyễn Văn A',
-          email: 'nguyenvana@university.edu.vn'
-        },
-        version: 2,
-        submissionDate: '2024-01-20',
-        academicYear: '2024-2025',
-        description: 'Môn học cung cấp kiến thức nền tảng về lập trình máy tính...',
-        clos: [
-          'CLO1: Hiểu được các khái niệm cơ bản về lập trình',
-          'CLO2: Vận dụng được các cấu trúc điều khiển',
-          'CLO3: Thiết kế và implement được các thuật toán đơn giản'
-        ],
-        modules: [
-          {
-            moduleNo: 1,
-            moduleName: 'Giới thiệu về lập trình',
-            topics: ['Khái niệm lập trình', 'Ngôn ngữ lập trình', 'Môi trường phát triển'],
-            hours: 6
-          },
-          {
-            moduleNo: 2,
-            moduleName: 'Cấu trúc dữ liệu cơ bản',
-            topics: ['Biến và kiểu dữ liệu', 'Toán tử', 'Biểu thức'],
-            hours: 8
-          }
-        ],
-        assessments: [
-          { type: 'Kiểm tra giữa kỳ', percentage: 30, description: 'Bài thi trắc nghiệm và tự luận' },
-          { type: 'Bài tập thực hành', percentage: 20, description: 'Các bài tập lập trình hàng tuần' },
-          { type: 'Thi cuối kỳ', percentage: 50, description: 'Bài thi tổng hợp kiến thức' }
-        ],
-        changes: [
-          {
-            section: 'CLOs',
-            type: 'modified',
-            description: 'Cập nhật CLO2 để phù hợp với chuẩn đầu ra mới',
-            confidence: 0.95
-          },
-          {
-            section: 'Module 2',
-            type: 'added',
-            description: 'Thêm chủ đề "Con trỏ và tham chiếu"',
-            confidence: 0.88
-          }
-        ]
-      });
-    } catch (error) {
-      console.error('Error loading syllabus:', error);
+      setError(null);
+      if (!id) throw new Error('Không có ID giáo trình');
+      const syllabusId = parseInt(id);
+      const data = await getSyllabusDetailForReview(syllabusId);
+      setSyllabus(data);
+    } catch (err) {
+      console.error('Error loading syllabus:', err);
+      setError('Không thể tải chi tiết giáo trình. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -136,9 +90,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // TODO: Call API to approve syllabus
-      // await approveSyllabus(id, approvalNote);
-      console.log('Approved:', { id, approvalNote });
+      if (!id) throw new Error('Không có ID giáo trình');
+      const syllabusId = parseInt(id);
+      await approveSyllabus(syllabusId, approvalNote);
       alert('✅ Đã phê duyệt giáo trình thành công!\nGiáo trình sẽ được chuyển đến phòng Đào tạo.');
       navigate('/hod/syllabus-review');
     } catch (error) {
@@ -157,9 +111,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // TODO: Call API to reject syllabus
-      // await rejectSyllabus(id, rejectionType, rejectionReason);
-      console.log('Rejected:', { id, rejectionType, rejectionReason });
+      if (!id) throw new Error('Không có ID giáo trình');
+      const syllabusId = parseInt(id);
+      await rejectSyllabus(syllabusId, rejectionReason);
       alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về cho giảng viên với lý do từ chối.');
       navigate('/hod/syllabus-review');
     } catch (error) {
@@ -171,11 +125,40 @@ const SyllabusReviewDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải...</div>;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader size={48} className="spin" style={{ color: '#1976d2', margin: '0 auto 16px', display: 'block' }} />
+          <p style={{ color: '#666', fontSize: '16px', fontWeight: 500 }}>Đang tải chi tiết giáo trình...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!syllabus) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Không tìm thấy giáo trình</div>;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+        <div style={{ textAlign: 'center', background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <AlertCircle size={48} style={{ color: '#f44336', margin: '0 auto 16px', display: 'block' }} />
+          <h3 style={{ color: '#f44336', margin: '0 0 8px 0' }}>Lỗi tải dữ liệu</h3>
+          <p style={{ color: '#666', margin: '0 0 16px 0' }}>{error || 'Không tìm thấy giáo trình'}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '8px 16px',
+              background: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -246,7 +229,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">3</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
@@ -428,11 +413,17 @@ const SyllabusReviewDetailPage: React.FC = () => {
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>
               Chuẩn đầu ra (CLOs)
             </h3>
-            <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {syllabus.clos.map((clo, index) => (
-                <li key={index} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>{clo}</li>
-              ))}
-            </ul>
+            {syllabus.clos && syllabus.clos.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {syllabus.clos.map((clo: any, index: number) => (
+                  <li key={index} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>
+                    {typeof clo === 'string' ? clo : (clo.description || clo.name || JSON.stringify(clo))}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có CLO được định nghĩa</p>
+            )}
           </div>
 
           {/* Modules */}

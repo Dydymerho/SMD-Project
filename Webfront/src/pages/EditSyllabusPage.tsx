@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
 import Toast, { useToast } from '../components/Toast';
+import { getSyllabusDetailForReview } from '../services/workflowService';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
 import { getSyllabusById, updateSyllabus } from '../services/api';
@@ -98,22 +99,45 @@ const EditSyllabusPage: React.FC = () => {
 
   const loadSyllabusData = async (syllabusId: string) => {
     try {
-      const data = await getSyllabusById(Number(syllabusId));
-
-      // Hỗ trợ cả cấu trúc phẳng và lồng course
-      setCourseCode((data as any)?.courseCode || (data as any)?.course?.courseCode || '');
-      setCourseName((data as any)?.courseName || (data as any)?.course?.courseName || '');
-      setCredits(String((data as any)?.credit || (data as any)?.course?.credits || ''));
-      setAcademicYear((data as any)?.academicYear || '');
-      setSemester((data as any)?.semester || '');
-      setCourseObjectives((data as any)?.courseObjectives || '');
-      setCourseDescription((data as any)?.courseDescription || '');
-      // TODO: map CLO/PLO/assessments/sessionPlans/materials khi backend trả về đầy đủ
-
+      const data = await getSyllabusDetailForReview(parseInt(syllabusId));
+      
+      if (data) {
+        // Set basic info
+        setCourseCode(data.courseCode || '');
+        setCourseName(data.courseName || '');
+        setCredits(data.credits?.toString() || '');
+        setAcademicYear(data.academicYear || '');
+        setCourseObjectives(''); // Not available in API response
+        setCourseDescription(data.description || '');
+        
+        // Set CLOs - normalize from multiple possible sources
+        const loadedClos = data.clos && Array.isArray(data.clos) && data.clos.length > 0
+          ? data.clos.map((clo: any, index: number) => ({
+              id: clo.id?.toString() || (index + 1).toString(),
+              code: clo.code || clo.cloCode || `CLO${index + 1}`,
+              description: clo.description || clo.cloDescription || '',
+              bloomLevel: clo.bloomLevel || 'Remember'
+            }))
+          : [{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }];
+        
+        setClos(loadedClos);
+        
+        // Initialize PLO mappings if they exist
+        const mappings: { [cloId: string]: PLOMapping[] } = {};
+        loadedClos.forEach((clo: any) => {
+          mappings[clo.id] = clo.ploMappings && Array.isArray(clo.ploMappings)
+            ? clo.ploMappings
+            : [{ ploCode: 'PLO1', weight: 0 }];
+        });
+        setPloMappings(mappings);
+      }
+      
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading syllabus:', err);
-      error('Không thể tải dữ liệu giáo trình');
+    } catch (error) {
+      console.error('Error loading syllabus:', error);
+      // Fallback to empty form if API fails
+      setClos([{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }]);
+      setPloMappings({ '1': [{ ploCode: 'PLO1', weight: 0 }] });
       setLoading(false);
     }
   };
