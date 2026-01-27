@@ -82,7 +82,7 @@ public class JwtUtil {
             .claims(claims)  // Use claims() instead of setClaims()
             .subject(username)  // Use subject() instead of setSubject()
             .issuedAt(new Date(System.currentTimeMillis()))  // Use issuedAt() instead of setIssuedAt()
-            .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))  // Use expiration() instead of setExpiration()
+            .expiration(new Date(System.currentTimeMillis() + expiration))  // Use expiration() instead of setExpiration()
             .signWith(getSignKey())  // signWith() already uses the modern API
             .compact();
     }

@@ -110,10 +110,16 @@ public class Syllabus {
     @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
 
-    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("createdAt ASC")
     @ToString.Exclude
     @JsonIgnore
     private List<AITask> aiTasks;
+
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @JsonIgnore
+    private List<Notification> notifications;
 
     @PrePersist
     protected void onCreate() {

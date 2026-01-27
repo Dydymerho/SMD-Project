@@ -1,5 +1,7 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.CourseResponse;
+import com.smd.core.dto.DepartmentSimpleDto;
 import com.smd.core.entity.Course;
 import com.smd.core.service.CourseService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/courses")
@@ -16,33 +19,55 @@ public class CourseController {
     private final CourseService courseService;
 
     @GetMapping
-    public ResponseEntity<List<Course>> getAllCourses() {
-        return ResponseEntity.ok(courseService.getAllCourses());
+    public ResponseEntity<List<CourseResponse>> getAllCourses() {
+        List<Course> courses = courseService.getAllCourses();
+        List<CourseResponse> response = courses.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Course> getCourseById(@PathVariable Long id) {
-        return ResponseEntity.ok(courseService.getCourseById(id));
+    public ResponseEntity<CourseResponse> getCourseById(@PathVariable Long id) {
+        Course course = courseService.getCourseById(id);
+        return ResponseEntity.ok(convertToDto(course));
     }
 
     @GetMapping("/code/{courseCode}")
-    public ResponseEntity<Course> getCourseByCourseCode(@PathVariable String courseCode) {
-        return ResponseEntity.ok(courseService.getCourseByCourseCode(courseCode));
+    public ResponseEntity<CourseResponse> getCourseByCourseCode(@PathVariable String courseCode) {
+        Course course = courseService.getCourseByCourseCode(courseCode);
+        return ResponseEntity.ok(convertToDto(course));
     }
 
     @PostMapping
-    public ResponseEntity<Course> createCourse(@RequestBody Course course) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(courseService.createCourse(course));
+    public ResponseEntity<CourseResponse> createCourse(@RequestBody Course course) {
+        Course created = courseService.createCourse(course);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course course) {
-        return ResponseEntity.ok(courseService.updateCourse(id, course));
+    public ResponseEntity<CourseResponse> updateCourse(@PathVariable Long id, @RequestBody Course course) {
+        Course updated = courseService.updateCourse(id, course);
+        return ResponseEntity.ok(convertToDto(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private CourseResponse convertToDto(Course course) {
+        return CourseResponse.builder()
+            .courseId(course.getCourseId())
+            .courseCode(course.getCourseCode())
+            .courseName(course.getCourseName())
+            .credits(course.getCredits())
+            .department(course.getDepartment() != null ? 
+                DepartmentSimpleDto.builder()
+                    .departmentId(course.getDepartment().getDepartmentId())
+                    .deptName(course.getDepartment().getDeptName())
+                    .build() : null)
+            .build();
     }
 }

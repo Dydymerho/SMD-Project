@@ -38,19 +38,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
  const login = async (apiData: any): Promise<void> => {
   try {
-    let assignedRole: 'ADMIN' | 'TEACHER' | 'STUDENT' = 'STUDENT';
+    // Map backend role name to frontend role type
+    const mapRoleName = (roleName: string): 'ADMIN' | 'TEACHER' | 'STUDENT' => {
+      if (!roleName) return 'STUDENT';
+      
+      const roleMap: { [key: string]: 'ADMIN' | 'TEACHER' | 'STUDENT' } = {
+        'ADMIN': 'ADMIN',
+        'LECTURER': 'TEACHER',
+        'HEAD_OF_DEPARTMENT': 'TEACHER',
+        'ACADEMIC_AFFAIRS': 'ADMIN',
+        'PRINCIPAL': 'ADMIN',
+        'STUDENT': 'STUDENT'
+      };
+      
+      return roleMap[roleName] || 'STUDENT';
+    };
 
-    if (apiData.username === 'admin') {
-      assignedRole = 'ADMIN';
-    } else if (apiData.username.toLowerCase().startsWith('gv')) {
-      assignedRole = 'TEACHER';
-    }
-    
     const mappedUser: User = {
-      id: (apiData.id || apiData.userID || '').toString(), 
+      id: (apiData.userId || apiData.id || apiData.userID || '').toString(), 
       username: apiData.username,
-      name: apiData.fullName || apiData.username,
-      role: assignedRole,
+      name: apiData.fullName || apiData.fullFullName || apiData.username,
+      role: mapRoleName(apiData.roleName),
       email: apiData.email
     };
     
