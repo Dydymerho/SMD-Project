@@ -24,10 +24,8 @@ const LoginPage: React.FC = () => {
         await login(data);
         if (data.username === 'admin') {
           navigate('/admin/system-management');
-        } else if (data.username === 'student') {
-          navigate('/student/dashboard');
         } else {
-          alert('Vai trò không hợp lệ');
+          navigate('/dashboard');
         }
       }
     } catch (err: any) {
@@ -43,9 +41,6 @@ const LoginPage: React.FC = () => {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <div className="logo">
-            <div className="logo-icon"></div>
-          </div>
           <h1>SMD System</h1>
           <p>Hệ thống quản lý & tra cứu Giáo trình</p>
         </div>
@@ -90,13 +85,6 @@ const LoginPage: React.FC = () => {
             <a href="/forgot-password">Quên mật khẩu?</a>
           </div>
         </form>
-
-        <div className="demo-accounts">
-          <p><strong>Demo accounts:</strong></p>
-          <p>Admin: 001 / admin123</p>
-          <p>Giảng viên: 002 / teacher123</p>
-          <p>Sinh viên: 003 / student123</p>
-        </div>
       </div>
     </div>
   );

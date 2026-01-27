@@ -302,4 +302,49 @@ export const markAllNotificationsAsRead = async () => {
   return response.data;
 };
 
+// Course Subscriptions API
+export const followCourse = async (courseId: number) => {
+  const response = await axiosClient.post(`/courses/${courseId}/follow`);
+  return response.data;
+};
+
+export const unfollowCourse = async (courseId: number) => {
+  const response = await axiosClient.delete(`/courses/${courseId}/follow`);
+  return response.data;
+};
+
+export const getFollowedCourses = async () => {
+  const response = await axiosClient.get("/courses/following");
+  return response.data;
+};
+
+// Reports API
+export interface CreateReportRequest {
+  title: string;
+  description: string;
+}
+
+export interface ReportResponse {
+  reportId: number;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  reporterId: number;
+  reporterName: string;
+  reporterEmail: string;
+}
+
+export const createReport = async (request: CreateReportRequest): Promise<ReportResponse> => {
+  const response = await axiosClient.post("/reports", request);
+  return response.data;
+};
+
+export const getMyReports = async (page: number = 0, size: number = 10) => {
+  const response = await axiosClient.get("/reports/my-reports", {
+    params: { page, size }
+  });
+  return response.data;
+};
+
 export default axiosClient;

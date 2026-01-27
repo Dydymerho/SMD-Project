@@ -95,11 +95,109 @@
   color: #007bff;
 }
 
+.user-menu-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.user-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.user-menu-btn:hover {
+  background-color: #f0f0f0;
+  color: #007bff;
+}
+
+.user-menu-btn svg {
+  color: #007bff;
+}
+
+.chevron-icon {
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.chevron-icon.open {
+  transform: rotate(180deg);
+}
+
 .user-name-navbar {
-  max-width: 150px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+  color: #007bff;
+}
+
+.dropdown-item svg {
+  color: #666;
+}
+
+.dropdown-item:hover svg {
+  color: #007bff;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 4px 0;
+}
+
+.dropdown-item.logout-item {
+  color: #ff4444;
+}
+
+.dropdown-item.logout-item:hover {
+  background-color: #fff0f0;
+  color: #ff4444;
+}
+
+.dropdown-item.logout-item svg {
+  color: #ff4444;
 }
 
 .logout-navbar-btn {

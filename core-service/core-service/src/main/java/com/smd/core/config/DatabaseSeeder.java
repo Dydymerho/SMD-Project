@@ -389,25 +389,27 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
-    // ==========================================
     // PHẦN 4: INTERACTION & AI
     // ==========================================
     private void initInteractions() {
         Department itDept = getDepartment("Khoa Cong Nghe Thong Tin");
         if (itDept == null || itDept.getHeadOfDepartment() == null) return;
         
+        // 1. Tương tác: Trưởng bộ môn comment vào đề cương đang chờ duyệt
         List<Syllabus> pendingSyllabi = syllabusRepository.findByCurrentStatus(Syllabus.SyllabusStatus.PENDING_REVIEW);
         User head = itDept.getHeadOfDepartment();
 
         for (Syllabus s : pendingSyllabi) {
             if (s.getCourse().getDepartment().getDepartmentId().equals(itDept.getDepartmentId())) {
+                // Tạo Comment
                 reviewCommentRepository.save(ReviewComment.builder()
                         .syllabus(s)
                         .user(head)
-                        .content("Đề cương cần chi tiết hơn ở phần đánh giá.")
+                        .content("Đề cương cần chi tiết hơn ở phần đánh giá, vui lòng bổ sung rubrics.")
                         .createdAt(LocalDateTime.now().minusHours(2))
                         .build());
                 
+                // Tạo Thông báo cho Giảng viên (Lecturer)
                 notificationRepository.save(Notification.builder()
                         .recipient(s.getLecturer())
                         .syllabus(s)
@@ -415,10 +417,62 @@ public class DatabaseSeeder implements CommandLineRunner {
                         .title("Yêu cầu chỉnh sửa")
                         .message("Trưởng bộ môn đã nhận xét đề cương " + s.getCourse().getCourseCode())
                         .triggeredBy(head.getUsername())
-                        .isRead(false)
+                        .isRead(false) // Chưa đọc
                         .createdAt(LocalDateTime.now())
                         .build());
             }
+        }
+//nigga
+        // 2. Tương tác: Thông báo cho Sinh viên (Student) về đề cương đã Public
+        // Giả lập student1 nhận được thông báo về môn học họ quan tâm
+        User student = userRepository.findByUsername("student1").orElse(null);
+        // Lấy một đề cương bất kỳ (ưu tiên Published) để giả lập thông báo
+        Syllabus publicSyllabus = syllabusRepository.findAll().stream()
+                .filter(s -> s.getCurrentStatus() == Syllabus.SyllabusStatus.PUBLISHED)
+                .findFirst()
+                .orElse(!pendingSyllabi.isEmpty() ? pendingSyllabi.get(0) : null);
+
+        if (student != null && publicSyllabus != null) {
+            notificationRepository.save(Notification.builder()
+                    .recipient(student)
+                    .syllabus(publicSyllabus)
+                    .type(Notification.NotificationType.SYLLABUS_PUBLISHED)
+                    .title("Đề cương môn học mới")
+                    .message("Môn học " + publicSyllabus.getCourse().getCourseName() + " (" + publicSyllabus.getCourse().getCourseCode() + ") đã cập nhật đề cương mới v" + publicSyllabus.getVersionNo())
+                    .triggeredBy("admin") // Người public (thường là Principal hoặc Admin)
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusMinutes(30))
+                    .build());
+            
+            // Thêm một thông báo cũ đã đọc
+            notificationRepository.save(Notification.builder()
+                    .recipient(student)
+                    .syllabus(publicSyllabus)
+                    .type(Notification.NotificationType.PDF_UPLOADED)
+                    .title("Tài liệu tham khảo mới")
+                    .message("File PDF tham khảo cho môn " + publicSyllabus.getCourse().getCourseCode() + " đã được tải lên.")
+                    .triggeredBy(publicSyllabus.getLecturer().getUsername())
+                    .isRead(true) // Đã đọc
+                    .readAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now().minusDays(1))
+                    .build());
+        }
+
+        // 3. Tương tác: Thông báo cho Phòng Đào Tạo (Academic Affairs)
+        // Giả lập đề cương đã qua ải HOD, giờ đến lượt PĐT duyệt
+        User aaUser = userRepository.findByRole_RoleName("ACADEMIC_AFFAIRS").stream().findFirst().orElse(null);
+        if (aaUser != null && !pendingSyllabi.isEmpty()) {
+            Syllabus s = pendingSyllabi.get(0);
+            notificationRepository.save(Notification.builder()
+                    .recipient(aaUser)
+                    .syllabus(s)
+                    .type(Notification.NotificationType.SYLLABUS_APPROVED_BY_HOD)
+                    .title("Đề cương chờ phê duyệt")
+                    .message("Đề cương " + s.getCourse().getCourseName() + " đã được Trưởng bộ môn thông qua và đang chờ Phòng Đào Tạo duyệt.")
+                    .triggeredBy(head.getUsername())
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusMinutes(15))
+                    .build());
         }
     }
 

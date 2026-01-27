@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './Navbar.css';
-import { Bell, LogOut, User } from 'lucide-react';
+import { Bell, LogOut, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getNotificationStats } from '../services/api';
 
@@ -11,12 +11,31 @@ const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchNotificationStats();
     const interval = setInterval(fetchNotificationStats, 30000); // Refresh every 30s
     return () => clearInterval(interval);
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
   const fetchNotificationStats = async () => {
     try {
@@ -33,7 +52,18 @@ const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
+    setIsUserMenuOpen(false);
     navigate('/login');
+  };
+
+  const handleViewProfile = () => {
+    setIsUserMenuOpen(false);
+    navigate('/profile');
+  };
+
+  const handleChangePassword = () => {
+    setIsUserMenuOpen(false);
+    navigate('/change-password');
   };
 
   return (
@@ -70,18 +100,44 @@ const Navbar: React.FC = () => {
             )}
           </div>
           {user && (
-            <div className="user-info-navbar">
-              <User size={20} />
-              <span className="user-name-navbar">{user.name}</span>
+            <div className="user-menu-wrapper" ref={userMenuRef}>
+              <button
+                className="user-menu-btn"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                title="Tùy chọn người dùng"
+              >
+                <User size={20} />
+                <span className="user-name-navbar">{user.name}</span>
+                <ChevronDown size={18} className={`chevron-icon ${isUserMenuOpen ? 'open' : ''}`} />
+              </button>
+              {isUserMenuOpen && (
+                <div className="user-dropdown-menu">
+                  <button 
+                    className="dropdown-item"
+                    onClick={handleViewProfile}
+                  >
+                    <User size={16} />
+                    <span>Xem hồ sơ</span>
+                  </button>
+                  <button 
+                    className="dropdown-item"
+                    onClick={handleChangePassword}
+                  >
+                    <LogOut size={16} />
+                    <span>Đổi mật khẩu</span>
+                  </button>
+                  <div className="dropdown-divider"></div>
+                  <button 
+                    className="dropdown-item logout-item"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={16} />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
-          <button 
-            className="logout-navbar-btn"
-            onClick={handleLogout}
-            title="Đăng xuất"
-          >
-            <LogOut size={20} />
-          </button>
         </div>
       </div>
     </nav>
