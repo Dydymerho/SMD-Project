@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Home, FolderOpen, MessageSquare, Search, GitCompare, Bell, User,
-  Plus, ArrowLeft, Send
+  Plus, ArrowLeft, Save, Send
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
 import './CreateSyllabusPage.css';
@@ -39,10 +39,12 @@ interface Material {
   type: string;
 }
 
-const CreateSyllabusPage: React.FC = () => {
+const EditSyllabusPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   // Basic Info
   const [courseCode, setCourseCode] = useState('');
@@ -83,6 +85,36 @@ const CreateSyllabusPage: React.FC = () => {
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load existing syllabus data
+  useEffect(() => {
+    if (id) {
+      loadSyllabusData(id);
+    }
+  }, [id]);
+
+  const loadSyllabusData = async (syllabusId: string) => {
+    try {
+      // TODO: Call API to get syllabus by ID
+      // const response = await api.get(`/api/v1/syllabuses/${syllabusId}`);
+      // const data = response.data;
+      
+      // Mock data for now
+      setCourseCode('CS101');
+      setCourseName('Nhập môn Công nghệ thông tin');
+      setCredits('3');
+      setAcademicYear('2023-2024');
+      setSemester('HK1');
+      setCourseObjectives('Giới thiệu các khái niệm cơ bản về CNTT');
+      setCourseDescription('Môn học cung cấp kiến thức nền tảng về công nghệ thông tin');
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading syllabus:', error);
+      alert('Không thể tải dữ liệu giáo trình');
+      setLoading(false);
+    }
+  };
 
   // CLO Functions
   const addCLO = () => {
@@ -199,7 +231,7 @@ const CreateSyllabusPage: React.FC = () => {
   };
 
   // Form Submission
-  const handleSubmit = async () => {
+  const handleUpdate = async () => {
     setIsSubmitting(true);
     
     try {
@@ -227,8 +259,6 @@ const CreateSyllabusPage: React.FC = () => {
         },
         academicYear,
         semester,
-        versionNo: 1,
-        currentStatus: 'DRAFT',
         courseObjectives,
         courseDescription,
         clos: clos.map(clo => ({
@@ -242,24 +272,24 @@ const CreateSyllabusPage: React.FC = () => {
         materials: materials.filter(m => m.title)
       };
 
-      console.log('Submitting syllabus:', syllabusData);
+      console.log('Updating syllabus:', syllabusData);
 
-      // TODO: Call API to create syllabus
-      // const response = await api.post('/api/v1/syllabuses', syllabusData);
+      // TODO: Call API to update syllabus
+      // const response = await api.put(`/api/v1/syllabuses/${id}`, syllabusData);
 
       // TODO: Upload PDF if exists
       // if (pdfFile) {
       //   const formData = new FormData();
       //   formData.append('file', pdfFile);
-      //   await api.post(`/api/v1/syllabuses/${response.data.syllabusId}/upload-pdf`, formData);
+      //   await api.post(`/api/v1/syllabuses/${id}/upload-pdf`, formData);
       // }
 
-      alert('✅ Tạo đề cương thành công!');
+      alert('✅ Cập nhật đề cương thành công!');
       navigate('/dashboard');
       
     } catch (error) {
-      console.error('Error creating syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi tạo đề cương');
+      console.error('Error updating syllabus:', error);
+      alert('❌ Có lỗi xảy ra khi cập nhật đề cương');
     } finally {
       setIsSubmitting(false);
     }
@@ -677,6 +707,25 @@ const CreateSyllabusPage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="dashboard-page">
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <div className="logo"></div>
+            <h2>SMD System</h2>
+            <p>Giảng viên</p>
+          </div>
+        </aside>
+        <main className="main-content">
+          <div className="content-section">
+            <p>Đang tải dữ liệu giáo trình...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-page">
       {/* Sidebar - Same as LecturerDashboard */}
@@ -706,7 +755,8 @@ const CreateSyllabusPage: React.FC = () => {
           </a>
           <a 
             href="#" 
-            className="nav-item active" 
+            className="nav-item" 
+            onClick={(e) => { e.preventDefault(); navigate('/syllabus/create'); }}
           >
             <span className="icon"><Plus size={20} /></span>
             Tạo giáo trình mới
@@ -749,8 +799,8 @@ const CreateSyllabusPage: React.FC = () => {
         {/* Header - Same as LecturerDashboard */}
         <header className="page-header">
           <div className="header-left">
-            <h1>Tạo giáo trình mới</h1>
-            <p>Soạn thảo nội dung, đính kèm metadata (CLO, PLO, modules) và nộp HoD</p>
+            <h1>Cập nhật giáo trình</h1>
+            <p>Chỉnh sửa thông tin và nội dung giáo trình đã tạo</p>
           </div>
           <div className="header-right">
             <div className="notification-wrapper">
@@ -790,63 +840,63 @@ const CreateSyllabusPage: React.FC = () => {
           </div>
 
           <div className="stepper">
-          {[
-            { num: 1, label: 'Thông tin cơ bản' },
-            { num: 2, label: 'CLO / PLO' },
-            { num: 3, label: 'Đánh giá' },
-            { num: 4, label: 'Kế hoạch' },
-            { num: 5, label: 'Tài liệu & PDF' }
-          ].map((step) => (
-            <div
-              key={step.num}
-              className={`step ${currentStep === step.num ? 'active' : ''} ${currentStep > step.num ? 'completed' : ''}`}
-              onClick={() => setCurrentStep(step.num)}
-            >
-              <div className="step-number">{step.num}</div>
-              <div className="step-label">{step.label}</div>
-            </div>
-          ))}
-        </div>
-
-        <form className="syllabus-form" onSubmit={(e) => e.preventDefault()}>
-          {renderStepContent()}
-
-          <div className="form-actions">
-            {currentStep > 1 && (
-              <button
-                type="button"
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="btn-secondary"
+            {[
+              { num: 1, label: 'Thông tin cơ bản' },
+              { num: 2, label: 'CLO / PLO' },
+              { num: 3, label: 'Đánh giá' },
+              { num: 4, label: 'Kế hoạch' },
+              { num: 5, label: 'Tài liệu & PDF' }
+            ].map((step) => (
+              <div
+                key={step.num}
+                className={`step ${currentStep === step.num ? 'active' : ''} ${currentStep > step.num ? 'completed' : ''}`}
+                onClick={() => setCurrentStep(step.num)}
               >
-                ← Quay lại
-              </button>
-            )}
-            
-            {currentStep < 5 ? (
-              <button
-                type="button"
-                onClick={() => setCurrentStep(currentStep + 1)}
-                className="btn-primary"
-              >
-                Tiếp theo →
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="btn-submit"
-                disabled={isSubmitting}
-              >
-                <Send size={18} style={{ marginRight: '8px' }} />
-                {isSubmitting ? 'Đang xử lý...' : 'Submit đề cương'}
-              </button>
-            )}
+                <div className="step-number">{step.num}</div>
+                <div className="step-label">{step.label}</div>
+              </div>
+            ))}
           </div>
-        </form>
+
+          <form className="syllabus-form" onSubmit={(e) => e.preventDefault()}>
+            {renderStepContent()}
+
+            <div className="form-actions">
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep - 1)}
+                  className="btn-secondary"
+                >
+                  ← Quay lại
+                </button>
+              )}
+              
+              {currentStep < 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  className="btn-primary"
+                >
+                  Tiếp theo →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleUpdate}
+                  className="btn-submit"
+                  disabled={isSubmitting}
+                >
+                  <Save size={18} style={{ marginRight: '8px' }} />
+                  {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              )}
+            </div>
+          </form>
         </div>
       </main>
     </div>
   );
 };
 
-export default CreateSyllabusPage;
+export default EditSyllabusPage;

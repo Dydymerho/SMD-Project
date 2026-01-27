@@ -4,7 +4,7 @@ interface User {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  role: 'ADMIN' | 'LECTURER' | 'STUDENT';
   email: string;
 }
 
@@ -14,7 +14,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isTeacher: boolean;
+  isLecturer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,13 +39,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
  const login = async (apiData: any): Promise<void> => {
   try {
     // Map backend role name to frontend role type
-    const mapRoleName = (roleName: string): 'ADMIN' | 'TEACHER' | 'STUDENT' => {
+    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' => {
       if (!roleName) return 'STUDENT';
       
-      const roleMap: { [key: string]: 'ADMIN' | 'TEACHER' | 'STUDENT' } = {
+      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' } = {
         'ADMIN': 'ADMIN',
-        'LECTURER': 'TEACHER',
-        'HEAD_OF_DEPARTMENT': 'TEACHER',
+        'LECTURER': 'LECTURER',
+        'HEAD_OF_DEPARTMENT': 'LECTURER',
         'ACADEMIC_AFFAIRS': 'ADMIN',
         'PRINCIPAL': 'ADMIN',
         'STUDENT': 'STUDENT'
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'ADMIN',
-    isTeacher: user?.role === 'TEACHER',
+    isLecturer: user?.role === 'LECTURER',
   };
 
   if (isLoading) {
