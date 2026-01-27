@@ -4,7 +4,7 @@ interface User {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'LECTURER' | 'STUDENT';
+  role: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL';
   email: string;
 }
 
@@ -38,20 +38,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
  const login = async (apiData: any): Promise<void> => {
   try {
+    console.log('Login API Data:', apiData);
+    console.log('Role Name from backend:', apiData.roleName);
+    
     // Map backend role name to frontend role type
-    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' => {
+    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL' => {
       if (!roleName) return 'STUDENT';
       
-      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' } = {
+      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL' } = {
         'ADMIN': 'ADMIN',
         'LECTURER': 'LECTURER',
-        'HEAD_OF_DEPARTMENT': 'LECTURER',
-        'ACADEMIC_AFFAIRS': 'ADMIN',
-        'PRINCIPAL': 'ADMIN',
+        'HEAD_OF_DEPARTMENT': 'HEAD_OF_DEPARTMENT',
+        'ACADEMIC_AFFAIRS': 'ACADEMIC_AFFAIRS',
+        'PRINCIPAL': 'PRINCIPAL',
         'STUDENT': 'STUDENT'
       };
       
-      return roleMap[roleName] || 'STUDENT';
+      const mappedRole = roleMap[roleName] || 'STUDENT';
+      console.log(`Mapping role: ${roleName} -> ${mappedRole}`);
+      return mappedRole;
     };
 
     const mappedUser: User = {
@@ -62,6 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       email: apiData.email
     };
     
+    console.log('Mapped User:', mappedUser);
     setUser(mappedUser);
     localStorage.setItem('user', JSON.stringify(mappedUser));
   } catch (error) {

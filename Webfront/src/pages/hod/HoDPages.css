@@ -1,0 +1,82 @@
+.hod-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.hod-container {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 40px 24px;
+}
+
+.hod-header {
+  margin-bottom: 32px;
+}
+
+.hod-header h1 {
+  font-size: 28px;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.hod-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-tabs button {
+  padding: 10px 16px;
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.filter-tabs button:hover {
+  background: #e0e0e0;
+}
+
+.filter-tabs button.active {
+  background: #007bff;
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hod-container {
+    padding: 20px 16px;
+  }
+
+  .hod-header h1 {
+    font-size: 22px;
+  }
+
+  .hod-header p {
+    font-size: 13px;
+  }
+
+  table {
+    font-size: 12px !important;
+  }
+
+  table th,
+  table td {
+    padding: 12px !important;
+  }
+}
