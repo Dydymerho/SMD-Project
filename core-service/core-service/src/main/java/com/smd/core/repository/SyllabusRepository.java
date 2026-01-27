@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,12 @@ public interface SyllabusRepository extends JpaRepository<Syllabus, Long> {
     List<Syllabus> findByAcademicYearContaining(String keyword);
     
     // === VERSIONING QUERIES ===
+
+    @Query("SELECT s FROM Syllabus s WHERE " +
+            "LOWER(s.course.courseName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.course.courseCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.academicYear) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Syllabus> searchByKeyword(@Param("keyword") String keyword);
     
     // Find specific version of a syllabus
     Optional<Syllabus> findByCourse_CourseIdAndAcademicYearAndVersionNo(Long courseId, String academicYear, Integer versionNo);

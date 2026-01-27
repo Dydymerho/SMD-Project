@@ -261,7 +261,7 @@ public class SyllabusService {
             if (documents.isEmpty()) {
                 System.out.println("--> [SEARCH] Không tìm thấy trong Elasticsearch, fallback PostgreSQL");
                 // Fallback: Search trực tiếp trong PostgreSQL
-                return syllabusRepo.findByAcademicYearContaining(keyword);
+                return syllabusRepo.searchByKeyword(keyword);
             }
 
             // Bước 2: Extract IDs từ search results
@@ -278,7 +278,7 @@ public class SyllabusService {
         } catch (Exception e) {
             // Nếu Elasticsearch lỗi, fallback sang PostgreSQL
             System.err.println("--> [SEARCH ERROR] Elasticsearch error, fallback: " + e.getMessage());
-            return syllabusRepo.findByAcademicYearContaining(keyword);
+            return syllabusRepo.searchByKeyword(keyword);
         }
     }
     
