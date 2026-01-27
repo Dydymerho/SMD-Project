@@ -340,6 +340,7 @@
   background: var(--primary-color);
   color: white;
   border: none;
+  border-radius: 10px;
   font-weight: 500;
   cursor: pointer;
   transition: 0.3s;
@@ -365,9 +366,9 @@
 }
 
 .action-btn {
-  flex: 0 0 44px;
   height: 44px;
-  padding: 0;
+  padding: 5px;
+  width: 100px;
   border: 2px solid var(--border-color);
   background: white;
   border-radius: 8px;
@@ -756,32 +757,6 @@
   margin-bottom: 8px;
 }
 
-.course-code {
-  font-weight: 700;
-  color: #2c3e50;
-  font-size: 0.95rem;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.course-credits {
-  background: #ecf0f1;
-  color: #2c3e50;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.course-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0;
-  line-height: 1.4;
-  word-wrap: break-word;
-}
 
 /* ===== NEW: No Results Message ===== */
 .no-results {
