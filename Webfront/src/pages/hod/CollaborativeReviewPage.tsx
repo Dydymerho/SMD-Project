@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, Home, MessageSquare, CheckCircle, Clock, Search, Bell, User 
+  Users, Home, MessageSquare, CheckCircle, Clock, Search, Bell, User, Loader, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -31,29 +32,54 @@ const CollaborativeReviewPage: React.FC = () => {
     deadline: '',
     participants: [] as string[]
   });
-  const [reviews, setReviews] = useState<CollaborativeReview[]>([
-    {
-      id: '1',
-      courseCode: 'CS101',
-      courseName: 'Lập trình cơ bản',
-      dueDate: '2024-02-15',
-      status: 'active',
-      participantCount: 8,
-      feedbackCount: 5,
-      lecturer: 'Nguyễn Văn A',
-    },
-    {
-      id: '2',
-      courseCode: 'CS102',
-      courseName: 'Cấu trúc dữ liệu',
-      dueDate: '2024-02-20',
-      status: 'pending',
-      participantCount: 6,
-      feedbackCount: 2,
-      lecturer: 'Trần Thị B',
-    },
-  ]);
+  const [reviews, setReviews] = useState<CollaborativeReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('active');
+  const notificationCount = 0;
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
+
+  const mapStatus = (status?: string): CollaborativeReview['status'] => {
+    const normalized = (status || '').toLowerCase();
+    if (normalized.includes('approve') || normalized.includes('complete')) return 'completed';
+    if (normalized.includes('pending')) return 'pending';
+    return 'active';
+  };
+
+  const loadReviews = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const pending = await getPendingSyllabusesForHoD();
+      const list = Array.isArray(pending.data) ? pending.data : [];
+
+      const mapped = await Promise.all(list.map(async (item: any) => {
+        const syllabusId = item.syllabusId || item.id;
+        const feedbackCount = syllabusId ? await getReviewCommentCount(syllabusId) : 0;
+        return {
+          id: (syllabusId || '').toString(),
+          courseCode: item.courseCode || item.course?.courseCode || 'N/A',
+          courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
+          dueDate: item.updatedAt || item.createdAt || new Date().toISOString(),
+          status: mapStatus(item.currentStatus),
+          participantCount: item.participantCount || 0,
+          feedbackCount,
+          lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
+          isFinalized: mapStatus(item.currentStatus) === 'completed'
+        } as CollaborativeReview;
+      }));
+
+      setReviews(mapped);
+    } catch (err) {
+      console.error('Error loading collaborative reviews:', err);
+      setError('Không thể tải danh sách thảo luận');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateReview = async () => {
     if (!newReview.syllabusId || !newReview.deadline) {
@@ -62,12 +88,17 @@ const CollaborativeReviewPage: React.FC = () => {
     }
 
     try {
-      // TODO: Call API to create collaborative review
-      // await createCollaborativeReview(newReview);
+      await createCollaborativeReview(
+        parseInt(newReview.syllabusId),
+        newReview.description,
+        newReview.deadline,
+        newReview.participants
+      );
       alert('✅ Đã tạo phiên thảo luận thành công!');
       setShowCreateModal(false);
       setNewReview({ syllabusId: '', description: '', deadline: '', participants: [] });
       // Reload reviews
+      loadReviews();
     } catch (error) {
       console.error('Error creating review:', error);
       alert('❌ Có lỗi xảy ra khi tạo phiên thảo luận');
@@ -147,7 +178,9 @@ const CollaborativeReviewPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">2</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
@@ -164,6 +197,40 @@ const CollaborativeReviewPage: React.FC = () => {
 
         {/* Content */}
         <div className="content-section" style={{ padding: '40px' }}>
+
+        {/* Loading State */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+            <Loader size={48} style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: '#666', fontSize: '16px', fontWeight: 500 }}>Đang tải danh sách thảo luận...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffebee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(244, 67, 54, 0.1)', marginBottom: '24px' }}>
+            <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#f44336', opacity: 0.8 }} />
+            <h3 style={{ color: '#f44336', marginBottom: '8px' }}>Lỗi tải dữ liệu</h3>
+            <p style={{ color: '#d32f2f', marginBottom: '16px' }}>{error}</p>
+            <button
+              onClick={loadReviews}
+              style={{
+                padding: '8px 16px',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+        <>
 
         {/* Header with Create Button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -391,6 +458,8 @@ const CollaborativeReviewPage: React.FC = () => {
             <p>Không có thảo luận hợp tác trong danh mục này</p>
           </div>
         )}
+        </>
+        )}
         </div>
 
         {/* Create Review Modal */}
@@ -441,9 +510,11 @@ const CollaborativeReviewPage: React.FC = () => {
                   }}
                 >
                   <option value="">-- Chọn giáo trình --</option>
-                  <option value="1">CS101 - Lập trình cơ bản (v2)</option>
-                  <option value="2">CS102 - Cấu trúc dữ liệu (v1)</option>
-                  <option value="3">CS201 - Thuật toán nâng cao (v1)</option>
+                  {reviews.map((review) => (
+                    <option key={review.id} value={review.id}>
+                      {review.courseCode} - {review.courseName}
+                    </option>
+                  ))}
                 </select>
               </div>
 
