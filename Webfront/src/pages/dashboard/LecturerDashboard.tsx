@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -8,6 +8,11 @@ import {
 } from 'lucide-react';
 import './DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import { 
+  getMySyllabi, searchSyllabuses, followCourse, unfollowCourse, 
+  markNotificationAsRead, markAllNotificationsAsRead, createReport,
+  getNotifications
+} from '../../services/api';
 
 interface Syllabus {
   id: string;
@@ -24,6 +29,23 @@ interface Syllabus {
   collaborators?: number;
 }
 
+interface APISyllabus {
+  syllabusId: number;
+  course: {
+    courseId: number;
+    courseCode: string;
+    courseName: string;
+    credits: number;
+  };
+  lecturer: {
+    fullName: string;
+  };
+  currentStatus?: string;
+  versionNotes?: string;
+  academicYear?: string;
+  createdAt?: string;
+}
+
 const LecturerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -31,6 +53,13 @@ const LecturerDashboard: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  
+  // Data states
+  const [mySyllabi, setMySyllabi] = useState<Syllabus[]>([]);
+  const [searchResults, setSearchResults] = useState<Syllabus[]>([]);
+  const [collaborativeSyllabi, setCollaborativeSyllabi] = useState<Syllabus[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   
   // Modals
   const [showReportModal, setShowReportModal] = useState(false);
@@ -43,97 +72,90 @@ const LecturerDashboard: React.FC = () => {
   const [submitNote, setSubmitNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Lecturer specific stats
-  const stats = {
-    totalSyllabi: 8,
-    inProgress: 2,
-    pendingApproval: 3,
-    approved: 5,
-    collaborative: 4,
-    followed: 6,
+  // Lecturer specific stats - will be calculated from API data
+  const [stats, setStats] = useState({
+    totalSyllabi: 0,
+    inProgress: 0,
+    pendingApproval: 0,
+    approved: 0,
+    collaborative: 0,
+    followed: 0,
+  });
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchMyData();
+  }, []);
+
+  // Fetch notification count
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const data = await getNotifications(0, 100);
+        if (data.content) {
+          const unread = data.content.filter((n: any) => !n.isRead).length;
+          setUnreadNotificationCount(unread);
+        }
+      } catch (error) {
+        console.error('Lỗi lấy thông báo:', error);
+      }
+    };
+    fetchNotifications();
+    // Auto refresh every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchMyData = async () => {
+    try {
+      setLoadingData(true);
+      const syllabi = await getMySyllabi();
+      
+      // Convert API response to UI format
+      const convertedSyllabi = syllabi.map((s: APISyllabus) => ({
+        id: s.course.courseCode,
+        name: s.course.courseName,
+        semester: s.academicYear,
+        status: mapStatus(s.currentStatus),
+        lastUpdated: s.createdAt ? new Date(s.createdAt).toLocaleDateString('vi-VN') : 'N/A',
+        version: s.versionNotes ? `v${s.versionNotes.split('v')[1]?.split(' ')[0] || '1.0'}` : 'v1.0',
+        following: false,
+        comments: 0,
+      }));
+
+      setMySyllabi(convertedSyllabi);
+
+      // Calculate stats
+      const inProgress = convertedSyllabi.filter((s: Syllabus) => s.status === 'Đang soạn').length;
+      const pendingApproval = convertedSyllabi.filter((s: Syllabus) => s.status === 'Chờ duyệt').length;
+      const approved = convertedSyllabi.filter((s: Syllabus) => s.status === 'Đã duyệt').length;
+
+      setStats({
+        totalSyllabi: convertedSyllabi.length,
+        inProgress,
+        pendingApproval,
+        approved,
+        collaborative: 0,
+        followed: 0,
+      });
+    } catch (error) {
+      console.error('Lỗi lấy dữ liệu giáo trình:', error);
+    } finally {
+      setLoadingData(false);
+    }
   };
 
-  // Function 1 & 2: My Syllabi (Create & Update)
-  const mySyllabi: Syllabus[] = [
-    {
-      id: 'CS101',
-      name: 'Nhập môn Công nghệ thông tin',
-      semester: 'HK I 2023-2024',
-      status: 'Đã duyệt',
-      lastUpdated: '15/12/2025',
-      version: 'v2.1',
-      comments: 3,
-      following: true,
-    },
-    {
-      id: 'CS201',
-      name: 'Kỹ thuật lập trình',
-      semester: 'HK II 2023-2024',
-      status: 'Chờ duyệt',
-      lastUpdated: '20/01/2026',
-      version: 'v1.0',
-      comments: 1,
-      following: false,
-    },
-    {
-      id: 'CS301',
-      name: 'Cấu trúc dữ liệu và giải thuật',
-      semester: 'HK I 2024-2025',
-      status: 'Đang soạn',
-      lastUpdated: '25/01/2026',
-      version: 'v0.5',
-      comments: 0,
-      following: false,
-    },
-  ];
-
-  // Function 4: Collaborative Review
-  const collaborativeSyllabi: Syllabus[] = [
-    {
-      id: 'CS102',
-      name: 'Lập trình hướng đối tượng',
-      instructor: 'TS. Trần Văn B',
-      submittedDate: '18/01/2026',
-      version: 'v1.2',
-      comments: 5,
-      status: 'Đang cộng tác',
-      collaborators: 3,
-    },
-    {
-      id: 'CS202',
-      name: 'Cơ sở dữ liệu',
-      instructor: 'ThS. Lê Thị C',
-      submittedDate: '22/01/2026',
-      version: 'v2.0',
-      comments: 2,
-      status: 'Đang cộng tác',
-      collaborators: 5,
-    },
-  ];
-
-  // Function 3: Search & Follow
-  const searchResults: Syllabus[] = [
-    {
-      id: 'CS103',
-      name: 'Mạng máy tính',
-      semester: 'HK I 2024-2025',
-      status: 'Hoạt động',
-      lastUpdated: '10/01/2026',
-      version: 'v3.0',
-      instructor: 'PGS.TS Nguyễn Văn D',
-      following: true,
-    },
-    {
-      id: 'CS203',
-      name: 'Hệ điều hành',
-      semester: 'HK II 2023-2024',
-      status: 'Hoạt động',
-      lastUpdated: '05/01/2026',
-      version: 'v1.8',
-      instructor: 'TS. Phạm Thị E',
-      following: false,
-    },
-  ];
+  const mapStatus = (status?: string): string => {
+    if (!status) return 'Đang soạn';
+    const statusMap: { [key: string]: string } = {
+      'DRAFT': 'Đang soạn',
+      'PENDING_REVIEW': 'Chờ duyệt',
+      'APPROVED': 'Đã duyệt',
+      'REJECTED': 'Từ chối',
+      'PUBLISHED': 'Công bố',
+    };
+    return statusMap[status] || 'Đang soạn';
+  };
 
   const handleViewDetails = (id: string) => {
     navigate(`/subject/${id}`);
@@ -141,6 +163,7 @@ const LecturerDashboard: React.FC = () => {
 
   const handleToggleFollow = (id: string) => {
     console.log('Toggle follow:', id);
+    // TODO: Implement follow/unfollow logic
   };
 
   const handleAddComment = (id: string) => {
@@ -165,8 +188,10 @@ const LecturerDashboard: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // TODO: Call API to submit report
-      console.log('Report submitted:', { currentSyllabusId, reportType, reportContent });
+      await createReport({
+        title: `[${reportType.toUpperCase()}] ${currentSyllabusId}`,
+        description: reportContent
+      });
       alert('✅ Đã gửi báo cáo thành công!');
       setShowReportModal(false);
       setReportContent('');
@@ -188,6 +213,7 @@ const LecturerDashboard: React.FC = () => {
     setIsSubmitting(true);
     try {
       // TODO: Call API to submit comment
+      // POST /api/v1/syllabuses/{id}/comments
       console.log('Comment submitted:', { currentSyllabusId, commentContent });
       alert('✅ Đã thêm nhận xét thành công!');
       setShowCommentModal(false);
@@ -216,8 +242,8 @@ const LecturerDashboard: React.FC = () => {
       setShowSubmitModal(false);
       setSubmitNote('');
       
-      // TODO: Refresh syllabus list to update status
-      window.location.reload();
+      // Refresh syllabus list
+      fetchMyData();
     } catch (error) {
       console.error('Error submitting to HoD:', error);
       alert('❌ Có lỗi xảy ra khi gửi giáo trình');
@@ -310,7 +336,7 @@ const LecturerDashboard: React.FC = () => {
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
                 <Bell size={24} />
-                <span className="badge">5</span>
+                <span className="badge">{unreadNotificationCount}</span>
               </div>
               <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>
@@ -376,39 +402,49 @@ const LecturerDashboard: React.FC = () => {
             <div className="recent-syllabi">
               <h3>Giáo trình gần đây</h3>
               <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Mã MH</th>
-                      <th>Tên môn học</th>
-                      <th>Trạng thái</th>
-                      <th>Cập nhật</th>
-                      <th>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mySyllabi.slice(0, 3).map((syllabus) => (
-                      <tr key={syllabus.id}>
-                        <td>{syllabus.id}</td>
-                        <td>{syllabus.name}</td>
-                        <td>
-                          <span className={`status-badge ${
-                            syllabus.status === 'Đã duyệt' ? 'active' : 
-                            syllabus.status === 'Chờ duyệt' ? 'pending' : 'draft'
-                          }`}>
-                            {syllabus.status}
-                          </span>
-                        </td>
-                        <td>{syllabus.lastUpdated}</td>
-                        <td>
-                          <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
-                            <Eye size={18} />
-                          </button>
-                        </td>
+                {loadingData ? (
+                  <div style={{ textAlign: 'center', padding: '30px' }}>
+                    <p>Đang tải dữ liệu...</p>
+                  </div>
+                ) : mySyllabi.length > 0 ? (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Mã MH</th>
+                        <th>Tên môn học</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật</th>
+                        <th>Hành động</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {mySyllabi.slice(0, 3).map((syllabus) => (
+                        <tr key={syllabus.id}>
+                          <td>{syllabus.id}</td>
+                          <td>{syllabus.name}</td>
+                          <td>
+                            <span className={`status-badge ${
+                              syllabus.status === 'Đã duyệt' ? 'active' : 
+                              syllabus.status === 'Chờ duyệt' ? 'pending' : 'draft'
+                            }`}>
+                              {syllabus.status}
+                            </span>
+                          </td>
+                          <td>{syllabus.lastUpdated}</td>
+                          <td>
+                            <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
+                              <Eye size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                    <p>Chưa có giáo trình nào. <a href="#" onClick={(e) => { e.preventDefault(); navigate('/syllabus/create'); }} style={{ color: '#3b82f6' }}>Tạo giáo trình mới</a></p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -428,94 +464,104 @@ const LecturerDashboard: React.FC = () => {
             </div>
 
             <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Mã MH</th>
-                    <th>Tên môn học</th>
-                    <th>Học kỳ</th>
-                    <th>Trạng thái</th>
-                    <th>Phiên bản</th>
-                    <th>Cập nhật</th>
-                    <th>Theo dõi</th>
-                    <th>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mySyllabi.map((syllabus) => (
-                    <tr key={syllabus.id}>
-                      <td><strong>{syllabus.id}</strong></td>
-                      <td>{syllabus.name}</td>
-                      <td>{syllabus.semester}</td>
-                      <td>
-                        <span className={`status-badge ${
-                          syllabus.status === 'Đã duyệt' ? 'active' : 
-                          syllabus.status === 'Chờ duyệt' ? 'pending' : 'draft'
-                        }`}>
-                          {syllabus.status}
-                        </span>
-                      </td>
-                      <td>{syllabus.version}</td>
-                      <td>{syllabus.lastUpdated}</td>
-                      <td>
-                        <button 
-                          className={`btn-follow ${syllabus.following ? 'following' : ''}`}
-                          onClick={() => handleToggleFollow(syllabus.id)}
-                          title={syllabus.following ? 'Đang theo dõi' : 'Theo dõi'}
-                        >
-                          <Star size={16} fill={syllabus.following ? 'currentColor' : 'none'} />
-                        </button>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button 
-                            className="icon-btn" 
-                            onClick={() => handleViewDetails(syllabus.id)} 
-                            title="Xem chi tiết"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button 
-                            className="icon-btn" 
-                            onClick={() => navigate(`/syllabus/edit/${syllabus.id}`)} 
-                            title="Cập nhật"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button 
-                            className="icon-btn" 
-                            onClick={() => handleCompareVersions(syllabus.id)} 
-                            title="So sánh phiên bản"
-                          >
-                            <GitCompare size={18} />
-                          </button>
-                          {syllabus.status === 'Đang soạn' && (
-                            <>
-                              <button 
-                                className="icon-btn success" 
-                                onClick={() => {
-                                  setCurrentSyllabusId(syllabus.id);
-                                  setShowSubmitModal(true);
-                                }} 
-                                title="Gửi Trưởng khoa duyệt"
-                              >
-                                <Send size={18} />
-                              </button>
-                              <button 
-                                className="icon-btn danger" 
-                                onClick={() => {}} 
-                                title="Xóa bản nháp"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+              {loadingData ? (
+                <div style={{ textAlign: 'center', padding: '30px' }}>
+                  <p>Đang tải dữ liệu...</p>
+                </div>
+              ) : mySyllabi.length > 0 ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Mã MH</th>
+                      <th>Tên môn học</th>
+                      <th>Học kỳ</th>
+                      <th>Trạng thái</th>
+                      <th>Phiên bản</th>
+                      <th>Cập nhật</th>
+                      <th>Theo dõi</th>
+                      <th>Hành động</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {mySyllabi.map((syllabus) => (
+                      <tr key={syllabus.id}>
+                        <td><strong>{syllabus.id}</strong></td>
+                        <td>{syllabus.name}</td>
+                        <td>{syllabus.semester}</td>
+                        <td>
+                          <span className={`status-badge ${
+                            syllabus.status === 'Đã duyệt' ? 'active' : 
+                            syllabus.status === 'Chờ duyệt' ? 'pending' : 'draft'
+                          }`}>
+                            {syllabus.status}
+                          </span>
+                        </td>
+                        <td>{syllabus.version}</td>
+                        <td>{syllabus.lastUpdated}</td>
+                        <td>
+                          <button 
+                            className={`btn-follow ${syllabus.following ? 'following' : ''}`}
+                            onClick={() => handleToggleFollow(syllabus.id)}
+                            title={syllabus.following ? 'Đang theo dõi' : 'Theo dõi'}
+                          >
+                            <Star size={16} fill={syllabus.following ? 'currentColor' : 'none'} />
+                          </button>
+                        </td>
+                        <td>
+                          <div className="action-buttons">
+                            <button 
+                              className="icon-btn" 
+                              onClick={() => handleViewDetails(syllabus.id)} 
+                              title="Xem chi tiết"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button 
+                              className="icon-btn" 
+                              onClick={() => navigate(`/syllabus/edit/${syllabus.id}`)} 
+                              title="Cập nhật"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button 
+                              className="icon-btn" 
+                              onClick={() => handleCompareVersions(syllabus.id)} 
+                              title="So sánh phiên bản"
+                            >
+                              <GitCompare size={18} />
+                            </button>
+                            {syllabus.status === 'Đang soạn' && (
+                              <>
+                                <button 
+                                  className="icon-btn success" 
+                                  onClick={() => {
+                                    setCurrentSyllabusId(syllabus.id);
+                                    setShowSubmitModal(true);
+                                  }} 
+                                  title="Gửi Trưởng khoa duyệt"
+                                >
+                                  <Send size={18} />
+                                </button>
+                                <button 
+                                  className="icon-btn danger" 
+                                  onClick={() => {}} 
+                                  title="Xóa bản nháp"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                  <p>Chưa có giáo trình nào. <a href="#" onClick={(e) => { e.preventDefault(); navigate('/syllabus/create'); }} style={{ color: '#3b82f6' }}>Tạo giáo trình mới</a></p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -529,74 +575,86 @@ const LecturerDashboard: React.FC = () => {
             </div>
 
             <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Mã MH</th>
-                    <th>Tên môn học</th>
-                    <th>Giảng viên chính</th>
-                    <th>Ngày gửi</th>
-                    <th>Phiên bản</th>
-                    <th>Người tham gia</th>
-                    <th>Góp ý của tôi</th>
-                    <th>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {collaborativeSyllabi.map((syllabus) => (
-                    <tr key={syllabus.id}>
-                      <td><strong>{syllabus.id}</strong></td>
-                      <td>{syllabus.name}</td>
-                      <td>{syllabus.instructor}</td>
-                      <td>{syllabus.submittedDate}</td>
-                      <td>{syllabus.version}</td>
-                      <td>
-                        <span className="collaborator-badge">
-                          <User size={14} />
-                          {syllabus.collaborators}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="comment-badge">
-                          <MessageSquare size={14} />
-                          {syllabus.comments}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button 
-                            className="icon-btn" 
-                            onClick={() => navigate(`/syllabus/review/${syllabus.id}`)} 
-                            title="Xem tất cả Review"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button 
-                            className="icon-btn primary" 
-                            onClick={() => handleAddComment(syllabus.id)} 
-                            title="Thêm góp ý"
-                          >
-                            <MessageSquare size={18} />
-                          </button>
-                          <button 
-                            className="icon-btn warning" 
-                            onClick={() => handleReportError(syllabus.id)} 
-                            title="Báo lỗi"
-                          >
-                            <AlertCircle size={18} />
-                          </button>
-                        </div>
-                      </td>
+              {loadingData ? (
+                <div style={{ textAlign: 'center', padding: '30px' }}>
+                  <p>Đang tải dữ liệu...</p>
+                </div>
+              ) : collaborativeSyllabi.length > 0 ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Mã MH</th>
+                      <th>Tên môn học</th>
+                      <th>Giảng viên chính</th>
+                      <th>Ngày gửi</th>
+                      <th>Phiên bản</th>
+                      <th>Người tham gia</th>
+                      <th>Góp ý của tôi</th>
+                      <th>Hành động</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {collaborativeSyllabi.map((syllabus) => (
+                      <tr key={syllabus.id}>
+                        <td><strong>{syllabus.id}</strong></td>
+                        <td>{syllabus.name}</td>
+                        <td>{syllabus.instructor}</td>
+                        <td>{syllabus.submittedDate}</td>
+                        <td>{syllabus.version}</td>
+                        <td>
+                          <span className="collaborator-badge">
+                            <User size={14} />
+                            {syllabus.collaborators}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="comment-badge">
+                            <MessageSquare size={14} />
+                            {syllabus.comments}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="action-buttons">
+                            <button 
+                              className="icon-btn" 
+                              onClick={() => navigate(`/syllabus/review/${syllabus.id}`)} 
+                              title="Xem tất cả Review"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button 
+                              className="icon-btn primary" 
+                              onClick={() => handleAddComment(syllabus.id)} 
+                              title="Thêm góp ý"
+                            >
+                              <MessageSquare size={18} />
+                            </button>
+                            <button 
+                              className="icon-btn warning" 
+                              onClick={() => handleReportError(syllabus.id)} 
+                              title="Báo lỗi"
+                            >
+                              <AlertCircle size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                  <p>Không có giáo trình nào đang cộng tác</p>
+                </div>
+              )}
             </div>
 
-            <div className="collaboration-info">
-              <AlertCircle size={20} />
-              <p>Giai đoạn cộng tác cho phép bạn review, góp ý và báo lỗi. Bạn có thể chỉnh sửa hoặc xóa góp ý của mình.</p>
-            </div>
+            {collaborativeSyllabi.length > 0 && (
+              <div className="collaboration-info">
+                <AlertCircle size={20} />
+                <p>Giai đoạn cộng tác cho phép bạn review, góp ý và báo lỗi. Bạn có thể chỉnh sửa hoặc xóa góp ý của mình.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -611,7 +669,13 @@ const LecturerDashboard: React.FC = () => {
                   placeholder="Tìm kiếm theo tên môn học, mã môn học, giảng viên..."
                   className="search-input"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value.trim()) {
+                      // TODO: Implement search with API
+                      console.log('Searching for:', e.target.value);
+                    }
+                  }}
                 />
                 <button className="filter-btn">
                   <Filter size={18} />
@@ -621,47 +685,53 @@ const LecturerDashboard: React.FC = () => {
             </div>
 
             <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Mã MH</th>
-                    <th>Tên môn học</th>
-                    <th>Giảng viên</th>
-                    <th>Học kỳ</th>
-                    <th>Phiên bản</th>
-                    <th>Cập nhật</th>
-                    <th>Theo dõi</th>
-                    <th>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {searchResults.map((syllabus) => (
-                    <tr key={syllabus.id}>
-                      <td><strong>{syllabus.id}</strong></td>
-                      <td>{syllabus.name}</td>
-                      <td>{syllabus.instructor}</td>
-                      <td>{syllabus.semester}</td>
-                      <td>{syllabus.version}</td>
-                      <td>{syllabus.lastUpdated}</td>
-                      <td>
-                        <button 
-                          className={`btn-follow ${syllabus.following ? 'following' : ''}`}
-                          onClick={() => handleToggleFollow(syllabus.id)}
-                          title={syllabus.following ? 'Bỏ theo dõi' : 'Theo dõi để nhận thông báo'}
-                        >
-                          <Star size={16} fill={syllabus.following ? 'currentColor' : 'none'} />
-                          {syllabus.following ? 'Đang theo dõi' : 'Theo dõi'}
-                        </button>
-                      </td>
-                      <td>
-                        <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
-                          <Eye size={18} />
-                        </button>
-                      </td>
+              {searchResults.length > 0 ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Mã MH</th>
+                      <th>Tên môn học</th>
+                      <th>Giảng viên</th>
+                      <th>Học kỳ</th>
+                      <th>Phiên bản</th>
+                      <th>Cập nhật</th>
+                      <th>Theo dõi</th>
+                      <th>Hành động</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {searchResults.map((syllabus) => (
+                      <tr key={syllabus.id}>
+                        <td><strong>{syllabus.id}</strong></td>
+                        <td>{syllabus.name}</td>
+                        <td>{syllabus.instructor}</td>
+                        <td>{syllabus.semester}</td>
+                        <td>{syllabus.version}</td>
+                        <td>{syllabus.lastUpdated}</td>
+                        <td>
+                          <button 
+                            className={`btn-follow ${syllabus.following ? 'following' : ''}`}
+                            onClick={() => handleToggleFollow(syllabus.id)}
+                            title={syllabus.following ? 'Bỏ theo dõi' : 'Theo dõi để nhận thông báo'}
+                          >
+                            <Star size={16} fill={syllabus.following ? 'currentColor' : 'none'} />
+                            {syllabus.following ? 'Đang theo dõi' : 'Theo dõi'}
+                          </button>
+                        </td>
+                        <td>
+                          <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
+                            <Eye size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                  <p>{searchQuery ? 'Không tìm thấy giáo trình phù hợp' : 'Nhập từ khóa để tìm kiếm giáo trình'}</p>
+                </div>
+              )}
             </div>
 
             <div className="search-info">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare } from 'lucide-react';
-import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse } from '../../services/api';
+import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import { useAuth } from '../../context/AuthContext';
 
@@ -137,15 +137,34 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  const handleSubscribe = (syllabusId: number) => {
-    const newSubscribed = new Set(subscribedSyllabi);
-    if (newSubscribed.has(syllabusId)) {
-      newSubscribed.delete(syllabusId);
-    } else {
-      newSubscribed.add(syllabusId);
+  const handleSubscribe = async (syllabusId: number) => {
+    try {
+      const courseId = selectedSyllabus?.course?.courseId || syllabi.find(s => s.syllabusId === syllabusId)?.course?.courseId;
+      
+      if (!courseId) {
+        console.error('Course ID not found');
+        return;
+      }
+
+      const newSubscribed = new Set(subscribedSyllabi);
+      
+      if (newSubscribed.has(syllabusId)) {
+        // Unfollow course
+        await unfollowCourse(courseId);
+        newSubscribed.delete(syllabusId);
+        console.log('✅ Đã hủy follow môn học:', courseId);
+      } else {
+        // Follow course
+        await followCourse(courseId);
+        newSubscribed.add(syllabusId);
+        console.log('✅ Đã follow môn học:', courseId);
+      }
+      
+      setSubscribedSyllabi(newSubscribed);
+    } catch (error) {
+      console.error('Lỗi khi follow/unfollow môn học:', error);
+      alert('❌ Có lỗi xảy ra. Vui lòng thử lại!');
     }
-    setSubscribedSyllabi(newSubscribed);
-    // TODO: Call API to save subscription
   };
 
   const handleOpenDetail = (syllabus: Syllabus) => {
@@ -154,15 +173,24 @@ const StudentDashboard: React.FC = () => {
     setActiveViewTool('info');
   };
 
-  const handleSendFeedback = () => {
+  const handleSendFeedback = async () => {
     if (feedbackContent.trim() && selectedSyllabus) {
-      console.log('Feedback gửi:', {
-        syllabusId: selectedSyllabus.syllabusId,
-        content: feedbackContent
-      });
-      // TODO: Call API to submit feedback
-      setFeedbackContent('');
-      setFeedbackModal(false);
+      try {
+        const reportData = {
+          title: `Báo cáo lỗi: ${selectedSyllabus.course?.courseName} (${selectedSyllabus.course?.courseCode})`,
+          description: feedbackContent.trim()
+        };
+
+        const response = await createReport(reportData);
+        console.log('✅ Báo cáo đã được gửi thành công:', response);
+        
+        setFeedbackContent('');
+        setFeedbackModal(false);
+        alert('✅ Cảm ơn bạn đã gửi báo cáo! Chúng tôi sẽ xem xét và phản hồi sớm.');
+      } catch (error) {
+        console.error('Lỗi khi gửi báo cáo:', error);
+        alert('❌ Có lỗi xảy ra khi gửi báo cáo. Vui lòng thử lại!');
+      }
     }
   };
 
