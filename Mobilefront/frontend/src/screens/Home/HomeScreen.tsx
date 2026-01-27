@@ -1,70 +1,114 @@
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StatusBar, FlatList, RefreshControl, ActivityIndicator } from "react-native"
-import React, { useState, useEffect } from "react"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { Modal, Pressable } from "react-native"
-import styles from "./Home.styles"
-import Icon from "react-native-vector-icons/MaterialIcons"
-import { useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import type { HomeStackParamList } from "../../navigation/HomeStack"
-import { CourseApi } from "../../../../backend/api/CourseApi"
-import { Courses } from "../../../../backend/types/Courses"
+import React, { useState, useEffect, useCallback } from "react";
+import {
+    View, Text, TextInput, ScrollView, TouchableOpacity,
+    StatusBar, FlatList, RefreshControl, ActivityIndicator,
+    Modal, Pressable, Alert
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+// --- IMPORTS CUSTOM ---
+import styles from "./Home.styles";
+import type { HomeStackParamList } from "../../navigation/HomeStack";
+import { CourseApi } from "../../../../backend/api/CourseApi";
+import { ProfileApi } from "../../../../backend/api/ProfileApi"; // Đảm bảo import đúng
+import { Courses } from "../../../../backend/types/Courses";
+import { Profile } from "../../../../backend/types/Profile";
 
 export default function HomeScreen() {
-    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>()
+    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+
+    // --- STATE ---
     const [courses, setCourses] = useState<Courses[]>([]);
+    const [profile, setProfile] = useState<Profile | null>(null);
+
+    // Loading & Refresh
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Search & Filter
     const [searchText, setSearchText] = useState("");
     const [filterVisible, setFilterVisible] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
+
+    // Dropdown UI states
     const [showList, setShowList] = useState(false);
     const [showListYear, setShowListYear] = useState(false);
-
     // Fetch dữ liệu lần đầu
-    useEffect(() => {
-        fetchSyllabus();
-    }, []);
+    const fetchProfile = async () => {
+        try {
+            const res: any = await ProfileApi.getMyProfile();
+            console.log("Profile Data:", res);
 
+            // ✅ LOGIC MAP DỮ LIỆU AN TOÀN
+            if (res && res.user) {
+                // Trường hợp API trả về: { user: {...}, country: "...", ... }
+                const mappedProfile: Profile = {
+                    ...res.user,
+                    country: res.country || "",
+                    timezone: res.timezone || "",
+                    // Map thêm các trường khác nếu cần
+                };
+                setProfile(mappedProfile);
+            } else {
+                // Trường hợp API trả về phẳng: { username: "...", fullName: "..." }
+                setProfile(res);
+            }
+        } catch (error) {
+            console.error("Lỗi lấy Profile:", error);
+            // Không set error state ở đây để tránh chặn UI nếu chỉ lỗi profile
+        }
+    };
+
+    // 2. Lấy danh sách Syllabus
     const fetchSyllabus = async () => {
         try {
-            setError(null);
-            console.log("Đang gọi API...");
+            console.log("Đang tải Syllabus...");
             const data = await CourseApi.getMySyllabus();
-            console.log("API thành công, data nhận được:", data);
-            console.log("Số lượng môn học:", data.length);
             setCourses(data);
         } catch (error: any) {
-            console.error("Error fetching syllabus:", error);
-            console.error("Error message:", error.message);
-            console.error("Error response:", error.response?.data);
-            console.error("Error status:", error.response?.status);
-            console.error("Error config:", error.config?.url);
-
-            // Phân loại error chi tiết hơn
+            console.error("Lỗi lấy Syllabus:", error);
+            // Xử lý thông báo lỗi chi tiết
             if (error.message === "Network Error") {
-                setError("Không có kết nối mạng. Vui lòng kiểm tra internet.");
-            } else if (error.response?.status === 404) {
-                setError("Không tìm thấy API endpoint. Vui lòng liên hệ quản trị viên.");
-            } else if (error.response?.status === 500) {
-                setError("Server đang gặp sự cố. Vui lòng thử lại sau.");
+                setError("Không có kết nối mạng.");
             } else if (error.response?.status === 401) {
-                setError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+                setError("Phiên đăng nhập hết hạn.");
             } else {
-                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+                setError("Không thể tải danh sách môn học.");
             }
+        }
+    };
+
+    // 3. Hàm tổng hợp để gọi ban đầu và khi refresh
+    const loadAllData = async () => {
+        setError(null);
+        try {
+            // ✅ Gọi song song cả 2 API để tối ưu tốc độ
+            await Promise.all([
+                fetchSyllabus(),
+                fetchProfile()
+            ]);
+        } catch (e) {
+            console.error(e);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    // Xử lý refresh
-    const onRefresh = async () => {
+    // --- USE EFFECT ---
+    useEffect(() => {
+        loadAllData();
+    }, []);
+
+    // --- HANDLERS ---
+    const onRefresh = () => {
         setRefreshing(true);
-        await fetchSyllabus();
+        loadAllData();
     };
 
     // Lấy danh sách các khoa duy nhất
@@ -116,7 +160,9 @@ export default function HomeScreen() {
             >
                 {/* Header Section */}
                 <View style={styles.header}>
-                    <Text style={styles.greeting}>Xin chào Tiến</Text>
+                    <Text style={styles.greeting}>
+                        {profile?.fullName ? `Xin chào, ${profile.fullName}` : "Xin chào bạn"}
+                    </Text>
                     <Text style={styles.subText}>Học kỳ: HK1 — 2025</Text>
 
                     <View style={styles.searchWrapper}>

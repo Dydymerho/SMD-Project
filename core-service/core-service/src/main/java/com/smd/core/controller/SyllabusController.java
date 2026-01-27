@@ -48,15 +48,45 @@ public class SyllabusController {
         return ResponseEntity.ok(syllabusService.createSyllabus(syllabus));
     }
 
+    // --- CẬP NHẬT: Trả về SyllabusResponse DTO ---
     @GetMapping("/{id}")
-    public ResponseEntity<Syllabus> getDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(syllabusService.getSyllabusById(id));
+    public ResponseEntity<SyllabusResponse> getDetail(@PathVariable Long id) {
+        Syllabus syllabus = syllabusService.getSyllabusById(id);
+        // Convert Entity -> DTO
+        return ResponseEntity.ok(SyllabusResponse.fromEntity(syllabus));
+    }
+    
+    // --- ENDPOINT MỚI: Trả về SyllabusDetailResponse với đầy đủ thông tin ---
+    @GetMapping("/{id}/detail")
+    @Operation(
+        summary = "Get complete syllabus detail",
+        description = "Get full syllabus information including session plans, assessments, and materials. Used for mobile SubjectDetailScreen."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved syllabus detail",
+            content = @Content(schema = @Schema(implementation = SyllabusDetailResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<SyllabusDetailResponse> getSyllabusDetail(
+            @Parameter(description = "Syllabus ID", required = true)
+            @PathVariable Long id) {
+        SyllabusDetailResponse detail = syllabusService.getSyllabusDetail(id);
+        return ResponseEntity.ok(detail);
     }
 
+    // --- CẬP NHẬT: Trả về List<SyllabusResponse> DTO ---
     @GetMapping("/search")
-    public ResponseEntity<List<Syllabus>> search(@RequestParam String keyword) {
-        // URL dạng: /api/syllabuses/search?keyword=Java
-        return ResponseEntity.ok(syllabusService.search(keyword));
+    public ResponseEntity<List<SyllabusResponse>> search(@RequestParam String keyword) {
+        // 1. Lấy danh sách Entity từ Service
+        List<Syllabus> list = syllabusService.search(keyword);
+        
+        // 2. Convert từng Entity sang DTO
+        List<SyllabusResponse> response = list.stream()
+                .map(SyllabusResponse::fromEntity)
+                .collect(Collectors.toList());
+        
+        // 3. Trả về danh sách DTO
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping

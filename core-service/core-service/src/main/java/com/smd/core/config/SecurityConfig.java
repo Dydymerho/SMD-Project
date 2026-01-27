@@ -41,6 +41,11 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/error").permitAll()
+
+                // --- dung prometheus ---
+                .requestMatchers("/actuator/**").permitAll() 
+                // -----------------------------
+
                 // CẬP NHẬT: Chỉ cho phép ADMIN truy cập các API quản lý hệ thống
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
