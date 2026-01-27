@@ -507,6 +507,7 @@
 }
 
 .bulk-btn.lock { background: #fff1f0; color: #cf1322; }
+.bulk-btn.unlock { background: #f6ffed; color: #52c41a; }
 .bulk-btn.reset { background: #e6f7ff; color: #096dd9; }
 
 .no-margin { margin: 0 !important; }
