@@ -802,7 +802,6 @@ const LecturerDashboard: React.FC = () => {
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     if (e.target.value.trim()) {
-                      // TODO: Implement search with API
                       console.log('Searching for:', e.target.value);
                     }
                   }}

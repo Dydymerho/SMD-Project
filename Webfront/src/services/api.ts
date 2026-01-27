@@ -365,6 +365,67 @@ export const getFollowedCourses = async () => {
   return response.data;
 };
 
+// Dashboard Stats API for AA
+export const getPendingApprovalsCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/PENDING_APPROVAL");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching pending approvals:", error);
+    return 0;
+  }
+};
+
+export const getTotalPrograms = async () => {
+  try {
+    const response = await axiosClient.get("/programs");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching programs:", error);
+    return 0;
+  }
+};
+
+export const getTotalPLOs = async () => {
+  try {
+    const response = await axiosClient.get("/plos");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching PLOs:", error);
+    return 0;
+  }
+};
+
+export const getApprovedCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/APPROVED");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching approved syllabuses:", error);
+    return 0;
+  }
+};
+
+export const getRejectedCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/REJECTED");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching rejected syllabuses:", error);
+    return 0;
+  }
+};
+
+export const getUnreadNotificationsCount = async () => {
+  try {
+    const response = await axiosClient.get("/notifications/unread");
+    return (Array.isArray(response) ? response.length : 0);
+  } catch (error) {
+    console.error("Error fetching unread notifications:", error);
+    return 0;
+  }
+};
+
 // Reports API
 export interface CreateReportRequest {
   title: string;
@@ -390,6 +451,45 @@ export const createReport = async (request: CreateReportRequest): Promise<Report
 export const getMyReports = async (page: number = 0, size: number = 10) => {
   const response = await axiosClient.get("/reports/my-reports", {
     params: { page, size }
+  });
+  return response.data;
+};
+
+// AA-specific API calls
+export const getSyllabusesByStatus = async (status: string): Promise<Syllabus[]> => {
+  try {
+    const response = await axiosClient.get(`/syllabuses/by-status/${status}`);
+    return response.data || [];
+  } catch (error) {
+    console.error(`Error fetching syllabuses by status ${status}:`, error);
+    return [];
+  }
+};
+
+export const getPLOs = async () => {
+  try {
+    const response = await axiosClient.get("/plos");
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching PLOs:", error);
+    return [];
+  }
+};
+
+export const approveSyllabusAA = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+export const rejectSyllabusAA = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-reject`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
   });
   return response.data;
 };

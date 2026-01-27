@@ -1,27 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, CheckCircle, Settings, Search, Bell, User, 
-  Plus, Edit, Trash2, Award, BookOpen, GitBranch
+  Plus, Edit, Trash2, Award, BookOpen, GitBranch, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import * as api from '../../services/api';
 
 interface Program {
-  id: string;
+  programId: number;
   code: string;
   name: string;
   totalPLOs: number;
   totalCourses: number;
-  lastUpdated: string;
+  departmentName: string;
 }
 
 interface PLO {
-  id: string;
+  ploId: number;
   code: string;
   description: string;
+  programId: number;
   programCode: string;
   category: string;
 }
@@ -31,30 +33,79 @@ const ProgramManagementPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'programs' | 'plos' | 'prerequisites'>('programs');
-  const [programs, setPrograms] = useState<Program[]>([
-    { id: '1', code: 'CS', name: 'Computer Science', totalPLOs: 12, totalCourses: 45, lastUpdated: '2024-01-20' },
-    { id: '2', code: 'SE', name: 'Software Engineering', totalPLOs: 10, totalCourses: 38, lastUpdated: '2024-01-18' },
-    { id: '3', code: 'MATH', name: 'Mathematics', totalPLOs: 8, totalCourses: 32, lastUpdated: '2024-01-15' },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [plos, setPlos] = useState<PLO[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
 
-  const [plos, setPlos] = useState<PLO[]>([
-    { id: '1', code: 'PLO1', description: 'Apply knowledge of computing and mathematics', programCode: 'CS', category: 'Knowledge' },
-    { id: '2', code: 'PLO2', description: 'Analyze complex computing problems', programCode: 'CS', category: 'Problem Analysis' },
-    { id: '3', code: 'PLO3', description: 'Design solutions to complex problems', programCode: 'CS', category: 'Design' },
-    { id: '4', code: 'PLO4', description: 'Conduct investigations', programCode: 'CS', category: 'Investigation' },
-    { id: '5', code: 'PLO5', description: 'Function effectively on teams', programCode: 'CS', category: 'Teamwork' },
-  ]);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const notificationCount = 5;
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [programsData, plosData, allSyllabuses, unreadCount] = await Promise.all([
+        api.getPrograms(),
+        api.getPLOs(),
+        api.getAllSyllabuses(),
+        api.getUnreadNotificationsCount()
+      ]);
+
+      const syllabusCounts: { [key: number]: number } = {};
+      (allSyllabuses as any[]).forEach((s: any) => {
+        const progId = s.program?.programId;
+        if (progId) {
+          syllabusCounts[progId] = (syllabusCounts[progId] || 0) + 1;
+        }
+      });
+
+      const ploCounts: { [key: number]: number } = {};
+      (plosData as any[]).forEach((p: any) => {
+        const progId = p.programId;
+        if (progId) {
+          ploCounts[progId] = (ploCounts[progId] || 0) + 1;
+        }
+      });
+
+      const normalizedPrograms = (programsData as any[]).map((p: any) => ({
+        programId: p.programId,
+        code: `PRG-${p.programId}`,
+        name: p.programName,
+        totalPLOs: ploCounts[p.programId] || 0,
+        totalCourses: syllabusCounts[p.programId] || 0,
+        departmentName: p.department?.deptName || 'Chưa rõ'
+      }));
+
+      const normalizedPLOs = (plosData as any[]).map((p: any) => ({
+        ploId: p.ploId,
+        code: p.ploCode || `PLO-${p.ploId}`,
+        description: p.ploDescription || 'Chưa có mô tả',
+        programId: p.programId,
+        programCode: `PRG-${p.programId}`,
+        category: 'Knowledge'
+      }));
+
+      setPrograms(normalizedPrograms);
+      setPlos(normalizedPLOs);
+      setNotificationCount(unreadCount);
+    } catch (err) {
+      console.error('Error loading program data:', err);
+      setError('Không thể tải dữ liệu. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="dashboard-page">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo">🎓</div>
           <h2>SMD System</h2>
-          <p>Academic Affairs</p>
+          <p>{user?.name || 'Academic Affairs'}</p>
         </div>
         
         <nav className="sidebar-nav">
@@ -81,7 +132,6 @@ const ProgramManagementPage: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="main-content">
         <header className="page-header">
           <div className="header-left">
@@ -92,7 +142,7 @@ const ProgramManagementPage: React.FC = () => {
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)} style={{ cursor: 'pointer' }}>
                 <Bell size={24} />
-                <span className="badge">{notificationCount}</span>
+                {notificationCount > 0 && <span className="badge">{notificationCount}</span>}
               </div>
               {isNotificationOpen && <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
             </div>
@@ -106,232 +156,291 @@ const ProgramManagementPage: React.FC = () => {
         </header>
 
         <div className="content-section" style={{ padding: '40px' }}>
-          {/* Tabs */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            marginBottom: '24px',
-            borderBottom: '2px solid #e0e0e0',
-            paddingBottom: '8px'
-          }}>
-            <button
-              onClick={() => setActiveTab('programs')}
-              style={{
-                padding: '10px 20px',
-                background: activeTab === 'programs' ? '#2196f3' : 'transparent',
-                color: activeTab === 'programs' ? 'white' : '#666',
-                border: 'none',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <BookOpen size={16} />
-              Chương trình
-            </button>
-            <button
-              onClick={() => setActiveTab('plos')}
-              style={{
-                padding: '10px 20px',
-                background: activeTab === 'plos' ? '#2196f3' : 'transparent',
-                color: activeTab === 'plos' ? 'white' : '#666',
-                border: 'none',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Award size={16} />
-              PLO Standards
-            </button>
-            <button
-              onClick={() => setActiveTab('prerequisites')}
-              style={{
-                padding: '10px 20px',
-                background: activeTab === 'prerequisites' ? '#2196f3' : 'transparent',
-                color: activeTab === 'prerequisites' ? 'white' : '#666',
-                border: 'none',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <GitBranch size={16} />
-              Prerequisites
-            </button>
-          </div>
-
-          {/* Programs Tab */}
-          {activeTab === 'programs' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, color: '#333' }}>Danh sách Chương trình</h3>
-                <button style={{
-                  padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                  borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                }}>
-                  <Plus size={18} />
-                  Thêm Chương trình
-                </button>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '16px'
-              }}>
-                {programs.map(program => (
-                  <div key={program.id} className="program-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 4px 0', color: '#333' }}>{program.code}</h4>
-                        <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>{program.name}</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button style={{
-                          padding: '6px', background: '#f5f5f5', border: 'none',
-                          borderRadius: '6px', cursor: 'pointer'
-                        }}>
-                          <Edit size={16} color="#666" />
-                        </button>
-                        <button style={{
-                          padding: '6px', background: '#ffebee', border: 'none',
-                          borderRadius: '6px', cursor: 'pointer'
-                        }}>
-                          <Trash2 size={16} color="#f44336" />
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '8px',
-                      padding: '12px',
-                      background: '#f9f9f9',
-                      borderRadius: '8px'
-                    }}>
-                      <div>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>PLOs</p>
-                        <p style={{ margin: 0, fontWeight: 600, color: '#2196f3' }}>{program.totalPLOs}</p>
-                      </div>
-                      <div>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>Môn học</p>
-                        <p style={{ margin: 0, fontWeight: 600, color: '#4caf50' }}>{program.totalCourses}</p>
-                      </div>
-                    </div>
-                    <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#999' }}>
-                      Cập nhật: {program.lastUpdated}
-                    </p>
-                  </div>
-                ))}
-              </div>
+          {error && (
+            <div style={{
+              background: '#ffebee',
+              color: '#c62828',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertTriangle size={20} />
+              {error}
             </div>
           )}
 
-          {/* PLOs Tab */}
-          {activeTab === 'plos' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, color: '#333' }}>PLO Standards</h3>
-                <button style={{
-                  padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                  borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                }}>
-                  <Plus size={18} />
-                  Thêm PLO
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              color: '#999'
+            }}>
+              <div>Đang tải dữ liệu...</div>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '24px',
+                borderBottom: '2px solid #e0e0e0',
+                paddingBottom: '8px'
+              }}>
+                <button
+                  onClick={() => setActiveTab('programs')}
+                  style={{
+                    padding: '10px 20px',
+                    background: activeTab === 'programs' ? '#2196f3' : 'transparent',
+                    color: activeTab === 'programs' ? 'white' : '#666',
+                    border: 'none',
+                    borderRadius: '8px 8px 0 0',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <BookOpen size={16} />
+                  Chương trình ({programs.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('plos')}
+                  style={{
+                    padding: '10px 20px',
+                    background: activeTab === 'plos' ? '#2196f3' : 'transparent',
+                    color: activeTab === 'plos' ? 'white' : '#666',
+                    border: 'none',
+                    borderRadius: '8px 8px 0 0',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Award size={16} />
+                  PLO Standards ({plos.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('prerequisites')}
+                  style={{
+                    padding: '10px 20px',
+                    background: activeTab === 'prerequisites' ? '#2196f3' : 'transparent',
+                    color: activeTab === 'prerequisites' ? 'white' : '#666',
+                    border: 'none',
+                    borderRadius: '8px 8px 0 0',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <GitBranch size={16} />
+                  Prerequisites
                 </button>
               </div>
 
-              <div style={{
-                background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
-              }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                  <thead>
-                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã PLO</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mô tả</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Chương trình</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Danh mục</th>
-                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plos.map((plo, index) => (
-                      <tr key={plo.id} style={{
-                        borderBottom: '1px solid #e0e0e0',
-                        background: index % 2 === 0 ? '#fafafa' : 'white'
+              {activeTab === 'programs' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, color: '#333' }}>Danh sách Chương trình</h3>
+                    <button style={{
+                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
+                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      <Plus size={18} />
+                      Thêm Chương trình
+                    </button>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {programs.map(program => (
+                      <div key={program.programId} className="program-card" style={{
+                        background: 'white',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                       }}>
-                        <td style={{ padding: '16px', fontWeight: 600, color: '#2196f3' }}>{plo.code}</td>
-                        <td style={{ padding: '16px', color: '#333' }}>{plo.description}</td>
-                        <td style={{ padding: '16px', color: '#666' }}>{plo.programCode}</td>
-                        <td style={{ padding: '16px' }}>
-                          <span style={{
-                            padding: '4px 10px', borderRadius: '12px', background: '#e3f2fd',
-                            color: '#1976d2', fontSize: '12px', fontWeight: 600
-                          }}>
-                            {plo.category}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px 0', color: '#333' }}>{program.code}</h4>
+                            <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>{program.name}</p>
+                            <p style={{ margin: '4px 0 0 0', color: '#999', fontSize: '12px' }}>{program.departmentName}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
                             <button style={{
-                              padding: '6px 10px', background: '#2196f3', color: 'white', border: 'none',
-                              borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
+                              padding: '6px', background: '#f5f5f5', border: 'none',
+                              borderRadius: '6px', cursor: 'pointer'
                             }}>
-                              <Edit size={14} />
+                              <Edit size={16} color="#666" />
                             </button>
                             <button style={{
-                              padding: '6px 10px', background: '#f44336', color: 'white', border: 'none',
-                              borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
+                              padding: '6px', background: '#ffebee', border: 'none',
+                              borderRadius: '6px', cursor: 'pointer'
                             }}>
-                              <Trash2 size={14} />
+                              <Trash2 size={16} color="#f44336" />
                             </button>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '8px',
+                          padding: '12px',
+                          background: '#f9f9f9',
+                          borderRadius: '8px'
+                        }}>
+                          <div>
+                            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>PLOs</p>
+                            <p style={{ margin: 0, fontWeight: 600, color: '#2196f3' }}>{program.totalPLOs}</p>
+                          </div>
+                          <div>
+                            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>Môn học</p>
+                            <p style={{ margin: 0, fontWeight: 600, color: '#4caf50' }}>{program.totalCourses}</p>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+                  </div>
 
-          {/* Prerequisites Tab */}
-          {activeTab === 'prerequisites' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, color: '#333' }}>Module Relationships & Prerequisites</h3>
-                <button style={{
-                  padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                  borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                }}>
-                  <Plus size={18} />
-                  Thêm quy tắc
-                </button>
-              </div>
+                  {programs.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '60px 20px',
+                      color: '#999',
+                      background: 'white',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <BookOpen size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                      <h3>Chưa có chương trình nào</h3>
+                      <p>Thêm chương trình đầu tiên để bắt đầu</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <div style={{
-                background: 'white', padding: '24px', borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', color: '#999'
-              }}>
-                <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <h3>Module Relationships Management</h3>
-                <p>Quản lý điều kiện tiên quyết (Prerequisites) và đồng cùng học (Corequisites)</p>
-                <p style={{ fontSize: '13px' }}>Tính năng đang được phát triển...</p>
-              </div>
-            </div>
+              {activeTab === 'plos' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, color: '#333' }}>PLO Standards</h3>
+                    <button style={{
+                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
+                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      <Plus size={18} />
+                      Thêm PLO
+                    </button>
+                  </div>
+
+                  <div style={{
+                    background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã PLO</th>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mô tả</th>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Chương trình</th>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Danh mục</th>
+                          <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {plos.map((plo, index) => (
+                          <tr key={plo.ploId} style={{
+                            borderBottom: '1px solid #e0e0e0',
+                            background: index % 2 === 0 ? '#fafafa' : 'white'
+                          }}>
+                            <td style={{ padding: '16px', fontWeight: 600, color: '#2196f3' }}>{plo.code}</td>
+                            <td style={{ padding: '16px', color: '#333' }}>{plo.description}</td>
+                            <td style={{ padding: '16px', color: '#666' }}>{plo.programCode}</td>
+                            <td style={{ padding: '16px' }}>
+                              <span style={{
+                                padding: '4px 10px', borderRadius: '12px', background: '#e3f2fd',
+                                color: '#1976d2', fontSize: '12px', fontWeight: 600
+                              }}>
+                                {plo.category}
+                              </span>
+                            </td>
+                            <td style={{ padding: '16px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                <button style={{
+                                  padding: '6px 10px', background: '#2196f3', color: 'white', border: 'none',
+                                  borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
+                                }}>
+                                  <Edit size={14} />
+                                </button>
+                                <button style={{
+                                  padding: '6px 10px', background: '#f44336', color: 'white', border: 'none',
+                                  borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
+                                }}>
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {plos.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '60px 20px',
+                      color: '#999',
+                      background: 'white',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <Award size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                      <h3>Chưa có PLO nào</h3>
+                      <p>Thêm PLO đầu tiên để bắt đầu</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'prerequisites' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, color: '#333' }}>Module Relationships & Prerequisites</h3>
+                    <button style={{
+                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
+                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      <Plus size={18} />
+                      Thêm quy tắc
+                    </button>
+                  </div>
+
+                  <div style={{
+                    background: 'white', padding: '24px', borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', color: '#999'
+                  }}>
+                    <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                    <h3>Module Relationships Management</h3>
+                    <p>Quản lý điều kiện tiên quyết (Prerequisites) và đồng cùng học (Corequisites)</p>
+                    <p style={{ fontSize: '13px' }}>Tính năng đang được phát triển...</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

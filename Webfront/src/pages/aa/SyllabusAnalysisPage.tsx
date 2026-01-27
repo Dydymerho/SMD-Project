@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Home, CheckCircle, Settings, Eye, Copy, Bell, User 
+  Search, Home, CheckCircle, Settings, Eye, Copy, Bell, User, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 import { fetchAllSyllabuses } from '../../services/syllabusService';
+import * as api from '../../services/api';
 
 interface SyllabusVersion {
   version: number;
@@ -77,40 +78,44 @@ const AASyllabusAnalysisPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDept, setFilterDept] = useState('all');
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const notificationCount = 5;
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>(fallbackSyllabuses);
 
   const normalizeSyllabus = (item: any, index: number): Syllabus => {
     const course = item.course || {};
-    const dept = item.department || item.program || {};
+    const dept = item.course?.department || item.program || {};
+    
+    // Xử lý versions - lấy từ item hoặc tạo từ dữ liệu hiện tại
     const versions = Array.isArray(item.versions) && item.versions.length > 0
       ? item.versions.map((v: any, vIdx: number) => ({
           version: v.version || vIdx + 1,
-          academicYear: v.academicYear || v.year || 'Chưa rõ',
-          updatedAt: v.updatedAt || v.modifiedDate || v.createdAt || 'Chưa rõ',
+          academicYear: v.academicYear || v.year || item.academicYear || 'Chưa rõ',
+          updatedAt: v.updatedAt || v.modifiedDate || v.createdAt || item.updatedAt || 'Chưa rõ',
           changedSections: v.changedSections || v.changes || [],
         }))
       : [{
-          version: item.version || 1,
+          version: item.versionNo || item.version || 1,
           academicYear: item.academicYear || 'Chưa rõ',
           updatedAt: item.updatedAt || item.modifiedDate || item.createdAt || 'Chưa rõ',
-          changedSections: item.changedSections || [],
+          changedSections: [],
         }];
 
     return {
       id: String(item.syllabusId || item.id || index),
       courseCode: course.courseCode || item.courseCode || `Môn-${index + 1}`,
       courseName: course.courseName || item.courseName || item.title || 'Chưa có tên',
-      lecturer: item.lecturer?.name || item.lecturerName || item.createdBy?.fullName || 'Chưa rõ',
-      currentVersion: item.version || versions[versions.length - 1].version || 1,
-      lastUpdated: item.updatedAt || item.modifiedDate || item.createdAt || versions[versions.length - 1].updatedAt,
-      department: dept.name || dept.departmentName || dept.programName || 'Chưa xác định',
+      lecturer: item.lecturer?.fullName || item.lecturer?.name || item.lecturerName || item.createdBy?.fullName || 'Chưa rõ',
+      currentVersion: item.versionNo || item.version || versions[versions.length - 1].version || 1,
+      lastUpdated: item.updatedAt 
+        ? new Date(item.updatedAt).toLocaleDateString('vi-VN') 
+        : item.modifiedDate || item.createdAt || versions[versions.length - 1].updatedAt,
+      department: dept.deptName || dept.name || dept.departmentName || dept.programName || 'Chưa xác định',
       credits: course.credits || item.credits || 0,
       versions,
     };
@@ -120,14 +125,28 @@ const AASyllabusAnalysisPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetchAllSyllabuses();
-      const payload = Array.isArray(response.data) ? response.data : [];
+      // Fetch syllabuses và notification count
+      const [syllabusResponse, unreadCount] = await Promise.all([
+        api.getAllSyllabuses(),
+        api.getUnreadNotificationsCount()
+      ]);
+
+      const payload = Array.isArray(syllabusResponse) ? syllabusResponse : [];
       const normalized = payload.map((item, idx) => normalizeSyllabus(item, idx));
+      
       setSyllabuses(normalized.length ? normalized : fallbackSyllabuses);
+      setNotificationCount(unreadCount);
     } catch (err) {
       console.error('Failed to load syllabuses', err);
       setError('Không tải được dữ liệu, hiển thị dữ liệu mẫu.');
       setSyllabuses(fallbackSyllabuses);
+      // Vẫn lấy notification count ngay cả khi có lỗi
+      try {
+        const unreadCount = await api.getUnreadNotificationsCount();
+        setNotificationCount(unreadCount);
+      } catch {
+        setNotificationCount(0);
+      }
     } finally {
       setLoading(false);
     }
@@ -155,7 +174,7 @@ const AASyllabusAnalysisPage: React.FC = () => {
         <div className="sidebar-header">
           <div className="logo">🎓</div>
           <h2>SMD System</h2>
-          <p>Academic Affairs</p>
+          <p>{user?.name || 'Academic Affairs'}</p>
         </div>
         
         <nav className="sidebar-nav">
@@ -193,7 +212,7 @@ const AASyllabusAnalysisPage: React.FC = () => {
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)} style={{ cursor: 'pointer' }}>
                 <Bell size={24} />
-                <span className="badge">{notificationCount}</span>
+                {notificationCount > 0 && <span className="badge">{notificationCount}</span>}
               </div>
               {isNotificationOpen && <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
             </div>
@@ -214,235 +233,257 @@ const AASyllabusAnalysisPage: React.FC = () => {
               color: '#b71c1c',
               padding: '12px 16px',
               borderRadius: '8px',
-              marginBottom: '16px'
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
             }}>
+              <AlertTriangle size={20} />
               {error}
             </div>
           )}
 
-          {/* Search Bar */}
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            marginBottom: '16px'
-          }}>
-            <input
-              type="text"
-              placeholder="🔍 Tìm kiếm theo mã môn, tên môn hoặc giảng viên..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #ddd',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          {/* Filter Tabs */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '12px', 
-            marginBottom: '24px',
-            flexWrap: 'wrap'
-          }}>
-            <button
-              onClick={() => setFilterDept('all')}
-              style={{
-                padding: '10px 16px',
-                background: filterDept === 'all' ? '#007bff' : '#f5f5f5',
-                color: filterDept === 'all' ? 'white' : '#666',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 500,
-                transition: 'all 0.3s'
-              }}
-            >
-              Tất cả bộ môn ({syllabuses.length})
-            </button>
-            {Array.from(new Set(syllabuses.map(s => s.department))).map(dept => (
-              <button
-                key={dept}
-                onClick={() => setFilterDept(dept)}
-                style={{
-                  padding: '10px 16px',
-                  background: filterDept === dept ? '#007bff' : '#f5f5f5',
-                  color: filterDept === dept ? 'white' : '#666',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  transition: 'all 0.3s'
-                }}
-              >
-                {dept} ({syllabuses.filter(s => s.department === dept).length})
-              </button>
-            ))}
-          </div>
-
-          {/* Results Table */}
-          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
-                  <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã môn học</th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên môn học</th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Giảng viên</th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Bộ môn</th>
-                  <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tín chỉ</th>
-                  <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Phiên bản</th>
-                  <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Cập nhật</th>
-                  <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSyllabuses.map((syllabus) => (
-                  <tr key={syllabus.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                    <td style={{ padding: '16px', color: '#007bff', fontWeight: 600 }}>{syllabus.courseCode}</td>
-                    <td style={{ padding: '16px', color: '#333' }}>{syllabus.courseName}</td>
-                    <td style={{ padding: '16px', color: '#666' }}>{syllabus.lecturer}</td>
-                    <td style={{ padding: '16px', color: '#666', fontSize: '13px' }}>{syllabus.department}</td>
-                    <td style={{ padding: '16px', textAlign: 'center', color: '#666' }}>{syllabus.credits}</td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      <span style={{ background: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontWeight: 500 }}>
-                        v{syllabus.currentVersion}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>{syllabus.lastUpdated}</td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/aa/syllabus-approval/${syllabus.id}`)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#2196f3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Eye size={14} />
-                          Xem
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setSelectedSyllabus(syllabus); setShowCompareModal(true); }}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#ff9800',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Copy size={14} />
-                          So sánh
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredSyllabuses.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginTop: '24px' }}>
-              <Search size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-              <h3>Không tìm thấy giáo trình nào</h3>
-              <p>Hãy thử thay đổi tiêu chí tìm kiếm hoặc lọc của bạn</p>
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              color: '#999'
+            }}>
+              <div>Đang tải dữ liệu...</div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Search Bar */}
+              <div style={{
+                background: 'white',
+                padding: '20px',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                marginBottom: '16px'
+              }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Tìm kiếm theo mã môn, tên môn hoặc giảng viên..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
 
-          {/* Version Comparison Modal */}
-          {showCompareModal && selectedSyllabus && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={() => setShowCompareModal(false)}>
-              <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '12px', padding: '28px', width: '90%', maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div>
-                    <h2 style={{ margin: '0 0 6px 0', color: '#333' }}>So sánh phiên bản - {selectedSyllabus.courseCode}</h2>
-                    <p style={{ margin: 0, color: '#666' }}>{selectedSyllabus.courseName}</p>
-                  </div>
-                  <button onClick={() => setShowCompareModal(false)} style={{ border: 'none', background: '#f5f5f5', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontWeight: 600, color: '#666' }}>Đóng</button>
-                </div>
+              {/* Filter Tabs */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                marginBottom: '24px',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={() => setFilterDept('all')}
+                  style={{
+                    padding: '10px 16px',
+                    background: filterDept === 'all' ? '#007bff' : '#f5f5f5',
+                    color: filterDept === 'all' ? 'white' : '#666',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  Tất cả bộ môn ({syllabuses.length})
+                </button>
+                {Array.from(new Set(syllabuses.map(s => s.department))).map(dept => (
+                  <button
+                    key={dept}
+                    onClick={() => setFilterDept(dept)}
+                    style={{
+                      padding: '10px 16px',
+                      background: filterDept === dept ? '#007bff' : '#f5f5f5',
+                      color: filterDept === dept ? 'white' : '#666',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      transition: 'all 0.3s'
+                    }}
+                  >
+                    {dept} ({syllabuses.filter(s => s.department === dept).length})
+                  </button>
+                ))}
+              </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Phiên bản mới nhất</p>
-                    <h3 style={{ margin: 0, color: '#333' }}>v{selectedSyllabus.currentVersion}</h3>
-                    <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Cập nhật: {selectedSyllabus.lastUpdated}</p>
-                  </div>
-                  <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Số phiên bản</p>
-                    <h3 style={{ margin: 0, color: '#333' }}>{selectedSyllabus.versions.length}</h3>
-                    <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Từ {selectedSyllabus.versions[0].academicYear} → {selectedSyllabus.versions[selectedSyllabus.versions.length - 1].academicYear}</p>
-                  </div>
-                </div>
-
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+              {/* Results Table */}
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
-                      <th style={{ padding: '12px', textAlign: 'left' }}>Phiên bản</th>
-                      <th style={{ padding: '12px', textAlign: 'left' }}>Năm học</th>
-                      <th style={{ padding: '12px', textAlign: 'left' }}>Ngày cập nhật</th>
-                      <th style={{ padding: '12px', textAlign: 'left' }}>Mục thay đổi</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã môn học</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên môn học</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Giảng viên</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Bộ môn</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tín chỉ</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Phiên bản</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Cập nhật</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedSyllabus.versions.map((v) => (
-                      <tr key={`${selectedSyllabus.id}-v${v.version}`} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '12px', fontWeight: 600 }}>v{v.version}</td>
-                        <td style={{ padding: '12px' }}>{v.academicYear}</td>
-                        <td style={{ padding: '12px' }}>{v.updatedAt}</td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {v.changedSections.map((section) => (
-                              <span key={`${v.version}-${section}`} style={{ padding: '4px 8px', borderRadius: '6px', background: '#e3f2fd', color: '#1976d2', fontSize: '12px', fontWeight: 600 }}>{section}</span>
-                            ))}
+                    {filteredSyllabuses.map((syllabus) => (
+                      <tr key={syllabus.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <td style={{ padding: '16px', color: '#007bff', fontWeight: 600 }}>{syllabus.courseCode}</td>
+                        <td style={{ padding: '16px', color: '#333' }}>{syllabus.courseName}</td>
+                        <td style={{ padding: '16px', color: '#666' }}>{syllabus.lecturer}</td>
+                        <td style={{ padding: '16px', color: '#666', fontSize: '13px' }}>{syllabus.department}</td>
+                        <td style={{ padding: '16px', textAlign: 'center', color: '#666' }}>{syllabus.credits}</td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <span style={{ background: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                            v{syllabus.currentVersion}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>{syllabus.lastUpdated}</td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/aa/syllabus-approval/${syllabus.id}`)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#2196f3',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Eye size={14} />
+                              Xem
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedSyllabus(syllabus); setShowCompareModal(true); }}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#ff9800',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Copy size={14} />
+                              So sánh
+                            </button>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-
-                {selectedSyllabus.versions.length >= 2 && (
-                  <div style={{ background: '#fff8e1', padding: '14px', borderRadius: '10px', border: '1px solid #ffd54f' }}>
-                    <h4 style={{ margin: '0 0 8px 0', color: '#e65100' }}>Khác biệt giữa 2 phiên bản gần nhất</h4>
-                    {(() => {
-                      const lastTwo = selectedSyllabus.versions.slice(-2);
-                      const newest = lastTwo[lastTwo.length - 1];
-                      const prev = lastTwo[lastTwo.length - 2];
-                      const added = newest.changedSections.filter(c => !prev.changedSections.includes(c));
-                      const persisted = newest.changedSections.filter(c => prev.changedSections.includes(c));
-                      return (
-                        <ul style={{ margin: 0, paddingLeft: '18px', color: '#555', fontSize: '13px' }}>
-                          <li>Năm học: {prev.academicYear} → {newest.academicYear}</li>
-                          <li>Các mục cập nhật mới: {added.length ? added.join(', ') : 'Không có mục mới'}</li>
-                          <li>Các mục tiếp tục thay đổi: {persisted.length ? persisted.join(', ') : 'Không lặp lại thay đổi'}</li>
-                        </ul>
-                      );
-                    })()}
-                  </div>
-                )}
               </div>
-            </div>
+
+              {filteredSyllabuses.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginTop: '24px' }}>
+                  <Search size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                  <h3>Không tìm thấy giáo trình nào</h3>
+                  <p>Hãy thử thay đổi tiêu chí tìm kiếm hoặc lọc của bạn</p>
+                </div>
+              )}
+
+              {/* Version Comparison Modal */}
+              {showCompareModal && selectedSyllabus && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={() => setShowCompareModal(false)}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '12px', padding: '28px', width: '90%', maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h2 style={{ margin: '0 0 6px 0', color: '#333' }}>So sánh phiên bản - {selectedSyllabus.courseCode}</h2>
+                        <p style={{ margin: 0, color: '#666' }}>{selectedSyllabus.courseName}</p>
+                      </div>
+                      <button onClick={() => setShowCompareModal(false)} style={{ border: 'none', background: '#f5f5f5', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontWeight: 600, color: '#666' }}>Đóng</button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                      <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
+                        <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Phiên bản mới nhất</p>
+                        <h3 style={{ margin: 0, color: '#333' }}>v{selectedSyllabus.currentVersion}</h3>
+                        <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Cập nhật: {selectedSyllabus.lastUpdated}</p>
+                      </div>
+                      <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
+                        <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Số phiên bản</p>
+                        <h3 style={{ margin: 0, color: '#333' }}>{selectedSyllabus.versions.length}</h3>
+                        <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Từ {selectedSyllabus.versions[0].academicYear} → {selectedSyllabus.versions[selectedSyllabus.versions.length - 1].academicYear}</p>
+                      </div>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Phiên bản</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Năm học</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Ngày cập nhật</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Mục thay đổi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSyllabus.versions.map((v) => (
+                          <tr key={`${selectedSyllabus.id}-v${v.version}`} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '12px', fontWeight: 600 }}>v{v.version}</td>
+                            <td style={{ padding: '12px' }}>{v.academicYear}</td>
+                            <td style={{ padding: '12px' }}>{v.updatedAt}</td>
+                            <td style={{ padding: '12px' }}>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {v.changedSections.length > 0 ? (
+                                  v.changedSections.map((section) => (
+                                    <span key={`${v.version}-${section}`} style={{ padding: '4px 8px', borderRadius: '6px', background: '#e3f2fd', color: '#1976d2', fontSize: '12px', fontWeight: 600 }}>{section}</span>
+                                  ))
+                                ) : (
+                                  <span style={{ padding: '4px 8px', color: '#999', fontSize: '12px' }}>Không có thay đổi</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {selectedSyllabus.versions.length >= 2 && (
+                      <div style={{ background: '#fff8e1', padding: '14px', borderRadius: '10px', border: '1px solid #ffd54f' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#e65100' }}>Khác biệt giữa 2 phiên bản gần nhất</h4>
+                        {(() => {
+                          const lastTwo = selectedSyllabus.versions.slice(-2);
+                          const newest = lastTwo[lastTwo.length - 1];
+                          const prev = lastTwo[lastTwo.length - 2];
+                          const added = newest.changedSections.filter(c => !prev.changedSections.includes(c));
+                          const persisted = newest.changedSections.filter(c => prev.changedSections.includes(c));
+                          return (
+                            <ul style={{ margin: 0, paddingLeft: '18px', color: '#555', fontSize: '13px' }}>
+                              <li>Năm học: {prev.academicYear} → {newest.academicYear}</li>
+                              <li>Các mục cập nhật mới: {added.length ? added.join(', ') : 'Không có mục mới'}</li>
+                              <li>Các mục tiếp tục thay đổi: {persisted.length ? persisted.join(', ') : 'Không lặp lại thay đổi'}</li>
+                            </ul>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
