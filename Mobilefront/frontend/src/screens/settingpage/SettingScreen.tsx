@@ -34,7 +34,6 @@ type SettingItemProps = {
   isLast?: boolean;
   onPress?: () => void;
   isDestructive?: boolean;
-  // ✅ Bổ sung props cho Switch
   isSwitch?: boolean;
   switchValue?: boolean;
   onSwitchChange?: (val: boolean) => void;
@@ -72,8 +71,6 @@ const SettingItem = ({
         {label}
       </Text>
     </View>
-
-    {/* ✅ Logic hiển thị: Nếu là Switch thì hiện nút gạt, nếu không thì hiện Value/Mũi tên */}
     {isSwitch ? (
       <Switch
         trackColor={{ false: '#767577', true: '#2563EB' }}
@@ -102,7 +99,6 @@ export default function SettingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(true); // ✅ State thông báo
 
-  // 1. Load trạng thái thông báo từ Storage
   const loadSettings = async () => {
     try {
       const value = await AsyncStorage.getItem('notification_enabled');
@@ -145,7 +141,7 @@ export default function SettingScreen() {
     loadAllData();
   }, []);
 
-  // ✅ Hàm xử lý Toggle Switch
+  //Toggle Switch
   const toggleNotification = async (value: boolean) => {
     try {
       setIsNotificationEnabled(value);
@@ -156,7 +152,7 @@ export default function SettingScreen() {
     }
   };
 
-  // ✅ Hàm Refresh thật sự
+  //Refresh 
   const onRefresh = () => {
     setRefreshing(true);
     loadAllData();
@@ -194,7 +190,6 @@ export default function SettingScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          // ✅ Bổ sung RefreshControl
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />
           }
@@ -202,7 +197,6 @@ export default function SettingScreen() {
           {/* PROFILE SECTION */}
           <View style={styles.profileSection}>
             <View style={styles.avatarPlaceholder}>
-              {/* ✅ Avatar động */}
               <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
             </View>
             <View style={styles.profileInfo}>
@@ -214,7 +208,6 @@ export default function SettingScreen() {
           {/* SYSTEM SECTION */}
           <View style={[styles.section, { marginTop: 24 }]}>
             <Text style={styles.sectionTitle}>Hệ thống</Text>
-            {/* ✅ Sử dụng Switch Item */}
             <SettingItem
               icon={<Bell size={20} color="#2563EB" />}
               label="Thông báo"
@@ -250,7 +243,6 @@ export default function SettingScreen() {
               onPress={handleLogout}
             />
           </View>
-
           {/* APP INFO */}
           <View style={styles.appInfo}>
             <Text style={styles.appVersion}>Phiên bản 1.0.0</Text>

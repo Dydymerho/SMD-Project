@@ -1,10 +1,13 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import DeviceInfo from "react-native-device-info"
 /* ================= CONFIG ================= */
-
+const activeBaseURL = DeviceInfo.isEmulator()
+  ? 'http://10.0.2.2:9090/api'
+  : 'http://172.30.3.122:9090/api';
 const axiosClient = axios.create({
-  baseURL: 'http://10.0.2.2:9090/api', // ⚠️ đổi IP cho đúng
+
+  baseURL: activeBaseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -38,7 +41,7 @@ axiosClient.interceptors.response.use(
       message: error.response?.data || error.message,
     });
 
-    // ❌ Unauthorized → clear auth and let user re-login
+    // Unauthorized → clear auth and let user re-login
     if (status === 401) {
       await AsyncStorage.removeItem('AUTH_TOKEN');
       // Note: Không gọi logout() từ AuthContext ở đây để tránh circular dependency

@@ -16,13 +16,17 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { Mail, Lock, ArrowRight } from 'lucide-react-native';
-import { authApi } from '../../../../backend/api/authApi'; // Adjust the import path as needed
+// 1. Thêm Eye và EyeOff vào import
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react-native';
+import { authApi } from '../../../../backend/api/authApi';
 import { useAuth } from '../../../../backend/Contexts/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  // 2. Thêm state quản lý ẩn/hiện mật khẩu
+  const [isPasswordVisible, setIsPasswordVisible] = React.useState(false);
+
   const [isFocused, setIsFocused] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const { login } = useAuth();
@@ -36,35 +40,24 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Gọi API đăng nhập
       const res = await authApi.login(email, password);
-
       console.log('📦 API RESPONSE:', res);
 
-      // Lưu token và cập nhật auth state
       if (res.token) {
         await login(res.token);
         console.log('✅ Login successful');
-        // Navigation sẽ tự động chuyển do isLoggedIn trong AuthContext thay đổi
       } else {
         throw new Error('Token không tồn tại trong response');
       }
     } catch (error: any) {
       console.log('❌ Login error:', error);
-
-      // Hiển thị thông báo lỗi
       let errorMessage = 'Đã có lỗi xảy ra khi đăng nhập';
 
       if (error.response) {
-        // Lỗi từ server (4xx, 5xx)
-        errorMessage =
-          error.response.data?.message || 'Sai tài khoản hoặc mật khẩu';
+        errorMessage = error.response.data?.message || 'Sai tài khoản hoặc mật khẩu';
       } else if (error.request) {
-        // Lỗi không nhận được response
-        errorMessage =
-          'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
       } else {
-        // Lỗi khác
         errorMessage = error.message || errorMessage;
       }
 
@@ -75,7 +68,6 @@ export default function LoginScreen() {
   };
 
   const handleSubmit = () => {
-    // Bỏ qua nếu đang loading
     if (isLoading) return;
     handleLogin();
   };
@@ -129,6 +121,7 @@ export default function LoginScreen() {
             />
           </View>
 
+          {/* 3. Cập nhật phần nhập mật khẩu */}
           <View
             style={[
               styles.inputWrapper,
@@ -148,22 +141,24 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               onFocus={() => setIsFocused('password')}
               onBlur={() => setIsFocused(null)}
-              secureTextEntry
+              // Thay đổi secureTextEntry dựa trên state
+              secureTextEntry={!isPasswordVisible}
               editable={!isLoading}
-              onSubmitEditing={handleSubmit} // Cho phép submit bằng phím Enter
+              onSubmitEditing={handleSubmit}
             />
-          </View>
 
-          <TouchableOpacity style={styles.forgotPassword} disabled={isLoading}>
-            <Text
-              style={[
-                styles.forgotPasswordText,
-                isLoading && styles.disabledText,
-              ]}
+            {/* Thêm nút bấm Eye/EyeOff */}
+            <TouchableOpacity
+              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Tăng vùng bấm cho dễ
             >
-              Quên mật khẩu?
-            </Text>
-          </TouchableOpacity>
+              {isPasswordVisible ? (
+                <EyeOff size={20} color="#94a3b8" />
+              ) : (
+                <Eye size={20} color="#94a3b8" />
+              )}
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[
