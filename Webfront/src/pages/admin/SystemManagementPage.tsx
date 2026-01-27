@@ -1,4 +1,4 @@
-import { getUsers, getRecentAuditLogs, createUser, lockUser, unlockUser, assignRoleToUser, getUserRoles, removeRoleFromUser, getAllRoles } from '../../services/api';
+import { getUsers, getRecentAuditLogs, createUser, lockUser, unlockUser, assignRoleToUser, getUserRoles, removeRoleFromUser, getAllRoles, getNotificationStats } from '../../services/api';
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X } from 'lucide-react';
@@ -35,6 +35,7 @@ const SystemManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isAssignRoleOpen, setIsAssignRoleOpen] = useState(false);
@@ -108,6 +109,28 @@ useEffect(() => {
     await fetchAuditLogs();
   };
   init();
+}, []);
+
+// Fetch notification stats
+useEffect(() => {
+  const fetchNotificationStats = async () => {
+    try {
+      const stats = await getNotificationStats();
+      console.log('Notification stats:', stats);
+      setUnreadNotificationCount(stats?.unreadCount || 0);
+    } catch (error) {
+      console.error('Lỗi lấy thống kê thông báo:', error);
+      setUnreadNotificationCount(0);
+    }
+  };
+
+  fetchNotificationStats();
+  
+  // Auto refresh mỗi 30 giây
+  const interval = setInterval(fetchNotificationStats, 30000);
+  
+  // Cleanup interval khi component unmount
+  return () => clearInterval(interval);
 }, []);
 
   const fetchAuditLogs = async () => {
@@ -457,6 +480,8 @@ useEffect(() => {
             <span className="icon">📖</span>
             Quản lý giáo trình
           </div>
+
+                
         </nav>
 
         <div className="sidebar-footer">
@@ -478,7 +503,9 @@ useEffect(() => {
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
                 🔔
-                <span className="badge">2</span>
+                <span className="badge">
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
               </div>
               <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>
