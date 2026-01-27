@@ -17,9 +17,8 @@ class DiffRequest(BaseModel):
     old_content: str
     new_content: str
 
-# Model trả về chi tiết (dùng để document, thực tế trả về qua Task Worker)
 class HighlightItem(BaseModel):
-    type: str # 'added', 'removed', 'unchanged'
+    type: str 
     content: str
 
 class DiffResponse(BaseModel):
