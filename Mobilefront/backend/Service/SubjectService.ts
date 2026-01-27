@@ -3,14 +3,31 @@ import {
     SessionPlanApi,
     AssessmentApi,
     MaterialApi
-} from '../api'; // Gọi từ file indexAPI
+} from '../api'; // File indexAPI
 import { SubjectDetailData } from '../../backend/types/SubjectDetail';
 
-// Helper function: Tự động lấy mảng dữ liệu dù Backend trả về dạng nào
+// Helper: Chuyển đổi response về mảng an toàn
 const getListData = (response: any) => {
     if (Array.isArray(response)) return response;
     if (response && Array.isArray(response.data)) return response.data;
     return [];
+};
+
+// 🔥 Helper: Lọc thông minh (Smart Filter)
+// Hàm này sẽ kiểm tra xem item có thuộc về syllabusId không, bất kể backend đặt tên là gì
+const filterBySyllabus = (list: any[], syllabusId: any) => {
+    if (!syllabusId) return [];
+
+    return list.filter(item => {
+        // Kiểm tra các trường phổ biến mà Backend có thể trả về
+        // Bạn có thể thêm các trường khác nếu thấy trong Log (vd: subject_id)
+        return (
+            item.syllabusId === syllabusId ||  // Trường hợp chuẩn camelCase
+            item.syllabus_id === syllabusId || // Trường hợp snake_case (thường gặp)
+            item.SyllabusId === syllabusId ||  // Trường hợp PascalCase
+            item.id === syllabusId             // Trường hợp item chính là con (hiếm)
+        );
+    });
 };
 
 export const SubjectService = {
@@ -24,41 +41,48 @@ export const SubjectService = {
                 MaterialApi.getMaterial()
             ]);
 
-            // 2. Chuẩn hóa dữ liệu về dạng mảng
+            // 2. Lấy danh sách thô
             const listSyllabus = getListData(sysRes);
             const listPlans = getListData(planRes);
             const listAssess = getListData(assessRes);
             const listMaterials = getListData(matRes);
 
-            // 3. Tìm môn học hiện tại
-            // Lưu ý: So sánh linh hoạt (có thể cần trim() khoảng trắng thừa)
+            // 3. Tìm môn học hiện tại theo Code
             const currentSyllabus = listSyllabus.find((s: any) =>
-                s.courseCode?.trim() === courseCode?.trim()
+                s.courseCode?.trim().toLowerCase() === courseCode?.trim().toLowerCase()
             );
 
             if (!currentSyllabus) {
+                console.log(`❌ Không tìm thấy môn học: ${courseCode}`);
                 return null;
             }
 
-            // 4. Lấy ID để lọc dữ liệu con
-            const syllabusId = currentSyllabus.id;
+            // 4. Lấy ID của môn học để lọc
+            // Lưu ý: Kiểm tra xem ID môn học tên là 'id', 'syllabusId' hay 'courseId'
+            const currentId = currentSyllabus.id || currentSyllabus.syllabusId;
 
-            // 5. SỬA TẠM THỜI: Lấy tất cả dữ liệu (Không lọc) để kiểm tra UI
-            // Khi nào backend có syllabusId chuẩn thì uncomment dòng filter sau
+            console.log(`✅ Tìm thấy môn học: ${courseCode}, ID: ${currentId}`);
 
-            // const relatedPlans = listPlans.filter((item: any) => item.syllabusId === syllabusId);
-            const relatedPlans = listPlans; // <--- Lấy hết để test hiển thị
-
-            // const relatedAssessments = listAssess.filter((item: any) => item.syllabusId === syllabusId);
-            const relatedAssessments = listAssess; // <--- Lấy hết
-
-            // const relatedMaterials = listMaterials.filter((item: any) => item.syllabusId === syllabusId);
-            const relatedMaterials = listMaterials; // <--- Lấy hết
-
-            // DEBUG LOG: In ra để xem dữ liệu thực tế có trường gì
-            if (listPlans.length > 0) {
-                console.log("Cấu trúc 1 SessionPlan:", JSON.stringify(listPlans[0], null, 2));
+            if (!currentId) {
+                console.warn("⚠️ Cảnh báo: Dữ liệu môn học không có trường 'id'. Không thể lọc dữ liệu con.");
+                // Trả về dữ liệu thô (không lọc) hoặc rỗng tùy bạn quyết định
+                return {
+                    info: currentSyllabus,
+                    plans: [],
+                    assessments: [],
+                    materials: []
+                };
             }
+
+            // 5. Áp dụng Lọc thông minh cho các danh sách con
+            const relatedPlans = filterBySyllabus(listPlans, currentId);
+            const relatedAssessments = filterBySyllabus(listAssess, currentId);
+            const relatedMaterials = filterBySyllabus(listMaterials, currentId);
+
+            console.log(`📊 Kết quả lọc cho ID ${currentId}:`);
+            console.log(`- Plans: ${relatedPlans.length}/${listPlans.length}`);
+            console.log(`- Assessments: ${relatedAssessments.length}/${listAssess.length}`);
+            console.log(`- Materials: ${relatedMaterials.length}/${listMaterials.length}`);
 
             return {
                 info: currentSyllabus,
