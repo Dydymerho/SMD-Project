@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
 
   /* ===== HEADER ===== */
   header: {
-    backgroundColor: "#4F1CFF", // tím đậm
+    backgroundColor: "#ffffff", // tím đậm
     marginHorizontal: -16,
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
   },
   /* ===== BULLET ===== */
   bullet: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#475569",
-    lineHeight: 22,
+    lineHeight: 10,
     marginBottom: 8,
     fontWeight: "400",
   },
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
     borderLeftColor: "#3B82F6",
   },
   week: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "700",
     color: "#3B82F6",
     marginBottom: 4,
     textTransform: "uppercase",
   },
   topic: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "600",
     color: "#0F172A",
     marginBottom: 4,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   missions: {
-    fontSize: 16,
+    fontSize: 12,
     color: "#0F172A",
   },
   /* ===== TREE & MAPPING ===== */
@@ -234,14 +234,15 @@ const styles = StyleSheet.create({
 
   /* ===== REPORT BUTTON ===== */
   reportBtn: {
-    marginTop: 16,
-    marginHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#FEE2E2",
-    borderRadius: 12,
+    paddingHorizontal: 30,
+    paddingVertical: 10,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    marginBottom: 40,
+    borderColor: '#FFD1D1',
+    marginLeft: 0,
+    alignItems: 'center',
+    marginTop: 4
   },
   reportText: {
     fontSize: 14,
@@ -249,6 +250,100 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     textAlign: "center",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // Nền tối mờ
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalView: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1E293B',
+    textAlign: 'center'
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 16,
+    textAlign: 'center'
+  },
+  input: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 12,
+    height: 100,
+    textAlignVertical: 'top', // Để text nằm trên cùng (Android)
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  buttonCancel: {
+    backgroundColor: '#F1F5F9',
+  },
+  buttonConfirm: {
+    backgroundColor: '#EF4444', // Màu đỏ báo cáo
+  },
+  textCancel: {
+    color: '#64748B',
+    fontWeight: '600'
+  },
+  textConfirm: {
+    color: 'white',
+    fontWeight: '600'
+  },
+  followBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 8,
+    minWidth: 110,
+  },
+  followBtnInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  followBtnActive: {
+    backgroundColor: '#FFF',
+  },
+  followBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  followTextInactive: {
+    color: '#FFF',
+  },
+  followTextActive: {
+    color: '#4F1CFF',
+  }
 })
 
 export default styles

@@ -35,6 +35,7 @@ public class SyllabusResponse {
     private String programName;
     private String aiSumary;
     private Integer credit;
+    private String type;
     
     public static SyllabusResponse fromEntity(Syllabus syllabus) {
         return SyllabusResponse.builder()
@@ -43,6 +44,7 @@ public class SyllabusResponse {
                 .courseName(syllabus.getCourse().getCourseName())
                 .courseCode(syllabus.getCourse().getCourseCode())
                 .credit(syllabus.getCourse().getCredits())
+                .type(syllabus.getCourse().getCourseType() != null ? syllabus.getCourse().getCourseType().name(): null)  // Using status as type for now
                 .lecturerId(syllabus.getLecturer().getUserId())
                 .lecturerName(syllabus.getLecturer().getFullName())
                 .lecturerEmail(syllabus.getLecturer().getEmail())

@@ -124,7 +124,7 @@ public class SyllabusDetailResponse {
                 .lecturerName(syllabus.getLecturer().getFullName())
                 .credit(syllabus.getCourse().getCredits())
                 .academicYear(syllabus.getAcademicYear())
-                .type(syllabus.getCurrentStatus().name())  // Using status as type for now
+                .type(syllabus.getCourse().getCourseType() != null ? syllabus.getCourse().getCourseType().name(): null)  // Using status as type for now
                 .target(new ArrayList<>())  // Empty list for now, can be populated if target field exists
                 .sessionPlans(sessionPlanResponses)
                 .assessments(assessmentResponses)

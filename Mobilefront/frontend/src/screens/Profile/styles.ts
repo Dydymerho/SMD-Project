@@ -24,14 +24,7 @@ export default StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
     },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 4,
-        borderColor: "#ffffff",
-        marginBottom: 12,
-    },
+
     userName: {
         fontSize: 22,
         fontWeight: "800",
@@ -41,6 +34,20 @@ export default StyleSheet.create({
         fontSize: 14,
         color: "#64748b",
         marginTop: 4,
+    },
+    avatarText: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "white",
+    },
+    avatarPlaceholder: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: "#2563EB",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 16,
     },
     // Section
     section: {

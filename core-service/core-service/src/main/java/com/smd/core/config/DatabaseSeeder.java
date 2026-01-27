@@ -241,11 +241,33 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
-    private void createCourse(String code, String name, int credits, Department dept) {
+    /**
+     * Hàm tạo môn học với đầy đủ tham số.
+     */
+    private void createCourse(String code, String name, int credits, Course.CourseType type, Department dept) {
         if (courseRepository.findByCourseCode(code).isPresent()) return;
-        courseRepository.save(Course.builder().courseCode(code).courseName(name).credits(credits).department(dept).build());
-        log.info("   + Created Course: {}", code);
+
+        // Sử dụng giá trị mặc định nếu type bị null khi gọi hàm
+        Course.CourseType finalType = (type != null) ? type : Course.CourseType.BAT_BUOC;
+
+        courseRepository.save(Course.builder()
+                .courseCode(code)
+                .courseName(name)
+                .credits(credits)
+                .courseType(finalType)
+                .department(dept)
+                .build());
+        
+        log.info("   + Created Course: {} ({})", code, finalType);
     }
+
+    /**
+     * Hàm nạp chồng (Overloading): Mặc định loại môn học là BAT_BUOC nếu không truyền tham số type.
+     */
+    private void createCourse(String code, String name, int credits, Department dept) {
+        createCourse(code, name, credits, Course.CourseType.BAT_BUOC, dept);
+    }
+
 
     private void initCourseRelations() {
         createRelation("PRF192", "PRO192", CourseRelation.RelationType.PREREQUISITE);

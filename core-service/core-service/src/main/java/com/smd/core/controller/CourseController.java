@@ -69,6 +69,7 @@ public class CourseController {
                     .departmentId(course.getDepartment().getDepartmentId())
                     .deptName(course.getDepartment().getDeptName())
                     .build() : null)
+            .courseType(course.getCourseType() != null ? course.getCourseType().name() : null)
             .build();
     }
 
