@@ -50,18 +50,16 @@ export const SubjectService = {
             );
 
             if (!currentSyllabus) {
-                console.log(`❌ Không tìm thấy môn học: ${courseCode}`);
+                console.log(`Không tìm thấy môn học: ${courseCode}`);
                 return null;
             }
 
-            // 4. Lấy ID của môn học để lọc
-            // Lưu ý: Kiểm tra xem ID môn học tên là 'id', 'syllabusId' hay 'courseId'
             const currentId = currentSyllabus.id || currentSyllabus.syllabusId;
 
             console.log(`✅ Tìm thấy môn học: ${courseCode}, ID: ${currentId}`);
 
             if (!currentId) {
-                console.warn("⚠️ Cảnh báo: Dữ liệu môn học không có trường 'id'. Không thể lọc dữ liệu con.");
+                console.warn("Cảnh báo: Dữ liệu môn học không có trường 'id'. Không thể lọc dữ liệu con.");
                 // Trả về dữ liệu thô (không lọc) hoặc rỗng tùy bạn quyết định
                 return {
                     info: currentSyllabus,
@@ -76,7 +74,7 @@ export const SubjectService = {
             const relatedAssessments = filterBySyllabus(listAssess, currentId);
             const relatedMaterials = filterBySyllabus(listMaterials, currentId);
 
-            console.log(`📊 Kết quả lọc cho ID ${currentId}:`);
+            console.log(`Kết quả lọc cho ID ${currentId}:`);
             console.log(`- Plans: ${relatedPlans.length}/${listPlans.length}`);
             console.log(`- Assessments: ${relatedAssessments.length}/${listAssess.length}`);
             console.log(`- Materials: ${relatedMaterials.length}/${listMaterials.length}`);

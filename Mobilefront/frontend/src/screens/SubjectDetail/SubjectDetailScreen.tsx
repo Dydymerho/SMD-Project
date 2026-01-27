@@ -3,9 +3,6 @@ import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } fr
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import styles from "./SubjectDetailScreen.styles";
-
-// Import Service và Type
-// ⚠️ Đảm bảo đường dẫn này trúng vào file bạn vừa lưu ở bước 1
 import { SubjectService } from "../../../../backend/Service/SubjectService";
 import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
 

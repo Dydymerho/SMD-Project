@@ -706,3 +706,260 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ===== NEW: Status Badges ===== */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-draft {
+  background: #95a5a6;
+  color: white;
+}
+
+.status-submitted {
+  background: #3498db;
+  color: white;
+}
+
+.status-approved {
+  background: #27ae60;
+  color: white;
+}
+
+.status-published {
+  background: #2ecc71;
+  color: white;
+}
+
+.status-rejected {
+  background: #e74c3c;
+  color: white;
+}
+
+.status-archived {
+  background: #7f8c8d;
+  color: white;
+}
+
+/* ===== NEW: Course Card Improvements ===== */
+.course-code-name {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.course-code {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.course-credits {
+  background: #ecf0f1;
+  color: #2c3e50;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.course-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+/* ===== NEW: No Results Message ===== */
+.no-results {
+  color: #e74c3c !important;
+  font-weight: 500;
+  padding: 20px !important;
+  text-align: center !important;
+  background: #fadbd8;
+  border-left: 4px solid #e74c3c;
+  border-radius: 4px;
+}
+
+.no-results strong {
+  color: #c0392b;
+  font-weight: 700;
+}
+
+/* ===== NEW: Detail Modal Sections ===== */
+.info-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.info-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.info-row.full-width {
+  flex-direction: column;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: var(--text-muted);
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.clos-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.clos-list li {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #f8f9fa;
+  border-left: 4px solid var(--primary-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+.sessions-table {
+  overflow-x: auto;
+}
+
+.sessions-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.sessions-table th {
+  background: #f0f0f0;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-main);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.sessions-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.assessments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.assessment-item {
+  padding: 15px;
+  background: #f8f9fa;
+  border-left: 4px solid var(--primary-color);
+  border-radius: 4px;
+}
+
+.assessment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.assessment-header h4 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.weight-badge {
+  background: var(--primary-color);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.assessment-criteria {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.material-item {
+  padding: 15px;
+  background: #f8f9fa;
+  border-left: 4px solid var(--primary-color);
+  border-radius: 4px;
+}
+
+.material-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.material-header h4 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+  flex: 1;
+}
+
+.material-type {
+  background: #e8f4f8;
+  color: var(--primary-color);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+.material-author {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
