@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Home, Users, CheckCircle, Eye, Copy, Bell, User 
+  Search, Home, Users, CheckCircle, Eye, Copy, Bell, User, Loader, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
-import { fetchAllSyllabuses } from '../../services/syllabusService';
+import { fetchAllSyllabuses } from '../../services/workflowService';
 
 interface SyllabusVersion {
   version: number;
@@ -130,7 +130,7 @@ const SyllabusAnalysisPage: React.FC = () => {
       setSyllabuses(normalized.length ? normalized : fallbackSyllabuses);
     } catch (err) {
       console.error('Failed to load syllabuses', err);
-      setError('Không tải được dữ liệu, hiển thị dữ liệu mẫu.');
+      setError('Không tải được dữ liệu từ API, hiển thị dữ liệu mẫu.');
       setSyllabuses(fallbackSyllabuses);
     } finally {
       setLoading(false);
@@ -251,19 +251,56 @@ const SyllabusAnalysisPage: React.FC = () => {
 
         {/* Content */}
         <div className="content-section" style={{ padding: '40px' }}>
-        {error && (
+        {loading && (
           <div style={{
-            background: '#ffebee',
-            border: '1px solid #f44336',
-            color: '#b71c1c',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px'
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px',
+            gap: '16px'
           }}>
-            {error}
+            <Loader size={48} className="spin" style={{ color: '#1976d2' }} />
+            <p style={{ color: '#666', fontSize: '16px' }}>Đang tải dữ liệu giáo trình...</p>
           </div>
         )}
 
+        {error && !loading && (
+          <div style={{
+            background: '#ffebee',
+            border: '1px solid #f44336',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start'
+          }}>
+            <AlertCircle size={20} style={{ color: '#f44336', marginTop: '2px', flexShrink: 0 }} />
+            <div>
+              <div style={{ color: '#b71c1c', fontWeight: 500 }}>{error}</div>
+              <button
+                onClick={loadSyllabuses}
+                style={{
+                  marginTop: '8px',
+                  padding: '6px 12px',
+                  background: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 500
+                }}
+              >
+                Thử lại
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+        <>
         {/* Search & Filter Bar */}
         <div style={{
           background: 'white',
@@ -610,6 +647,8 @@ const SyllabusAnalysisPage: React.FC = () => {
             </h3>
           </div>
         </div>
+        </>
+        )}
 
         {/* Version Comparison Modal */}
         {showCompareModal && selectedSyllabus && (

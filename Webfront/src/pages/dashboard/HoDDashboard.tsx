@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Home, FileText, Users, Search, Bell, CheckCircle, 
   XCircle, MessageSquare, GitCompare, AlertCircle,
-  Eye, Clock, User
+  Eye, Clock, User, Loader
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getHoDDashboardStats } from '../../services/workflowService';
 import './DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 
@@ -21,11 +22,13 @@ const HoDDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'review' | 'collaborative' | 'analysis'>('overview');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
-    pendingApprovals: 5,
-    collaborativeReviewActive: 2,
-    totalSyllabusInDept: 45,
-    recentNotifications: 3,
+    pendingApprovals: 0,
+    collaborativeReviewActive: 0,
+    totalSyllabusInDept: 0,
+    recentNotifications: 0,
   });
 
   useEffect(() => {
@@ -34,12 +37,16 @@ const HoDDashboard: React.FC = () => {
   }, []);
 
   const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      // TODO: Call API to fetch HoD statistics
-      // const response = await getDashboardStats();
-      // setStats(response);
-    } catch (error) {
-      console.error('Lỗi tải thống kê:', error);
+      const result = await getHoDDashboardStats();
+      setStats(result);
+    } catch (err) {
+      console.error('Lỗi tải thống kê:', err);
+      setError('Không thể tải thống kê. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -134,7 +141,39 @@ const HoDDashboard: React.FC = () => {
 
         {/* Dashboard Content */}
         <div className="content-section" style={{ padding: '40px' }}>
+          {/* Loading State */}
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+              <Loader size={48} style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: '#666', fontSize: '16px', fontWeight: 500 }}>Đang tải thống kê...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffebee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(244, 67, 54, 0.1)', marginBottom: '24px' }}>
+              <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#f44336', opacity: 0.8 }} />
+              <h3 style={{ color: '#f44336', marginBottom: '8px' }}>Lỗi tải dữ liệu</h3>
+              <p style={{ color: '#d32f2f', marginBottom: '16px' }}>{error}</p>
+              <button
+                onClick={fetchStats}
+                style={{
+                  padding: '8px 16px',
+                  background: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+
           {/* Statistics Cards */}
+          {!loading && !error && (
           <div className="stats-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -213,6 +252,7 @@ const HoDDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Quick Actions */}
           <div style={{

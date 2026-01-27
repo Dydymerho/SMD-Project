@@ -2,85 +2,114 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, Eye, MessageSquare, 
-  Home, Users, Search, Bell, User 
+  Home, Users, Search, Bell, User, Loader, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getPendingSyllabusesForHoD, approveSyllabus, rejectSyllabus } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 
 interface SyllabusSubmission {
   id: string;
+  syllabusId?: number;
   courseCode: string;
   courseName: string;
   lecturer: string;
   submissionDate: string;
+  createdAt?: string;
   status: 'pending' | 'approved' | 'rejected';
+  currentStatus?: string;
   version: number;
   hasChanges: boolean;
+  lecturerName?: string;
+  departmentName?: string;
 }
 
 const HoDSyllabusReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [syllabuses, setSyllabuses] = useState<SyllabusSubmission[]>([
-    {
-      id: '1',
-      courseCode: 'CS101',
-      courseName: 'Lập trình cơ bản',
-      lecturer: 'Nguyễn Văn A',
-      submissionDate: '2024-01-20',
-      status: 'pending',
-      version: 2,
-      hasChanges: true,
-    },
-    {
-      id: '2',
-      courseCode: 'CS102',
-      courseName: 'Cấu trúc dữ liệu',
-      lecturer: 'Trần Thị B',
-      submissionDate: '2024-01-18',
-      status: 'pending',
-      version: 1,
-      hasChanges: false,
-    },
-    {
-      id: '3',
-      courseCode: 'CS201',
-      courseName: 'Thuật toán nâng cao',
-      lecturer: 'Lê Văn C',
-      submissionDate: '2024-01-22',
-      status: 'approved',
-      version: 1,
-      hasChanges: false,
-    },
-    {
-      id: '4',
-      courseCode: 'CS301',
-      courseName: 'Trí tuệ nhân tạo',
-      lecturer: 'Phạm Thị D',
-      submissionDate: '2024-01-15',
-      status: 'rejected',
-      version: 1,
-      hasChanges: false,
-    },
-  ]);
+  const [syllabuses, setSyllabuses] = useState<SyllabusSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedSyllabus, setSelectedSyllabus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleApprove = (id: string) => {
-    setSyllabuses(prev =>
-      prev.map(s => s.id === id ? { ...s, status: 'approved' } : s)
-    );
+  useEffect(() => {
+    loadSyllabuses();
+  }, []);
+
+  const loadSyllabuses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getPendingSyllabusesForHoD();
+      const data = Array.isArray(result.data) ? result.data : [];
+      setSyllabuses(data.map((item: any) => {
+        const normalizedStatus = (item.currentStatus || '').toLowerCase();
+        const uiStatus: 'pending' | 'approved' | 'rejected' =
+          normalizedStatus.includes('pending') ? 'pending'
+          : normalizedStatus.includes('approve') ? 'approved'
+          : normalizedStatus.includes('reject') ? 'rejected'
+          : 'pending';
+
+        return {
+          id: (item.syllabusId || item.id || '').toString(),
+          syllabusId: item.syllabusId || item.id,
+          courseCode: item.courseCode || item.course?.courseCode || 'N/A',
+          courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
+          lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
+          submissionDate: item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
+          createdAt: item.createdAt,
+          status: uiStatus,
+          currentStatus: item.currentStatus,
+          version: item.version || 1,
+          hasChanges: item.version && item.version > 1,
+          lecturerName: item.lecturerName,
+          departmentName: item.departmentName || item.department?.deptName,
+        };
+      }));
+    } catch (err) {
+      console.error('Error loading syllabuses:', err);
+      setError('Không thể tải danh sách giáo trình');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    // TODO: Open modal for rejection reason
-    setSyllabuses(prev =>
-      prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
-    );
+  const handleApprove = async (id: string) => {
+    try {
+      const syllabusId = parseInt(id);
+      await approveSyllabus(syllabusId, 'Phê duyệt từ cấp trưởng bộ môn');
+      // Update local state
+      setSyllabuses(prev =>
+        prev.map(s => s.id === id ? { ...s, status: 'approved' } : s)
+      );
+      alert('Đã phê duyệt giáo trình thành công!');
+    } catch (err) {
+      console.error('Error approving syllabus:', err);
+      alert('Lỗi khi phê duyệt giáo trình');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    const reason = prompt('Vui lòng nhập lý do từ chối:');
+    if (!reason) return;
+    
+    try {
+      const syllabusId = parseInt(id);
+      await rejectSyllabus(syllabusId, reason);
+      // Update local state
+      setSyllabuses(prev =>
+        prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
+      );
+      alert('Đã từ chối giáo trình');
+    } catch (err) {
+      console.error('Error rejecting syllabus:', err);
+      alert('Lỗi khi từ chối giáo trình');
+    }
   };
 
   const filteredSyllabuses = syllabuses.filter(s => {
@@ -181,6 +210,40 @@ const HoDSyllabusReviewPage: React.FC = () => {
 
         {/* Content */}
         <div className="content-section" style={{ padding: '40px' }}>
+
+        {/* Loading State */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+            <Loader size={48} style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: '#666', fontSize: '16px', fontWeight: 500 }}>Đang tải danh sách giáo trình...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffebee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(244, 67, 54, 0.1)', marginBottom: '24px' }}>
+            <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#f44336', opacity: 0.8 }} />
+            <h3 style={{ color: '#f44336', marginBottom: '8px' }}>Lỗi tải dữ liệu</h3>
+            <p style={{ color: '#d32f2f', marginBottom: '16px' }}>{error}</p>
+            <button
+              onClick={loadSyllabuses}
+              style={{
+                padding: '8px 16px',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+        <>
 
         {/* Search Bar */}
         <div style={{
@@ -366,6 +429,8 @@ const HoDSyllabusReviewPage: React.FC = () => {
             <h3>Không có giáo trình nào trong danh sách</h3>
             <p>Tất cả giáo trình đã được xử lý hoặc không có nội dung để hiển thị</p>
           </div>
+        )}
+        </>
         )}
         </div>
       </main>
