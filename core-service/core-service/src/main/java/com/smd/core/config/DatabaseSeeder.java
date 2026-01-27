@@ -425,7 +425,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 //nigga
         // 2. Tương tác: Thông báo cho Sinh viên (Student) về đề cương đã Public
         // Giả lập student1 nhận được thông báo về môn học họ quan tâm
-        User student = userRepository.findByUsername("student1").orElse(null);
+        User student = userRepository.findByUsername("student").orElse(null);
         // Lấy một đề cương bất kỳ (ưu tiên Published) để giả lập thông báo
         Syllabus publicSyllabus = syllabusRepository.findAll().stream()
                 .filter(s -> s.getCurrentStatus() == Syllabus.SyllabusStatus.PUBLISHED)
