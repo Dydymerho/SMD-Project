@@ -87,7 +87,7 @@ const SyllabusAnalysisPage: React.FC = () => {
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const notificationCount = 3;
+  const notificationCount = 0;
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>(fallbackSyllabuses);
 
   const normalizeSyllabus = (item: any, index: number): Syllabus => {
@@ -234,7 +234,9 @@ const SyllabusAnalysisPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">{notificationCount}</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
@@ -301,6 +303,41 @@ const SyllabusAnalysisPage: React.FC = () => {
 
         {!loading && !error && (
         <>
+        {/* Summary Statistics */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          marginTop: '40px'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#999', margin: '0 0 8px 0', fontSize: '13px' }}>Tổng giáo trình</p>
+            <h3 style={{ color: '#333', margin: 0, fontSize: '24px' }}>
+              {filteredSyllabuses.length}
+            </h3>
+          </div>
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#999', margin: '0 0 8px 0', fontSize: '13px' }}>Phiên bản trung bình</p>
+            <h3 style={{ color: '#333', margin: 0, fontSize: '24px' }}>
+              {(filteredSyllabuses.reduce((sum, s) => sum + s.currentVersion, 0) / (filteredSyllabuses.length || 1)).toFixed(1)}
+            </h3>
+          </div>
+        </div>
+        </>
+        )}
+        
         {/* Search & Filter Bar */}
         <div style={{
           background: 'white',
@@ -478,25 +515,8 @@ const SyllabusAnalysisPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Realtime Alerts Snapshot */}
-        <div style={{
-          background: '#e3f2fd',
-          border: '1px solid #2196f3',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#0d47a1', fontWeight: 600 }}>
-            <Bell size={18} />
-            Thông báo tức thời (mẫu dữ liệu)
-          </div>
-          <ul style={{ margin: '10px 0 0 20px', color: '#0d47a1', fontSize: '13px' }}>
-            <li>Giáo trình mới nộp: CS205 - Phân tích thiết kế (lecturer: Đỗ Văn G)</li>
-            <li>Hết hạn thảo luận hợp tác: CS102 - Cấu trúc dữ liệu (2 giờ còn lại)</li>
-            <li>Giáo trình bị từ chối bởi QLĐT: CS301 - Trí tuệ nhân tạo (cần hành động)</li>
-          </ul>
-        </div>
-
+        
+        
         {/* Results Table */}
         <div style={{
           background: 'white',
@@ -615,40 +635,7 @@ const SyllabusAnalysisPage: React.FC = () => {
           </div>
         )}
 
-        {/* Summary Statistics */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginTop: '40px'
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#999', margin: '0 0 8px 0', fontSize: '13px' }}>Tổng giáo trình</p>
-            <h3 style={{ color: '#333', margin: 0, fontSize: '24px' }}>
-              {filteredSyllabuses.length}
-            </h3>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#999', margin: '0 0 8px 0', fontSize: '13px' }}>Phiên bản trung bình</p>
-            <h3 style={{ color: '#333', margin: 0, fontSize: '24px' }}>
-              {(filteredSyllabuses.reduce((sum, s) => sum + s.currentVersion, 0) / (filteredSyllabuses.length || 1)).toFixed(1)}
-            </h3>
-          </div>
-        </div>
-        </>
-        )}
+
 
         {/* Version Comparison Modal */}
         {showCompareModal && selectedSyllabus && (

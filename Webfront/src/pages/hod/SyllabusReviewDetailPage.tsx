@@ -60,6 +60,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionType, setRejectionType] = useState('content_error');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const notificationCount = 0;
 
   useEffect(() => {
     loadSyllabusDetail();
@@ -228,7 +229,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">3</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
@@ -410,11 +413,17 @@ const SyllabusReviewDetailPage: React.FC = () => {
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>
               Chuẩn đầu ra (CLOs)
             </h3>
-            <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {syllabus.clos.map((clo, index) => (
-                <li key={index} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>{clo}</li>
-              ))}
-            </ul>
+            {syllabus.clos && syllabus.clos.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {syllabus.clos.map((clo: any, index: number) => (
+                  <li key={index} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>
+                    {typeof clo === 'string' ? clo : (clo.description || clo.name || JSON.stringify(clo))}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có CLO được định nghĩa</p>
+            )}
           </div>
 
           {/* Modules */}

@@ -36,6 +36,7 @@ const HoDSyllabusReviewPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedSyllabus, setSelectedSyllabus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const notificationCount = 0;
 
   useEffect(() => {
     loadSyllabuses();
@@ -193,7 +194,9 @@ const HoDSyllabusReviewPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">3</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />

@@ -65,6 +65,7 @@ const CollaborativeReviewDetailPage: React.FC = () => {
   const [compiledSummary, setCompiledSummary] = useState('');
   const [selectedParticipant, setSelectedParticipant] = useState('');
   const [availableLecturers, setAvailableLecturers] = useState<Array<{ id: string; name: string; email: string; department: string }>>([]);
+  const notificationCount = 0;
 
   useEffect(() => {
     loadReviewDetail();
@@ -384,7 +385,9 @@ KẾT LUẬN:
                 style={{ cursor: 'pointer' }}
               >
                 <Bell size={24} />
-                <span className="badge">3</span>
+                {notificationCount > 0 && (
+                  <span className="badge">{notificationCount}</span>
+                )}
               </div>
               {isNotificationOpen && (
                 <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />

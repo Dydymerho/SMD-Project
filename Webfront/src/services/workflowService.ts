@@ -101,11 +101,50 @@ export const fetchSyllabusById = async (id: number) => {
 
 export const getSyllabusDetailForReview = async (syllabusId: number) => {
   try {
-    const response = await axiosClient.get(`/syllabuses/${syllabusId}`);
-    const data = response.data;
-    
-    // Map API response to SyllabusDetail format
+    // use detail endpoint to retrieve full syllabus structure (CLOs, modules, assessments, etc.)
+    const response = await axiosClient.get(`/syllabuses/${syllabusId}/detail`);
+    const data = response.data || {};
+
     const course = data.course || {};
+
+    // Normalize CLOs (backend may use various field names)
+    const clos = (() => {
+      if (Array.isArray(data.clos)) return data.clos;
+      if (Array.isArray(data.cclos)) return data.cclos;
+      if (Array.isArray(data.courseOutcomes)) return data.courseOutcomes;
+      if (Array.isArray(data.courseLearningOutcomes)) return data.courseLearningOutcomes;
+      if (Array.isArray(data.learningOutcomes)) return data.learningOutcomes;
+      if (Array.isArray(data.outcomes)) return data.outcomes;
+      if (Array.isArray(data.objectives)) return data.objectives;
+      if (Array.isArray(data.goals)) return data.goals;
+      // Try from nested structures
+      if (data.courseInfo?.clos && Array.isArray(data.courseInfo.clos)) return data.courseInfo.clos;
+      if (data.syllabus?.clos && Array.isArray(data.syllabus.clos)) return data.syllabus.clos;
+      if (course?.clos && Array.isArray(course.clos)) return course.clos;
+      return [];
+    })();
+
+    // Normalize modules/contents
+    const modules = (() => {
+      if (Array.isArray(data.modules)) return data.modules;
+      if (Array.isArray(data.courseOutline)) return data.courseOutline;
+      if (Array.isArray(data.weeklyPlans)) return data.weeklyPlans;
+      if (Array.isArray(data.sessions)) return data.sessions;
+      if (Array.isArray(data.contents)) return data.contents;
+      return [];
+    })();
+
+    // Normalize assessments
+    const assessments = (() => {
+      if (Array.isArray(data.assessments)) return data.assessments;
+      if (Array.isArray(data.assessmentMethods)) return data.assessmentMethods;
+      if (Array.isArray(data.evaluation)) return data.evaluation;
+      return [];
+    })();
+
+    // Normalize changes/history
+    const changes = Array.isArray(data.changes) ? data.changes : data.changeLog || [];
+
     return {
       id: String(data.syllabusId || data.id),
       courseCode: course.courseCode || data.courseCode || 'N/A',
@@ -118,11 +157,27 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
       version: data.version || 1,
       submissionDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
       academicYear: data.academicYear || 'Chưa xác định',
-      description: data.description || data.content || 'Chưa có mô tả',
-      clos: Array.isArray(data.clos) ? data.clos : data.courseOutcomes || [],
-      modules: Array.isArray(data.modules) ? data.modules : [],
-      assessments: Array.isArray(data.assessments) ? data.assessments : [],
-      changes: Array.isArray(data.changes) ? data.changes : []
+      description: data.description || data.content || data.summary || 'Chưa có mô tả',
+      clos,
+      modules: modules.map((m: any, idx: number) => ({
+        moduleNo: m.moduleNo || m.module || m.week || m.order || idx + 1,
+        moduleName: m.moduleName || m.title || m.topic || m.name || `Module ${idx + 1}`,
+        topics: Array.isArray(m.topics) ? m.topics : (m.topic ? [m.topic] : (m.contents || m.details || [])),
+        hours: m.hours || m.duration || m.totalHours || 0,
+      })),
+      assessments: assessments.map((a: any, idx: number) => {
+        const criteria = a.criteria || a.criteriaDescription || a.rubric || '';
+        const baseDesc = a.description || a.detail || '';
+        const mergedDesc = criteria
+          ? `${baseDesc ? baseDesc + ' | ' : ''} ${criteria}`
+          : baseDesc;
+        return {
+          type: a.type || a.method || a.name || `Hình thức ${idx + 1}`,
+          percentage: a.percentage || a.weight || a.weightPercent || 0,
+          description: mergedDesc
+        };
+      }),
+      changes
     };
   } catch (error) {
     console.error('Error fetching syllabus detail for review:', error);

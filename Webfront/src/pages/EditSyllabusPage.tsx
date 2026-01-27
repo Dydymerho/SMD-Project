@@ -6,6 +6,7 @@ import {
   Plus, ArrowLeft, Save, Send
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
+import { getSyllabusDetailForReview } from '../services/workflowService';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
 
@@ -95,23 +96,45 @@ const EditSyllabusPage: React.FC = () => {
 
   const loadSyllabusData = async (syllabusId: string) => {
     try {
-      // TODO: Call API to get syllabus by ID
-      // const response = await api.get(`/api/v1/syllabuses/${syllabusId}`);
-      // const data = response.data;
+      const data = await getSyllabusDetailForReview(parseInt(syllabusId));
       
-      // Mock data for now
-      setCourseCode('CS101');
-      setCourseName('Nhập môn Công nghệ thông tin');
-      setCredits('3');
-      setAcademicYear('2023-2024');
-      setSemester('HK1');
-      setCourseObjectives('Giới thiệu các khái niệm cơ bản về CNTT');
-      setCourseDescription('Môn học cung cấp kiến thức nền tảng về công nghệ thông tin');
+      if (data) {
+        // Set basic info
+        setCourseCode(data.courseCode || '');
+        setCourseName(data.courseName || '');
+        setCredits(data.credits?.toString() || '');
+        setAcademicYear(data.academicYear || '');
+        setCourseObjectives(''); // Not available in API response
+        setCourseDescription(data.description || '');
+        
+        // Set CLOs - normalize from multiple possible sources
+        const loadedClos = data.clos && Array.isArray(data.clos) && data.clos.length > 0
+          ? data.clos.map((clo: any, index: number) => ({
+              id: clo.id?.toString() || (index + 1).toString(),
+              code: clo.code || clo.cloCode || `CLO${index + 1}`,
+              description: clo.description || clo.cloDescription || '',
+              bloomLevel: clo.bloomLevel || 'Remember'
+            }))
+          : [{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }];
+        
+        setClos(loadedClos);
+        
+        // Initialize PLO mappings if they exist
+        const mappings: { [cloId: string]: PLOMapping[] } = {};
+        loadedClos.forEach((clo: any) => {
+          mappings[clo.id] = clo.ploMappings && Array.isArray(clo.ploMappings)
+            ? clo.ploMappings
+            : [{ ploCode: 'PLO1', weight: 0 }];
+        });
+        setPloMappings(mappings);
+      }
       
       setLoading(false);
     } catch (error) {
       console.error('Error loading syllabus:', error);
-      alert('Không thể tải dữ liệu giáo trình');
+      // Fallback to empty form if API fails
+      setClos([{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }]);
+      setPloMappings({ '1': [{ ploCode: 'PLO1', weight: 0 }] });
       setLoading(false);
     }
   };
