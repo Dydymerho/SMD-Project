@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.smd.core.dto.CourseRelationResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -69,5 +70,11 @@ public class CourseController {
                     .deptName(course.getDepartment().getDeptName())
                     .build() : null)
             .build();
+    }
+
+    @GetMapping("/{id}/relations")
+    public ResponseEntity<List<CourseRelationResponse>> getCourseRelations(@PathVariable Long id) {
+        List<CourseRelationResponse> relations = courseService.getCourseRelations(id);
+        return ResponseEntity.ok(relations);
     }
 }
