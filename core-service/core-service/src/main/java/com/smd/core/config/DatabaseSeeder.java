@@ -45,6 +45,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     // 5. Interaction Repositories
     private final ReviewCommentRepository reviewCommentRepository;
     private final NotificationRepository notificationRepository;
+    private final CourseSubscriptionRepository courseSubscriptionRepository;
 
     @Override
     @Transactional
@@ -68,6 +69,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         // --- BƯỚC 4: TƯƠNG TÁC ---
         initInteractions();
         initAiTasks();
+        initCourseSubscriptions();
 
         log.info("DATABASE SEEDING COMPLETED.");
     }
@@ -512,5 +514,38 @@ public class DatabaseSeeder implements CommandLineRunner {
             }
         }
         log.info("   + Created AI Tasks for random syllabi");
+    }
+
+    private void initCourseSubscriptions() {
+        log.info("   + Seeding Course Subscriptions...");
+        
+        // Tìm đối tượng sinh viên (lưu ý dùng đúng username 'student' đã tạo ở initUsers)
+        User student = userRepository.findByUsername("student").orElse(null);
+        
+        // Danh sách các mã môn học muốn sinh viên này đăng ký theo dõi
+        String[] courseCodes = {"PRF192", "DBI202", "WED201c"};
+
+        if (student != null) {
+            for (String code : courseCodes) {
+                courseRepository.findByCourseCode(code).ifPresent(course -> {
+                    // Kiểm tra xem sinh viên đã đăng ký môn này chưa để tránh trùng lặp
+                    boolean exists = courseSubscriptionRepository
+                            .findByUser_UserIdAndCourse_CourseId(student.getUserId(), course.getCourseId())
+                            .isPresent();
+
+                    if (!exists) {
+                        CourseSubscription sub = CourseSubscription.builder()
+                                .user(student)
+                                .course(course)
+                                .subscribedAt(LocalDateTime.now().minusDays(2))
+                                .build();
+                        courseSubscriptionRepository.save(sub);
+                        log.info("     - Student '{}' subscribed to course: {}", student.getUsername(), code);
+                    }
+                });
+            }
+        } else {
+            log.warn("   [!] Could not find user 'student' to create subscriptions.");
+        }
     }
 }
