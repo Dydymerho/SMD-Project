@@ -1,13 +1,12 @@
 from sentence_transformers import SentenceTransformer, util
 import difflib
 
-# Load Model một lần duy nhất khi khởi động để tiết kiệm thời gian
 try:
     print("Đang load BERT Model (all-MiniLM-L6-v2)...")
     model = SentenceTransformer('all-MiniLM-L6-v2')
     print("✅ Load BERT Model thành công!")
 except Exception as e:
-    print(f"❌ Lỗi load model BERT: {e}")
+    print(f"Lỗi load model: {e}")
     model = None
 
 def calculate_similarity(text1: str, text2: str) -> float:
@@ -15,7 +14,6 @@ def calculate_similarity(text1: str, text2: str) -> float:
     if model is None or not text1 or not text2:
         return 0.0
     
-    # Encode sang vector và so sánh Cosine Similarity
     embeddings1 = model.encode(text1, convert_to_tensor=True)
     embeddings2 = model.encode(text2, convert_to_tensor=True)
     

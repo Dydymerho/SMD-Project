@@ -5,7 +5,6 @@ from app.services.llm_service import LLMService
 from app.services import syllabus_service
 from app.services.file_reader import ocr_mixed_file
 
-# Cấu hình Redis
 REDIS_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
 celery_app = Celery(
@@ -23,14 +22,12 @@ celery_app.conf.update(
     task_track_started=True,
 )
 
-# Hàm tiện ích để lưu file tạm
 def save_temp_file(content_bytes, filename, task_id):
     temp_path = f"/tmp/{task_id}_{filename}"
     with open(temp_path, "wb") as f:
         f.write(content_bytes)
     return temp_path
 
-# --- TASK 1: OCR ---
 @celery_app.task(name="app.worker.process_ocr_task", bind=True)
 def process_ocr_task(self, file_content, filename):  
     path = save_temp_file(file_content, filename, self.request.id)
@@ -42,19 +39,15 @@ def process_ocr_task(self, file_content, filename):
     finally:
         if os.path.exists(path): os.remove(path)
 
-# --- TASK 2: TÓM TẮT (SUMMARIZE) ---
 @celery_app.task(name="app.worker.task_summarize", bind=True)
 def task_summarize(self, file_content, filename):
     path = save_temp_file(file_content, filename, self.request.id)
     try:
-        # 1. OCR lấy text
         text = ocr_mixed_file(path)
         if len(text) < 10:
             return {"status": "Failed", "error": "File rỗng hoặc không đọc được chữ"}
 
-        # 2. Gọi AI Tóm tắt (Sử dụng LLMService trực tiếp)
         llm = LLMService()
-        # Chạy hàm async trong môi trường sync của Celery
         summary = asyncio.run(llm.generate_summary(text[:15000])) # Cắt bớt nếu quá dài
         
         return {"status": "Success", "summary": summary}
@@ -63,7 +56,6 @@ def task_summarize(self, file_content, filename):
     finally:
         if os.path.exists(path): os.remove(path)
 
-# --- TASK 3: SO SÁNH (COMPARE) ---
 @celery_app.task(name="app.worker.task_diff", bind=True)
 def task_diff(self, old_bytes, old_name, new_bytes, new_name):
     path_old = save_temp_file(old_bytes, old_name, self.request.id + "_old")
@@ -77,7 +69,6 @@ def task_diff(self, old_bytes, old_name, new_bytes, new_name):
         if not text_old.strip() or not text_new.strip():
             return {"status": "Failed", "error": "Không đọc được nội dung từ file tải lên"}
 
-        # Logic So Sánh
         self.update_state(state='PROGRESS', meta={'message': 'Đang tính điểm tương đồng...'})
         score = syllabus_service.calculate_similarity(text_old, text_new)
         
@@ -100,27 +91,21 @@ def task_diff(self, old_bytes, old_name, new_bytes, new_name):
         if os.path.exists(path_old): os.remove(path_old)
         if os.path.exists(path_new): os.remove(path_new)
 
-# --- TASK 4: CHECK CLO-PLO (Giữ nguyên input text vì logic này thường là text ngắn) ---
-# Thay thế hàm task_check_clo_plo cũ bằng hàm này:
 
 @celery_app.task(name="app.worker.task_check_clo_plo", bind=True)
 def task_check_clo_plo(self, clo_bytes, clo_filename, plo_bytes, plo_filename):
-    # Tạo đường dẫn file tạm
     path_clo = save_temp_file(clo_bytes, clo_filename, self.request.id + "_clo")
     path_plo = save_temp_file(plo_bytes, plo_filename, self.request.id + "_plo")
     
     try:
         self.update_state(state='PROGRESS', meta={'message': 'Đang đọc dữ liệu từ file...'})
 
-        # 1. Dùng OCR đa năng để lấy chữ từ file (PDF/Ảnh/Word đều chơi tất)
         clo_text = ocr_mixed_file(path_clo)
         plo_text = ocr_mixed_file(path_plo)
 
-        # 2. Kiểm tra lỗi đọc file
         if not clo_text.strip() or not plo_text.strip():
             return {"status": "Failed", "error": "Không đọc được nội dung (File rỗng hoặc ảnh quá mờ)"}
 
-        # 3. Gọi AI đánh giá
         self.update_state(state='PROGRESS', meta={'message': 'AI đang đánh giá độ khớp...'})
         service = LLMService()
         result = asyncio.run(service.check_clo_plo_alignment(clo_text, plo_text))
@@ -130,6 +115,5 @@ def task_check_clo_plo(self, clo_bytes, clo_filename, plo_bytes, plo_filename):
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
     finally:
-        # 4. Dọn dẹp chiến trường
         if os.path.exists(path_clo): os.remove(path_clo)
         if os.path.exists(path_plo): os.remove(path_plo)
