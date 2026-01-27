@@ -15,6 +15,17 @@ import EditSyllabusPage from './pages/EditSyllabusPage';
 import CompareVersionsPage from './pages/CompareVersionsPage';
 import SyllabusReviewPage from './pages/SyllabusReviewPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
+import HoDDashboard from './pages/dashboard/HoDDashboard';
+import HoDSyllabusReviewPage from './pages/hod/SyllabusReviewPage';
+import SyllabusReviewDetailPage from './pages/hod/SyllabusReviewDetailPage';
+import CollaborativeReviewPage from './pages/hod/CollaborativeReviewPage';
+import CollaborativeReviewDetailPage from './pages/hod/CollaborativeReviewDetailPage';
+import SyllabusAnalysisPage from './pages/hod/SyllabusAnalysisPage';
+import AADashboard from './pages/dashboard/AADashboard';
+import AASyllabusApprovalPage from './pages/aa/SyllabusApprovalPage';
+import AASyllabusApprovalDetailPage from './pages/aa/SyllabusApprovalDetailPage';
+import ProgramManagementPage from './pages/aa/ProgramManagementPage';
+import AASyllabusAnalysisPage from './pages/aa/SyllabusAnalysisPage';
 
 function App() {
   return (
@@ -86,6 +97,98 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['LECTURER']}>
                   <SyllabusReviewPage />
+                </PrivateRoute>
+              }
+            />
+
+            {/* HoD Routes */}
+            <Route
+              path="/hod/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <HoDDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hod/syllabus-review"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <HoDSyllabusReviewPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hod/syllabus-review/:id"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <SyllabusReviewDetailPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hod/collaborative-review"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <CollaborativeReviewPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hod/collaborative-review/:id"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <CollaborativeReviewDetailPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hod/syllabus-analysis"
+              element={
+                <PrivateRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'ADMIN']}>
+                  <SyllabusAnalysisPage />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Academic Affairs Routes */}
+            <Route
+              path="/aa/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <AADashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/syllabus-approval"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <AASyllabusApprovalPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/syllabus-approval/:id"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <AASyllabusApprovalDetailPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/program-management"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <ProgramManagementPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/syllabus-analysis"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <AASyllabusAnalysisPage />
                 </PrivateRoute>
               }
             />
