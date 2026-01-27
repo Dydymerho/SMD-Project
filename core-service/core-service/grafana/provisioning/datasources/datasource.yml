@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus # <--- THÊM DÒNG NÀY (đặt ID cố định dễ nhớ)
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090 # Tên service là 'prometheus' như trong docker-compose của bạn
+    isDefault: true
+    editable: true
