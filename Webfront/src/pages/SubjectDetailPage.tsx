@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, MessageSquare, MessageCircle, AlertCircle, Send, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { getCourseById, getSyllabusByCourseId } from '../services/api';
 import './SubjectDetailPage.css';
@@ -14,6 +15,7 @@ interface CourseDetail {
 }
 
 const CourseDetailPage: React.FC = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const syllabusId = searchParams.get('syllabusId');
@@ -47,6 +49,47 @@ const CourseDetailPage: React.FC = () => {
     };
     loadData();
   }, [id, syllabusId]);
+
+  const handleSubmitReport = async () => {
+    if (!reportContent.trim()) {
+      alert('Vui lòng nhập nội dung báo cáo');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      // Add your API call here to submit the report
+      // await submitReport({ courseId: id, type: reportType, content: reportContent });
+      alert('Báo cáo được gửi thành công');
+      setShowReportModal(false);
+      setReportContent('');
+      setReportType('content_error');
+    } catch (error) {
+      console.error('Lỗi gửi báo cáo:', error);
+      alert('Có lỗi xảy ra khi gửi báo cáo');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentContent.trim()) {
+      alert('Vui lòng nhập nội dung nhận xét');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      // Add your API call here to submit the comment
+      // await submitComment({ courseId: id, content: commentContent });
+      alert('Nhận xét được gửi thành công');
+      setShowCommentModal(false);
+      setCommentContent('');
+    } catch (error) {
+      console.error('Lỗi gửi nhận xét:', error);
+      alert('Có lỗi xảy ra khi gửi nhận xét');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) return <div className="loading">Đang tải...</div>;
   if (!course) return <div className="error">Không tìm thấy môn học</div>;
@@ -82,29 +125,20 @@ const CourseDetailPage: React.FC = () => {
             </section>
           )}  */}
 
-          {syllabus && (
-            <section className="detail-section">
-              <h2>Chi tiết giáo trình</h2>
-              <div className="syllabus-card">
-                <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
-                <p><strong>Năm học:</strong> {syllabus.academicYear}</p>
-                <p><strong>Phiên bản:</strong> {syllabus.versionNo}</p>
-                <div className="syllabus-notes">
-                  <h3>Nội dung chính:</h3>
-                  <p>{syllabus.versionNotes}</p>
-                </div>
-              </div>
-              <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
-            </div>
-            <div className="user-menu">
-              <span className="user-icon"><User size={24} /></span>
-              <div className="user-info">
-                <div className="user-name">{user?.name || 'Giảng viên'}</div>
-                <div className="user-role">Lecturer</div>
+        {syllabus && (
+          <section className="detail-section">
+            <h2>Chi tiết giáo trình</h2>
+            <div className="syllabus-card">
+              <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
+              <p><strong>Năm học:</strong> {syllabus.academicYear}</p>
+              <p><strong>Phiên bản:</strong> {syllabus.versionNo}</p>
+              <div className="syllabus-notes">
+                <h3>Nội dung chính:</h3>
+                <p>{syllabus.versionNotes}</p>
               </div>
             </div>
-          </div>
-        </header>
+          </section>
+        )}
 
         {/* Detail Content */}
         <div className="content-section" style={{ margin: '20px 40px' }}>
@@ -146,7 +180,7 @@ const CourseDetailPage: React.FC = () => {
                 <section className="detail-section">
                   <h2>Môn học tiên quyết</h2>
                   <ul>
-                    {course.prerequisites.map((prereq, index) => (
+                    {course.prerequisites.map((prereq: string, index: number) => (
                       <li key={index}>{prereq}</li>
                     ))}
                   </ul>
@@ -314,7 +348,8 @@ const CourseDetailPage: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
+    </div>
     </div>
   );
 };

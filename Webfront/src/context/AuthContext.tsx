@@ -39,13 +39,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
  const login = async (apiData: any): Promise<void> => {
   try {
     // Map backend role name to frontend role type
-    const mapRoleName = (roleName: string): 'ADMIN' | 'TEACHER' | 'STUDENT' => {
+    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' => {
       if (!roleName) return 'STUDENT';
       
-      const roleMap: { [key: string]: 'ADMIN' | 'TEACHER' | 'STUDENT' } = {
+      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' } = {
         'ADMIN': 'ADMIN',
-        'LECTURER': 'TEACHER',
-        'HEAD_OF_DEPARTMENT': 'TEACHER',
+        'LECTURER': 'LECTURER',
+        'HEAD_OF_DEPARTMENT': 'LECTURER',
         'ACADEMIC_AFFAIRS': 'ADMIN',
         'PRINCIPAL': 'ADMIN',
         'STUDENT': 'STUDENT'
