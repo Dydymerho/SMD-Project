@@ -28,6 +28,8 @@ const LoginPage: React.FC = () => {
           navigate('/hod/dashboard');
         } else if (data.roleName === 'ACADEMIC_AFFAIRS') {
           navigate('/aa/dashboard');
+        } else if (data.roleName === 'PRINCIPAL') {
+          navigate('/principal/dashboard');
         } else {
           navigate('/dashboard');
         }

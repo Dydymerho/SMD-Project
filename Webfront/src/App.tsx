@@ -26,6 +26,10 @@ import AASyllabusApprovalPage from './pages/aa/SyllabusApprovalPage';
 import AASyllabusApprovalDetailPage from './pages/aa/SyllabusApprovalDetailPage';
 import ProgramManagementPage from './pages/aa/ProgramManagementPage';
 import AASyllabusAnalysisPage from './pages/aa/SyllabusAnalysisPage';
+import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
+import FinalApprovalPage from './pages/principal/FinalApprovalPage';
+import FinalApprovalDetailPage from './pages/principal/FinalApprovalDetailPage';
+import SystemOversightPage from './pages/principal/SystemOversightPage';
 
 function App() {
   return (
@@ -189,6 +193,40 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
                   <AASyllabusAnalysisPage />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Principal Routes */}
+            <Route
+              path="/principal/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['PRINCIPAL', 'ADMIN']}>
+                  <PrincipalDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/principal/final-approval"
+              element={
+                <PrivateRoute allowedRoles={['PRINCIPAL', 'ADMIN']}>
+                  <FinalApprovalPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/principal/final-approval/:id"
+              element={
+                <PrivateRoute allowedRoles={['PRINCIPAL', 'ADMIN']}>
+                  <FinalApprovalDetailPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/principal/system-oversight"
+              element={
+                <PrivateRoute allowedRoles={['PRINCIPAL', 'ADMIN']}>
+                  <SystemOversightPage />
                 </PrivateRoute>
               }
             />

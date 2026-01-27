@@ -4,7 +4,7 @@ interface User {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS';
+  role: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL';
   email: string;
 }
 
@@ -42,15 +42,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Role Name from backend:', apiData.roleName);
     
     // Map backend role name to frontend role type
-    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' => {
+    const mapRoleName = (roleName: string): 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL' => {
       if (!roleName) return 'STUDENT';
       
-      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' } = {
+      const roleMap: { [key: string]: 'ADMIN' | 'LECTURER' | 'STUDENT' | 'HEAD_OF_DEPARTMENT' | 'ACADEMIC_AFFAIRS' | 'PRINCIPAL' } = {
         'ADMIN': 'ADMIN',
         'LECTURER': 'LECTURER',
         'HEAD_OF_DEPARTMENT': 'HEAD_OF_DEPARTMENT',
         'ACADEMIC_AFFAIRS': 'ACADEMIC_AFFAIRS',
-        'PRINCIPAL': 'ADMIN',
+        'PRINCIPAL': 'PRINCIPAL',
         'STUDENT': 'STUDENT'
       };
       
