@@ -11,7 +11,7 @@ export interface Syllabus {
     academicYear?: string; // Năm học (ví dụ: "2024–2025")
     content: string;      // Nội dung tài liệu
     url?: string;         // Đường dẫn tài liệu
-    description?: string; // Mô tả ngắn
+    //description?: string; // Mô tả ngắn
     aiSummary?: string;   // AI Summary
     credits?: number;     // Số tín chỉ
     prerequisites?: string[]; // Môn học cần hoàn thành trước đó
