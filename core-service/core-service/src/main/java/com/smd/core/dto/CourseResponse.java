@@ -12,4 +12,5 @@ public class CourseResponse {
     private String courseName;
     private Integer credits;
     private DepartmentSimpleDto department;
+    private String courseType; // Trả về dưới dạng String (MANDATORY/ELECTIVE)
 }

@@ -29,6 +29,16 @@ public class Course {
     @Column(nullable = false)
     private Integer credits;
 
+    // Định nghĩa loại môn học
+    public enum CourseType {
+        MANDATORY, // Bắt buộc
+        ELECTIVE   // Tự chọn
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "course_type", nullable = false)
+    private CourseType courseType = CourseType.MANDATORY; // Mặc định là bắt buộc
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     @ToString.Exclude

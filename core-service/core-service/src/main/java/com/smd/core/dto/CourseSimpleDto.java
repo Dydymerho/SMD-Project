@@ -11,4 +11,5 @@ public class CourseSimpleDto {
     private String courseCode;
     private String courseName;
     private Integer credits;
+    private String courseType;
 }
