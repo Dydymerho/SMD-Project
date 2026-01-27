@@ -248,7 +248,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (courseRepository.findByCourseCode(code).isPresent()) return;
 
         // Sử dụng giá trị mặc định nếu type bị null khi gọi hàm
-        Course.CourseType finalType = (type != null) ? type : Course.CourseType.MANDATORY;
+        Course.CourseType finalType = (type != null) ? type : Course.CourseType.BAT_BUOC;
 
         courseRepository.save(Course.builder()
                 .courseCode(code)
@@ -262,10 +262,10 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     /**
-     * Hàm nạp chồng (Overloading): Mặc định loại môn học là MANDATORY nếu không truyền tham số type.
+     * Hàm nạp chồng (Overloading): Mặc định loại môn học là BAT_BUOC nếu không truyền tham số type.
      */
     private void createCourse(String code, String name, int credits, Department dept) {
-        createCourse(code, name, credits, Course.CourseType.MANDATORY, dept);
+        createCourse(code, name, credits, Course.CourseType.BAT_BUOC, dept);
     }
 
 

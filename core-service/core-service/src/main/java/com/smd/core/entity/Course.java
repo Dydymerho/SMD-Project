@@ -31,13 +31,13 @@ public class Course {
 
     // Định nghĩa loại môn học
     public enum CourseType {
-        MANDATORY, // Bắt buộc
-        ELECTIVE   // Tự chọn
+        BAT_BUOC, // Bắt buộc
+        TU_CHON   // Tự chọn
     }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "course_type", nullable = false)
-    private CourseType courseType = CourseType.MANDATORY; // Mặc định là bắt buộc
+    private CourseType courseType = CourseType.BAT_BUOC; // Mặc định là bắt buộc
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
