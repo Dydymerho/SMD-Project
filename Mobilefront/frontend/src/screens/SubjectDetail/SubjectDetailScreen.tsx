@@ -1,11 +1,21 @@
-import styles from "./SubjectDetailScreen.styles"
-import type React from "react"
-import { View, Text, ScrollView, TouchableOpacity, Alert, } from "react-native"
-import { type RouteProp, useRoute } from "@react-navigation/native"
-import { SYLLABUS_CONTENT } from "../../mock/Syllabus"
+import React, { useEffect, useState } from "react"
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native"
+import { type RouteProp, useRoute, useNavigation } from "@react-navigation/native"
 import LinearGradient from "react-native-linear-gradient"
-/* ===== TYPES ===== */
+import styles from "./SubjectDetailScreen.styles"
 
+// --- 1. SỬA ĐƯỜNG DẪN IMPORT (Tùy cấu trúc thư mục thực tế của bạn) ---
+import { syllabusDetailApi } from "../../../../backend/api/DetailSyllabusApi"
+import { SessionPlanApi } from "../../../../backend/api/SesssionPlanApi" // Đảm bảo tên file đúng
+import { AssessmentApi } from "../../../../backend/api/AssessmentApi"
+import { MaterialApi } from "../../../../backend/api/MateriaApi" // Đảm bảo tên file đúng
+
+import { syllabus } from "../../../../backend/types/syllabusDetail"
+import { SessionPlan } from "../../../../backend/types/SessionPlan"
+import { Assessment } from "../../../../backend/types/Assessment"
+import { Material } from "../../../../backend/types/Material"
+
+/* ===== TYPES ===== */
 type RouteParams = {
     SubjectDetail: {
         code: string
@@ -13,13 +23,7 @@ type RouteParams = {
     }
 }
 
-/* ===== SMALL COMPONENTS ===== */
-
-const ActionTag = ({ label, onPress }: { label: string; onPress?: () => void }) => (
-    <TouchableOpacity style={styles.tag} onPress={onPress}>
-        <Text style={styles.tagText}>{label}</Text>
-    </TouchableOpacity>
-)
+/* ===== COMPONENTS CON ===== */
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={styles.section}>
         <Text style={styles.sectionTitle}>{title}</Text>
@@ -27,159 +31,208 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
     </View>
 )
 
-const InfoRow = ({ label, value }: { label: string; value?: string }) => (
+const InfoRow = ({ label, value }: { label: string; value?: string | number }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value || "—"}</Text>
     </View>
 )
 
-const Bullet = ({ text }: { text: string }) => <Text style={styles.bullet}>• {text}</Text>
-
-/* ===== SCREEN ===== */
-
+/* ===== SCREEN CHÍNH ===== */
 export default function SubjectDetailScreen() {
     const route = useRoute<RouteProp<RouteParams, "SubjectDetail">>()
-    const { code, name } = route.params
+    const navigation = useNavigation();
+    const { code } = route.params
 
-    const syllabus = SYLLABUS_CONTENT.find((item) => item.code === code)
+    // --- STATE MANAGEMENT ---
+    const [loading, setLoading] = useState<boolean>(true);
+    const [syllabusData, setSyllabusData] = useState<syllabus | null>(null);
+    const [sessionPlans, setSessionPlans] = useState<SessionPlan[]>([]);
+    const [assessments, setAssessments] = useState<Assessment[]>([]);
+    const [materials, setMaterials] = useState<Material[]>([]);
 
-    if (!syllabus) {
+    // --- FETCH DATA ---
+    useEffect(() => {
+        const fetchAllData = async () => {
+            try {
+                setLoading(true);
+
+                // 1. GỌI SONG SONG TẤT CẢ API (Tối ưu tốc độ)
+                // Promise.all sẽ chờ cho đến khi tất cả xong hoặc 1 cái bị lỗi
+                const [
+                    syllabusRes,
+                    sessionPlanRes,
+                    assessmentRes,
+                    materialRes
+                ] = await Promise.all([
+                    syllabusDetailApi.getSyllabusDetail(), // Index 0
+                    SessionPlanApi.getSessionPlan(),       // Index 1
+                    AssessmentApi.getAssessment(),         // Index 2
+                    MaterialApi.getMaterial()              // Index 3
+                ]);
+
+                // 2. XỬ LÝ SYLLABUS (Tìm môn học hiện tại)
+                const currentSyllabus = syllabusRes.data.find(
+                    s => s.courseCode === code
+                );
+
+                if (currentSyllabus) {
+                    setSyllabusData(currentSyllabus);
+
+                    // Giả sử Syllabus có trường id. Nếu không có id, bạn cần check lại logic kết nối.
+                    const syllabusId = currentSyllabus.id;
+
+                    if (syllabusId) {
+                        // 3. LỌC DỮ LIỆU CON THEO SYLLABUS ID
+                        const myPlans = sessionPlanRes.data.filter(
+                            p => p.syllabusId === syllabusId
+                        );
+
+                        const myAssessments = assessmentRes.data.filter(
+                            a => a.syllabusId === syllabusId
+                        );
+
+                        const myMaterials = materialRes.data.filter(
+                            m => m.syllabusId === syllabusId
+                        );
+
+                        // 4. CẬP NHẬT STATE
+                        setSessionPlans(myPlans);
+                        setAssessments(myAssessments);
+                        setMaterials(myMaterials);
+                    } else {
+                        console.warn("Syllabus tìm thấy nhưng không có ID để link dữ liệu");
+                    }
+                } else {
+                    console.log("Không tìm thấy Syllabus với mã:", code);
+                    // Có thể set state để hiển thị UI thông báo lỗi
+                }
+
+            } catch (error) {
+                console.error("Lỗi tải dữ liệu:", error);
+                Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllData();
+    }, [code]);
+
+    // --- RENDER LOADING ---
+    if (loading) {
         return (
-            <View style={styles.container}>
-                <Text>Không tìm thấy thông tin môn học</Text>
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#4F1CFF" />
+                <Text style={{ marginTop: 10, color: '#666' }}>Đang tải dữ liệu {code}...</Text>
             </View>
-        )
+        );
     }
 
+    // --- RENDER ERROR / NOT FOUND ---
+    if (!syllabusData) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+                <Text style={{ fontSize: 16, color: '#333', textAlign: 'center' }}>
+                    Không tìm thấy thông tin cho mã môn học: {code}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.reportBtn}>
+                    <Text style={styles.reportText}>Quay lại</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // --- RENDER CONTENT ---
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-            {/* ===== HEADER ===== */}
+            {/* 1. HEADER */}
             <LinearGradient
                 colors={["#4F1CFF", "#2D5BFF"]}
                 style={styles.header}>
-                <Text style={styles.code}>{syllabus.code}</Text>
-                <Text style={styles.title}>{syllabus.name}</Text>
-                <Text style={styles.subtitle}>{syllabus.department}</Text>
+                <Text style={styles.code}>{syllabusData.courseCode}</Text>
+                <Text style={styles.title}>{syllabusData.courseName}</Text>
+                <Text style={styles.subtitle}>{syllabusData.deptName || "Bộ môn: Đang cập nhật"}</Text>
             </LinearGradient>
-            {/* <View style={styles.headerActions}>
-                    <ActionTag label="Theo dõi" onPress={() => Alert.alert("Đã theo dõi")} />
-                    <ActionTag label="Thông báo" />
-                </View> */}
-            {/* ===== COURSE DESCRIPTION ===== */}
-            <Section title="Mô tả tóm tắt học phần">
-                <Text style={styles.bullet}>{syllabus.aiSummary}</Text>
+
+            {/* 2. MÔ TẢ */}
+            <Section title="Mô tả tóm tắt (AI Summary)">
+                <Text style={styles.missionText}>
+                    {syllabusData.aiSumary || "Hiện chưa có mô tả tóm tắt cho môn học này."}
+                </Text>
             </Section>
-            {/* ===== COURSE INFO ===== */}
+
+            {/* 3. THÔNG TIN CHUNG */}
             <Section title="Thông tin khóa học">
-                <InfoRow label="Khoa" value={syllabus.department} />
-                <InfoRow label="Người đăng" value={syllabus.author} />
-                <InfoRow label="Tín chỉ" value={String(syllabus.credits)} />
-                <InfoRow label="Loại học phần" value={syllabus.type} />
-                <InfoRow label="Phiên bản" value={String(syllabus.version)} />
-                <InfoRow label="Ngày xuất bản" value={syllabus.datePublished} />
+                <InfoRow label="Giảng viên" value={syllabusData.lecturerName} />
+                <InfoRow label="Bộ môn" value={syllabusData.deptName} />
+                <InfoRow label="Tín chỉ" value={syllabusData.credit} />
+                <InfoRow label="Năm học" value={syllabusData.academicYear} />
+                <InfoRow label="Loại hình" value={syllabusData.type || "Chính quy"} />
             </Section>
-            <Section title="Mục tiêu học phần">
-                {syllabus.target?.map((item, index) => (
-                    <View key={index} style={styles.outcomeItem}>
-                        <View style={styles.outcomeBadge}>
-                            <Text style={styles.outcomeBadgeText}>
-                                CO {index + 1}
-                            </Text>
-                        </View>
 
-                        <Text style={styles.outcomeText}>
-                            {item}
-                        </Text>
-                    </View>
-                ))}
-            </Section>
-            <Section title="Chuẩn đầu ra khóa học">
-                {syllabus.clos?.map((item, index) => (
-                    <View key={index} style={styles.outcomeItem}>
-                        <View style={styles.outcomeBadge}>
-                            <Text style={styles.outcomeBadgeText}>
-                                CL{index + 1}
-                            </Text>
-                        </View>
-
-                        <Text style={styles.outcomeText}>
-                            {item}
-                        </Text>
-                    </View>
-                ))}
-            </Section>
-            {/* ===== SUBJECT RELATIONSHIP ===== */}
-            <Section title="Liên hệ giữa CĐR học phần và CĐR CTĐ">
-                {syllabus.cloPloLinks?.map((item, index) => (
-                    <View key={index} style={styles.cloCard}>
-                        <Text style={styles.cloTitle}>{item.clo}</Text>
-
-                        <View style={styles.ploRow}>
-                            {item.plos.map((plo) => (
-                                <View key={plo} style={styles.ploBadge}>
-                                    <Text style={styles.ploText}>{plo} ✓</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                ))}
-            </Section>
-            {
-                syllabus.studentmission && (
-                    <Section title="Nhiệm vụ của sinh viên">
-                        {syllabus.studentmission.map((item, index) => (
-                            <View key={index} style={styles.teachingPlanRow}>
-                                <Text style={styles.missions}>{item}</Text>
+            {/* 4. MỤC TIÊU HỌC PHẦN (Optional) */}
+            {syllabusData.target && syllabusData.target.length > 0 && (
+                <Section title="Mục tiêu học phần">
+                    {syllabusData.target.map((item, index) => (
+                        <View key={`target-${index}`} style={styles.outcomeItem}>
+                            <View style={styles.outcomeBadge}>
+                                <Text style={styles.outcomeBadgeText}>CO {index + 1}</Text>
                             </View>
-                        ))}
-                    </Section>
-                )
-            }
-            {/* ===== TEACHING PLAN ===== */}
-            {
-                syllabus.teachingPlan && (
-                    <Section title="Kế hoạch giảng dạy">
-                        {syllabus.teachingPlan.map((item, index) => (
-                            <View key={index} style={styles.teachingPlanRow}>
-                                <Text style={styles.week}>Tuần {item.week}</Text>
+                            <Text style={styles.outcomeText}>{item}</Text>
+                        </View>
+                    ))}
+                </Section>
+            )}
+
+            {/* 5. KẾ HOẠCH GIẢNG DẠY (SESSION PLAN) */}
+            {sessionPlans.length > 0 ? (
+                <Section title="Kế hoạch giảng dạy">
+                    {sessionPlans
+                        .sort((a, b) => a.weekNo - b.weekNo) // Sắp xếp theo tuần
+                        .map((item, index) => (
+                            <View key={item.sessionId || index} style={styles.teachingPlanRow}>
+                                <Text style={styles.week}>Tuần {item.weekNo}</Text>
                                 <Text style={styles.topic}>{item.topic}</Text>
-                                <Text style={styles.method}>{item.method}</Text>
+                                <Text style={styles.method}>Phương pháp: {item.teachingMethod}</Text>
                             </View>
                         ))}
-                    </Section>
-                )
-            }
-            {/*STUDENT MISSIONS*/}
-            {/* ===== ASSESSMENT ===== */}
-            {
-                syllabus.assessments && (
-                    <Section title="Phương thức kiểm tra và đánh giá">
-                        {syllabus.assessments.map((item, index) => (
-                            <Text key={index} style={styles.bullet}>
-                                {item.type}: {item.weight}%
-                            </Text>
-                        ))}
-                    </Section>
-                )
-            }
+                </Section>
+            ) : null}
 
-            {/* ===== MATERIALS ===== */}
-            {
-                syllabus.materials && (
-                    <Section title="Tài liệu học tập">
-                        {syllabus.materials.map((item, index) => (
-                            <Text key={index} style={styles.bullet}>
-                                {`[${index + 1}]`} {item.name} – {item.author} ({item.type})
+            {/* 6. ĐÁNH GIÁ (ASSESSMENT) */}
+            {assessments.length > 0 ? (
+                <Section title="Phương thức đánh giá">
+                    {assessments.map((item, index) => (
+                        <Text key={item.assessmentId || index} style={styles.bullet}>
+                            • {item.name}: <Text style={{ fontWeight: 'bold' }}>{item.weightPercent}%</Text>
+                            {item.criteria ? ` - ${item.criteria}` : ''}
+                        </Text>
+                    ))}
+                </Section>
+            ) : null}
+
+            {/* 7. TÀI LIỆU (MATERIALS) */}
+            {materials.length > 0 ? (
+                <Section title="Tài liệu học tập">
+                    {materials.map((item, index) => (
+                        <View key={item.materialId || index} style={{ marginBottom: 12 }}>
+                            <Text style={styles.bullet}>
+                                {`[${index + 1}]`} <Text style={{ fontWeight: '600', color: '#0F172A' }}>{item.title}</Text>
                             </Text>
-                        ))}
-                    </Section>
-                )
-            }
-            {/* ===== REPORT ===== */}
-            <TouchableOpacity style={styles.reportBtn}>
-                <Text style={styles.reportText}>Báo cáo vấn đề</Text>
+                            <Text style={[styles.subtitle, { color: '#64748B', marginLeft: 16, marginTop: -4 }]}>
+                                Tác giả: {item.author} • {item.materialType}
+                            </Text>
+                        </View>
+                    ))}
+                </Section>
+            ) : null}
+
+            {/* FOOTER BUTTON */}
+            <TouchableOpacity style={styles.reportBtn} onPress={() => Alert.alert("Thông báo", "Đã gửi báo cáo thành công!")}>
+                <Text style={styles.reportText}>Báo cáo sai sót dữ liệu</Text>
             </TouchableOpacity>
-        </ScrollView >
+
+        </ScrollView>
     )
 }
