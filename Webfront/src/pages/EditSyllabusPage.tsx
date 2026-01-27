@@ -6,8 +6,10 @@ import {
   Plus, ArrowLeft, Save, Send
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
+import Toast, { useToast } from '../components/Toast';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
+import { getSyllabusById, updateSyllabus } from '../services/api';
 
 interface CLOItem {
   id: string;
@@ -43,6 +45,7 @@ const EditSyllabusPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error, info } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -95,23 +98,22 @@ const EditSyllabusPage: React.FC = () => {
 
   const loadSyllabusData = async (syllabusId: string) => {
     try {
-      // TODO: Call API to get syllabus by ID
-      // const response = await api.get(`/api/v1/syllabuses/${syllabusId}`);
-      // const data = response.data;
-      
-      // Mock data for now
-      setCourseCode('CS101');
-      setCourseName('Nhập môn Công nghệ thông tin');
-      setCredits('3');
-      setAcademicYear('2023-2024');
-      setSemester('HK1');
-      setCourseObjectives('Giới thiệu các khái niệm cơ bản về CNTT');
-      setCourseDescription('Môn học cung cấp kiến thức nền tảng về công nghệ thông tin');
-      
+      const data = await getSyllabusById(Number(syllabusId));
+
+      // Hỗ trợ cả cấu trúc phẳng và lồng course
+      setCourseCode((data as any)?.courseCode || (data as any)?.course?.courseCode || '');
+      setCourseName((data as any)?.courseName || (data as any)?.course?.courseName || '');
+      setCredits(String((data as any)?.credit || (data as any)?.course?.credits || ''));
+      setAcademicYear((data as any)?.academicYear || '');
+      setSemester((data as any)?.semester || '');
+      setCourseObjectives((data as any)?.courseObjectives || '');
+      setCourseDescription((data as any)?.courseDescription || '');
+      // TODO: map CLO/PLO/assessments/sessionPlans/materials khi backend trả về đầy đủ
+
       setLoading(false);
-    } catch (error) {
-      console.error('Error loading syllabus:', error);
-      alert('Không thể tải dữ liệu giáo trình');
+    } catch (err) {
+      console.error('Error loading syllabus:', err);
+      error('Không thể tải dữ liệu giáo trình');
       setLoading(false);
     }
   };
@@ -237,7 +239,7 @@ const EditSyllabusPage: React.FC = () => {
     try {
       // Validate
       if (!courseCode || !courseName || !credits || !academicYear) {
-        alert('Vui lòng điền đầy đủ thông tin cơ bản');
+        error('Vui lòng điền đầy đủ thông tin cơ bản');
         setIsSubmitting(false);
         return;
       }
@@ -245,7 +247,7 @@ const EditSyllabusPage: React.FC = () => {
       // Calculate total assessment weight
       const totalWeight = assessments.reduce((sum, a) => sum + Number(a.weight), 0);
       if (Math.abs(totalWeight - 100) > 0.01) {
-        alert(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
+        error(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
         setIsSubmitting(false);
         return;
       }
@@ -274,22 +276,25 @@ const EditSyllabusPage: React.FC = () => {
 
       console.log('Updating syllabus:', syllabusData);
 
-      // TODO: Call API to update syllabus
-      // const response = await api.put(`/api/v1/syllabuses/${id}`, syllabusData);
+      await updateSyllabus(Number(id), syllabusData);
 
-      // TODO: Upload PDF if exists
+      // TODO: Upload PDF if backend supports
       // if (pdfFile) {
       //   const formData = new FormData();
       //   formData.append('file', pdfFile);
-      //   await api.post(`/api/v1/syllabuses/${id}/upload-pdf`, formData);
+      //   await uploadSyllabusPdf(Number(id), formData);
       // }
 
-      alert('✅ Cập nhật đề cương thành công!');
+      success('✅ Cập nhật đề cương thành công!');
       navigate('/dashboard');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi cập nhật đề cương');
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật đề cương';
+      error(`❌ ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -895,6 +900,9 @@ const EditSyllabusPage: React.FC = () => {
           </form>
         </div>
       </main>
+      
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
