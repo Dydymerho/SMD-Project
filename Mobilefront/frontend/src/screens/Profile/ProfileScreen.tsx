@@ -130,12 +130,30 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* HERO */}
                 <View style={styles.heroCard}>
-                    <Image
-                        source={{ uri: profile.avatarUrl }}
-                        style={styles.avatar}
-                    />
+                    {profile.avatarUrl ? (
+                        <Image
+                            source={{ uri: profile.avatarUrl }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+
+                        <View style={[styles.avatar, {
+                            backgroundColor: '#e4e6eb',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            overflow: 'hidden'
+                        }]}>
+
+                            <Icon
+                                name="account"
+                                size={80}
+                                color="#bcc0c4"
+                                style={{ marginTop: 10 }}
+                            />
+                        </View>
+                    )}
+
                     <Text style={styles.userName}>{profile.fullName}</Text>
                     <Text style={styles.userRole}>Sinh viên khóa 2024</Text>
                 </View>
