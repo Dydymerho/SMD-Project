@@ -402,7 +402,7 @@ export const getFollowedCourses = async () => {
 export const getPendingApprovalsCount = async () => {
   try {
     const response = await axiosClient.get("/syllabuses/by-status/PENDING_APPROVAL");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching pending approvals:", error);
     return 0;
@@ -412,7 +412,7 @@ export const getPendingApprovalsCount = async () => {
 export const getTotalPrograms = async () => {
   try {
     const response = await axiosClient.get("/programs");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching programs:", error);
     return 0;
@@ -422,7 +422,7 @@ export const getTotalPrograms = async () => {
 export const getTotalPLOs = async () => {
   try {
     const response = await axiosClient.get("/plos");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching PLOs:", error);
     return 0;
@@ -432,7 +432,7 @@ export const getTotalPLOs = async () => {
 export const getApprovedCount = async () => {
   try {
     const response = await axiosClient.get("/syllabuses/by-status/APPROVED");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching approved syllabuses:", error);
     return 0;
@@ -442,7 +442,7 @@ export const getApprovedCount = async () => {
 export const getRejectedCount = async () => {
   try {
     const response = await axiosClient.get("/syllabuses/by-status/REJECTED");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching rejected syllabuses:", error);
     return 0;
@@ -452,7 +452,7 @@ export const getRejectedCount = async () => {
 export const getUnreadNotificationsCount = async () => {
   try {
     const response = await axiosClient.get("/notifications/unread");
-    return (Array.isArray(response) ? response.length : 0);
+    return (Array.isArray(response.data) ? response.data.length : 0);
   } catch (error) {
     console.error("Error fetching unread notifications:", error);
     return 0;
@@ -550,6 +550,25 @@ export const principalApproveSyllabus = async (syllabusId: number, comment: stri
 
 export const principalRejectSyllabus = async (syllabusId: number, comment: string) => {
   const response = await axiosClient.post(`/syllabuses/${syllabusId}/principal-reject`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+// Academic Affairs specific API calls
+export const aaApproveSyllabus = async (syllabusId: number, comment: string = '') => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+export const aaRejectSyllabus = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-reject`, {
     syllabusId,
     comment,
     returnToDraft: false

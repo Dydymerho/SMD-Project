@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, CheckCircle, XCircle, Settings, Search, Bell, User, 
-  Eye, Clock, AlertTriangle, Award, TrendingUp, FileText
+  Eye, AlertTriangle, FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';

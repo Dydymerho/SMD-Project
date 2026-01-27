@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Home, FileText, CheckCircle, Settings, Search, Bell, 
-  XCircle, AlertCircle, Clock, TrendingUp, User, Award
+  Home, CheckCircle, Settings, Search, Bell, 
+  AlertCircle, Clock, User, Award
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './DashboardPage.css';
@@ -31,7 +31,6 @@ interface RecentActivity {
 const AADashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview'>('overview');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,8 +82,17 @@ const AADashboard: React.FC = () => {
         api.getUnreadNotificationsCount(),
         api.getApprovedCount(),
         api.getRejectedCount(),
-        api.getRecentAuditLogs(7) // Get last 7 days of activity
+        api.getRecentAuditLogs(7).catch(() => []) // Get last 7 days of activity
       ]);
+
+      console.log('AA Dashboard Stats:', {
+        pendingCount,
+        programsCount,
+        plosCount,
+        unreadNotifications,
+        approvedCount,
+        rejectedCount
+      });
 
       setStats({
         pendingLevel2Approvals: pendingCount,

@@ -7,7 +7,6 @@ import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
-import { fetchAllSyllabuses } from '../../services/syllabusService';
 import * as api from '../../services/api';
 
 interface SyllabusVersion {
@@ -154,6 +153,7 @@ const AASyllabusAnalysisPage: React.FC = () => {
 
   useEffect(() => {
     loadSyllabuses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredSyllabuses = syllabuses.filter((s) => {

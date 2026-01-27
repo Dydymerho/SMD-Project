@@ -8,6 +8,28 @@ import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import * as api from '../../services/api';
+
+interface SessionPlan {
+  sessionId: number;
+  weekNo: number;
+  topic: string;
+  teachingMethod: string;
+}
+
+interface Assessment {
+  assessmentId: number;
+  name: string;
+  weightPercent: number;
+  criteria: string;
+}
+
+interface Material {
+  materialId: number;
+  title: string;
+  author: string;
+  materialType: string;
+}
 
 interface PLOMapping {
   ploCode: string;
@@ -17,14 +39,21 @@ interface PLOMapping {
 }
 
 interface SyllabusDetail {
-  id: string;
+  syllabusId: number;
   courseCode: string;
   courseName: string;
   credits: number;
-  department: string;
-  program: string;
-  lecturer: string;
-  hodApprovedDate: string;
+  deptName?: string;
+  programName?: string;
+  lecturerName: string;
+  lecturerEmail?: string;
+  academicYear?: string;
+  currentStatus?: string;
+  versionNotes?: string;
+  aiSummary?: string;
+  sessionPlans?: SessionPlan[];
+  assessments?: Assessment[];
+  materials?: Material[];
   clos: string[];
   ploMappings: PLOMapping[];
   rubricsValid: boolean;
@@ -45,79 +74,89 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
   const [approvalNote, setApprovalNote] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     loadSyllabusDetail();
   }, [id]);
 
   const loadSyllabusDetail = async () => {
+    if (!id) return;
+    
     try {
       setLoading(true);
-      // Mock data
+      const [syllabusData, unreadCount] = await Promise.all([
+        api.getSyllabusDetail(parseInt(id)),
+        api.getUnreadNotificationsCount().catch(() => 0)
+      ]);
+
+      console.log('Loaded syllabus detail:', syllabusData);
+
+      // Transform API data to local format
       setSyllabus({
-        id: id || '1',
-        courseCode: 'CS301',
-        courseName: 'Trí tuệ nhân tạo',
-        credits: 4,
-        department: 'Khoa CNTT',
-        program: 'Computer Science',
-        lecturer: 'Nguyễn Văn A',
-        hodApprovedDate: '2024-01-25',
-        clos: [
-          'CLO1: Hiểu các khái niệm cơ bản về AI',
-          'CLO2: Vận dụng các thuật toán học máy',
-          'CLO3: Phân tích và đánh giá mô hình AI',
-        ],
-        ploMappings: [
-          { ploCode: 'PLO1', ploDescription: 'Apply knowledge of computing', closMapped: ['CLO1', 'CLO2'], coveragePercentage: 80 },
-          { ploCode: 'PLO2', ploDescription: 'Analyze complex problems', closMapped: ['CLO2', 'CLO3'], coveragePercentage: 90 },
-          { ploCode: 'PLO5', ploDescription: 'Function effectively in teams', closMapped: ['CLO3'], coveragePercentage: 60 },
-        ],
-        rubricsValid: true,
+        syllabusId: syllabusData.id,
+        courseCode: syllabusData.courseCode,
+        courseName: syllabusData.courseName,
+        credits: syllabusData.credit,
+        deptName: syllabusData.deptName,
+        programName: undefined,
+        lecturerName: syllabusData.lecturerName,
+        lecturerEmail: undefined,
+        academicYear: syllabusData.academicYear,
+        currentStatus: undefined,
+        versionNotes: undefined,
+        aiSummary: syllabusData.aiSumary,
+        sessionPlans: syllabusData.sessionPlans || [],
+        assessments: syllabusData.assessments || [],
+        materials: syllabusData.materials || [],
+        clos: syllabusData.target || [],
+        ploMappings: [], // TODO: Fetch PLO mappings if endpoint exists
+        rubricsValid: true, // Mock data
         rubricsIssues: [],
-        prerequisitesValid: true,
-        prerequisitesList: ['CS201 - Cấu trúc dữ liệu', 'MATH101 - Đại số tuyến tính'],
+        prerequisitesValid: true, // Mock data
+        prerequisitesList: [],
       });
+      setNotificationCount(unreadCount);
     } catch (error) {
       console.error('Error loading syllabus:', error);
+      alert('Không thể tải thông tin giáo trình');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async () => {
-    if (!approvalNote.trim()) {
-      alert('Vui lòng nhập ghi chú phê duyệt');
-      return;
-    }
+    if (!id) return;
+    
     setIsSubmitting(true);
     try {
-      // TODO: API call
-      console.log('Approved Level 2:', { id, approvalNote });
-      alert('✅ Đã phê duyệt Level 2!\nGiáo trình sẽ được chuyển đến phòng ban cuối cùng để công bố.');
-      navigate('/aa/syllabus-approval');
-    } catch (error) {
+      await api.aaApproveSyllabus(parseInt(id), approvalNote);
+      alert('✅ Đã phê duyệt Level 2!\nGiáo trình sẽ được chuyển đến Principal để phê duyệt cuối cùng.');
+      setShowApproveModal(false);
+      setTimeout(() => navigate('/aa/syllabus-approval'), 1000);
+    } catch (error: any) {
       console.error('Error approving:', error);
-      alert('❌ Có lỗi xảy ra');
+      alert(error.response?.data?.message || '❌ Có lỗi xảy ra khi phê duyệt');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleReject = async () => {
-    if (!rejectionReason.trim()) {
+    if (!id || !rejectionReason.trim()) {
       alert('Vui lòng nhập lý do từ chối');
       return;
     }
+    
     setIsSubmitting(true);
     try {
-      // TODO: API call
-      console.log('Rejected Level 2:', { id, rejectionReason });
-      alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về HoD/Lecturer với lý do từ chối.');
-      navigate('/aa/syllabus-approval');
-    } catch (error) {
+      await api.aaRejectSyllabus(parseInt(id), rejectionReason);
+      alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về HoD với lý do từ chối.');
+      setShowRejectModal(false);
+      setTimeout(() => navigate('/aa/syllabus-approval'), 1000);
+    } catch (error: any) {
       console.error('Error rejecting:', error);
-      alert('❌ Có lỗi xảy ra');
+      alert(error.response?.data?.message || '❌ Có lỗi xảy ra khi từ chối');
     } finally {
       setIsSubmitting(false);
     }
@@ -167,7 +206,7 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)} style={{ cursor: 'pointer' }}>
                 <Bell size={24} />
-                <span className="badge">5</span>
+                {notificationCount > 0 && <span className="badge">{notificationCount}</span>}
               </div>
               {isNotificationOpen && <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
             </div>
@@ -194,35 +233,153 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
 
           {/* Course Info */}
           <div style={{ background: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
-            <h2 style={{ margin: '0 0 8px 0', color: '#333' }}>{syllabus.courseCode} - {syllabus.courseName}</h2>
-            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>{syllabus.program} | {syllabus.credits} tín chỉ | HoD đã duyệt: {syllabus.hodApprovedDate}</p>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+              <span style={{ background: '#2196f315', color: '#2196f3', padding: '4px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600 }}>
+                {syllabus.courseCode}
+              </span>
+              <span style={{ background: '#ff980015', color: '#ff9800', padding: '4px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600 }}>
+                {syllabus.currentStatus || 'PENDING_APPROVAL'}
+              </span>
+            </div>
+            <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>{syllabus.courseName}</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', color: '#666', fontSize: '14px' }}>
+              <div><strong>Chương trình:</strong> {syllabus.programName || 'N/A'}</div>
+              <div><strong>Số tín chỉ:</strong> {syllabus.credits}</div>
+              <div><strong>Khoa:</strong> {syllabus.deptName || 'N/A'}</div>
+              <div><strong>Giảng viên:</strong> {syllabus.lecturerName}</div>
+              {syllabus.academicYear && <div><strong>Năm học:</strong> {syllabus.academicYear}</div>}
+            </div>
+            {syllabus.versionNotes && (
+              <div style={{ marginTop: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', borderLeft: '4px solid #2196f3' }}>
+                <strong>Ghi chú:</strong> {syllabus.versionNotes}
+              </div>
+            )}
           </div>
 
-          {/* PLO Mapping Section */}
-          <div className="plo-mapping-section" style={{ marginBottom: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#1976d2', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={20} />
-              PLO Mapping Verification
-            </h3>
-            {syllabus.ploMappings.map((plo) => (
-              <div key={plo.ploCode} style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, color: '#333' }}>{plo.ploCode}</span>
-                    <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>{plo.ploDescription}</p>
-                  </div>
-                  <span style={{ fontSize: '14px', color: plo.coveragePercentage >= 70 ? '#4caf50' : '#ff9800', fontWeight: 600 }}>
-                    {plo.coveragePercentage}%
-                  </span>
-                </div>
-                <div>
-                  {plo.closMapped.map(clo => (
-                    <span key={clo} className="plo-tag">{clo}</span>
-                  ))}
-                </div>
+          {/* AI Summary Section */}
+          {syllabus.aiSummary && (
+            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '24px', borderRadius: '12px', marginBottom: '24px', color: 'white' }}>
+              <h3 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px' }}>
+                <Zap size={20} />
+                AI Summary - Tổng hợp tự động
+              </h3>
+              <div style={{ background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '8px', lineHeight: 1.8 }}>
+                {syllabus.aiSummary}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Session Plans Section */}
+          {syllabus.sessionPlans && syllabus.sessionPlans.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="#2196f3" />
+                Kế hoạch Giảng dạy ({syllabus.sessionPlans.length} buổi học)
+              </h3>
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tuần</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Chủ đề</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Phương pháp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {syllabus.sessionPlans.map((session, idx) => (
+                      <tr key={session.sessionId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Assessments Section */}
+          {syllabus.assessments && syllabus.assessments.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle size={20} color="#4caf50" />
+                Đánh giá & Kiểm tra ({syllabus.assessments.length} hình thức)
+              </h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {syllabus.assessments.map((assessment) => (
+                  <div key={assessment.assessmentId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>{assessment.name}</h4>
+                      <span style={{ background: '#4caf5015', color: '#4caf50', padding: '4px 12px', borderRadius: '12px', fontWeight: 600, fontSize: '14px' }}>
+                        {assessment.weightPercent}%
+                      </span>
+                    </div>
+                    <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '13px' }}>{assessment.criteria}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Materials Section */}
+          {syllabus.materials && syllabus.materials.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="#ff9800" />
+                Tài liệu Tham khảo ({syllabus.materials.length} tài liệu)
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
+                {syllabus.materials.map((material) => (
+                  <div key={material.materialId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
+                      <FileText size={18} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px' }}>{material.title}</h4>
+                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
+                        <span style={{ background: '#ff980015', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                          {material.materialType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PLO Mapping Section */}
+          {syllabus.ploMappings.length > 0 ? (
+            <div className="plo-mapping-section" style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#1976d2', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={20} />
+                PLO Mapping Verification
+              </h3>
+              {syllabus.ploMappings.map((plo) => (
+                <div key={plo.ploCode} style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: '#333' }}>{plo.ploCode}</span>
+                      <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>{plo.ploDescription}</p>
+                    </div>
+                    <span style={{ fontSize: '14px', color: plo.coveragePercentage >= 70 ? '#4caf50' : '#ff9800', fontWeight: 600 }}>
+                      {plo.coveragePercentage}%
+                    </span>
+                  </div>
+                  <div>
+                    {plo.closMapped.map(clo => (
+                      <span key={clo} className="plo-tag">{clo}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: '#fff3e0', color: '#e65100', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+              <AlertTriangle size={20} style={{ display: 'inline', marginRight: '8px' }} />
+              PLO Mapping data is not available yet. This feature will be enabled when PLO mapping endpoint is implemented.
+            </div>
+          )}
 
           {/* Rubrics & Prerequisites */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '24px' }}>
