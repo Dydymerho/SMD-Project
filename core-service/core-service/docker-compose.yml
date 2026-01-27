@@ -109,6 +109,7 @@ services:
       - prometheus
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   postgres_data:
