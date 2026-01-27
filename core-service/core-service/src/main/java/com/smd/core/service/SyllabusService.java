@@ -1,16 +1,12 @@
 package com.smd.core.service;
 
 import com.smd.core.document.SyllabusDocument;
-import com.smd.core.dto.SyllabusUploadResponse;
-import com.smd.core.entity.Syllabus;
-import com.smd.core.entity.SyllabusAuditLog;
-import com.smd.core.entity.User;
+import com.smd.core.dto.*;
+import com.smd.core.entity.*;
 import com.smd.core.exception.DuplicateResourceException;
 import com.smd.core.exception.InvalidDataException;
 import com.smd.core.exception.ResourceNotFoundException;
-import com.smd.core.repository.SyllabusRepository;
-import com.smd.core.repository.SyllabusSearchRepository;
-import com.smd.core.repository.UserRepository;
+import com.smd.core.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -25,6 +21,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -46,6 +43,15 @@ public class SyllabusService {
     
     @Autowired
     private AuditLogService auditLogService;
+    
+    @Autowired
+    private SessionPlanRepository sessionPlanRepository;
+    
+    @Autowired
+    private AssessmentRepository assessmentRepository;
+    
+    @Autowired
+    private MaterialRepository materialRepository;
     
     @Value("${file.upload.path:uploads/syllabus/pdf}")
     private String uploadPath; 
@@ -247,6 +253,35 @@ public class SyllabusService {
         }
         
         return fromDb;
+    }
+    
+    // GET SYLLABUS DETAIL WITH ALL RELATED DATA
+    @Transactional(readOnly = true)
+    public SyllabusDetailResponse getSyllabusDetail(Long syllabusId) {
+        System.out.println("\n==> [DETAIL] Getting full syllabus detail for ID: " + syllabusId);
+        
+        // Get syllabus from database
+        Syllabus syllabus = syllabusRepo.findById(syllabusId)
+                .orElseThrow(() -> {
+                    System.err.println("==> [DETAIL ERROR] Syllabus not found with ID: " + syllabusId);
+                    return new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId);
+                });
+        
+        // Get related data
+        List<SessionPlan> sessionPlans = sessionPlanRepository.findBySyllabus_SyllabusId(syllabusId);
+        List<Assessment> assessments = assessmentRepository.findBySyllabus_SyllabusId(syllabusId);
+        List<Material> materials = materialRepository.findBySyllabus_SyllabusId(syllabusId);
+        
+        // Convert to DTO using static method
+        SyllabusDetailResponse response = SyllabusDetailResponse.fromEntity(
+                syllabus, sessionPlans, assessments, materials);
+        
+        System.out.println("==> [DETAIL SUCCESS] Retrieved detail with " + 
+                response.getSessionPlans().size() + " session plans, " +
+                response.getAssessments().size() + " assessments, " +
+                response.getMaterials().size() + " materials");
+        
+        return response;
     }
 
     // 3. SEARCH (Elasticsearch) - TRẢ ĐẦY ĐỦ THÔNG TIN
