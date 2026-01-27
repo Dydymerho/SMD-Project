@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare, Zap, TreesIcon } from 'lucide-react';
-import { getCourses, searchSyllabuses, getDepartments, getNotificationStats } from '../../services/api';
+import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare } from 'lucide-react';
+import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, SyllabusDetailResponse } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import { useAuth } from '../../context/AuthContext';
 
@@ -25,11 +25,17 @@ interface Syllabus {
   };
   lecturer: {
     fullName: string;
+    email?: string;
+    userId?: number;
   };
   academicYear: string;
   versionNo: number;
-  currentStatus: string;
+  currentStatus: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PUBLISHED' | 'REJECTED' | 'ARCHIVED';
   versionNotes: string;
+  createdAt?: string;
+  publishedAt?: string;
+  aiSummary?: string;
+  deptName?: string;
 }
 
 interface Department {
@@ -42,7 +48,6 @@ const StudentDashboard: React.FC = () => {
   const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [courses, setCourses] = useState<Course[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [syllabi, setSyllabi] = useState<Syllabus[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +59,9 @@ const StudentDashboard: React.FC = () => {
   const [selectedMajor, setSelectedMajor] = useState('');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
-  const [activeViewTool, setActiveViewTool] = useState<'summary' | 'tree' | 'map'>('summary');
+  const [detailData, setDetailData] = useState<SyllabusDetailResponse | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [activeViewTool, setActiveViewTool] = useState<'info' | 'clos' | 'sessions' | 'assessments' | 'materials'>('info');
   const [subscribedSyllabi, setSubscribedSyllabi] = useState<Set<number>>(new Set());
   const [feedbackModal, setFeedbackModal] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState('');
@@ -97,7 +104,7 @@ const StudentDashboard: React.FC = () => {
   const handleOpenDetail = (syllabus: Syllabus) => {
     setSelectedSyllabus(syllabus);
     setDetailModalOpen(true);
-    setActiveViewTool('summary');
+    setActiveViewTool('info');
   };
 
   const handleSendFeedback = () => {
@@ -111,10 +118,27 @@ const StudentDashboard: React.FC = () => {
       setFeedbackModal(false);
     }
   };
+
+  // Fetch syllabus detail when modal opens
+  useEffect(() => {
+    if (detailModalOpen && selectedSyllabus) {
+      const fetchDetail = async () => {
+        try {
+          setLoadingDetail(true);
+          const detail = await getSyllabusDetail(selectedSyllabus.syllabusId);
+          setDetailData(detail);
+        } catch (error) {
+          console.error('Lỗi lấy chi tiết giáo trình:', error);
+        } finally {
+          setLoadingDetail(false);
+        }
+      };
+      fetchDetail();
+    }
+  }, [detailModalOpen, selectedSyllabus]);
   useEffect(() => {
     if (searchQuery === '' && searched) {
       setSearched(false);
-      setCourses([]);
     }
   }, [searchQuery, searched]);
 
@@ -191,7 +215,7 @@ const StudentDashboard: React.FC = () => {
             <div className="modal-header">
               <div>
                 <h2>{selectedSyllabus.course?.courseName}</h2>
-                <p className="modal-subtitle">{selectedSyllabus.course?.courseCode} - {selectedSyllabus.lecturer?.fullName}</p>
+                <p className="modal-subtitle">{selectedSyllabus.course?.courseCode} - {selectedSyllabus.course?.department?.deptName || 'N/A'}</p>
               </div>
               <button className="modal-close" onClick={() => setDetailModalOpen(false)}>
                 <X size={24} />
@@ -200,72 +224,175 @@ const StudentDashboard: React.FC = () => {
 
             <div className="modal-tabs">
               <button 
-                className={`modal-tab ${activeViewTool === 'summary' ? 'active' : ''}`}
-                onClick={() => setActiveViewTool('summary')}
+                className={`modal-tab ${activeViewTool === 'info' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('info')}
               >
-                <Zap size={18} />
-                AI Summary
+                Thông tin
               </button>
               <button 
-                className={`modal-tab ${activeViewTool === 'tree' ? 'active' : ''}`}
-                onClick={() => setActiveViewTool('tree')}
+                className={`modal-tab ${activeViewTool === 'clos' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('clos')}
               >
-                <TreesIcon size={18} />
-                Sơ đồ môn học
+                CLOs
               </button>
               <button 
-                className={`modal-tab ${activeViewTool === 'map' ? 'active' : ''}`}
-                onClick={() => setActiveViewTool('map')}
+                className={`modal-tab ${activeViewTool === 'sessions' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('sessions')}
               >
-                <Search size={18} />
-                Output Map
+                Lịch giảng dạy
+              </button>
+              <button 
+                className={`modal-tab ${activeViewTool === 'assessments' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('assessments')}
+              >
+                Đánh giá
+              </button>
+              <button 
+                className={`modal-tab ${activeViewTool === 'materials' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('materials')}
+              >
+                Tài liệu
               </button>
             </div>
 
             <div className="modal-body">
-              {activeViewTool === 'summary' && (
+              {loadingDetail ? (
                 <div className="view-tool-content">
-                  <h3>AI Tóm tắt giáo trình</h3>
-                  <div className="summary-content">
-                    <p><strong>Năm học:</strong> {selectedSyllabus.academicYear}</p>
-                    <p><strong>Phiên bản:</strong> {selectedSyllabus.versionNo}</p>
-                    <p><strong>Trạng thái:</strong> {selectedSyllabus.currentStatus}</p>
-                    <div className="summary-text">
-                      <p>Giáo trình này cung cấp các kiến thức cơ bản về môn học này. Học viên sẽ học được các khái niệm, kỹ năng cần thiết và cách ứng dụng trong thực tế.</p>
-                      <p>Nội dung được chia thành các chương chính giúp học viên tiếp thu dễ dàng hơn.</p>
-                    </div>
-                  </div>
+                  <p>Đang tải dữ liệu...</p>
                 </div>
-              )}
+              ) : (
+                <>
+                  {activeViewTool === 'info' && (
+                    <div className="view-tool-content">
+                      <h3>Thông tin chung</h3>
+                      {detailData && (
+                        <div className="info-section">
+                          <div className="info-row">
+                            <span className="info-label">Mã môn:</span>
+                            <span className="info-value">{detailData.courseCode}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Tên môn:</span>
+                            <span className="info-value">{detailData.courseName}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Bộ môn:</span>
+                            <span className="info-value">{detailData.deptName || 'N/A'}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Giảng viên:</span>
+                            <span className="info-value">{detailData.lecturerName}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Tín chỉ:</span>
+                            <span className="info-value">{detailData.credit}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Năm học:</span>
+                            <span className="info-value">{detailData.academicYear}</span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Loại:</span>
+                            <span className="info-value">{detailData.type}</span>
+                          </div>
+                          {detailData.aiSumary && (
+                            <div className="info-row full-width">
+                              <span className="info-label">AI Tóm tắt:</span>
+                              <p className="info-value">{detailData.aiSumary}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-              {activeViewTool === 'tree' && (
-                <div className="view-tool-content">
-                  <h3>Sơ đồ Prerequisite & Tiếp theo</h3>
-                  <div className="tree-content">
-                    <div className="tree-item">
-                      <div className="tree-node previous">← Môn học tiên quyết</div>
-                      <div className="tree-node current">Môn hiện tại</div>
-                      <div className="tree-node next">Môn học tiếp theo →</div>
+                  {activeViewTool === 'clos' && (
+                    <div className="view-tool-content">
+                      <h3>Mục tiêu học phần (CLOs)</h3>
+                      {detailData?.target && detailData.target.length > 0 ? (
+                        <ul className="clos-list">
+                          {detailData.target.map((clo, idx) => (
+                            <li key={idx}>{clo}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Chưa có dữ liệu</p>
+                      )}
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {activeViewTool === 'map' && (
-                <div className="view-tool-content">
-                  <h3>Output Standard Map</h3>
-                  <div className="map-content">
-                    <div className="map-item">
-                      <strong>Mục tiêu học tập:</strong>
-                      <ul>
-                        <li>Nắm vững các khái niệm cơ bản</li>
-                        <li>Phát triển kỹ năng thực hành</li>
-                        <li>Áp dụng vào các tình huống thực tế</li>
-                        <li>Phát triển tư duy phản biện</li>
-                      </ul>
+                  {activeViewTool === 'sessions' && (
+                    <div className="view-tool-content">
+                      <h3>Lịch giảng dạy</h3>
+                      {detailData?.sessionPlans && detailData.sessionPlans.length > 0 ? (
+                        <div className="sessions-table">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Tuần</th>
+                                <th>Chủ đề</th>
+                                <th>Phương pháp</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {detailData.sessionPlans.map((session) => (
+                                <tr key={session.sessionId}>
+                                  <td>{session.weekNo}</td>
+                                  <td>{session.topic}</td>
+                                  <td>{session.teachingMethod}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p>Chưa có dữ liệu</p>
+                      )}
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  {activeViewTool === 'assessments' && (
+                    <div className="view-tool-content">
+                      <h3>Phương pháp đánh giá</h3>
+                      {detailData?.assessments && detailData.assessments.length > 0 ? (
+                        <div className="assessments-list">
+                          {detailData.assessments.map((assessment) => (
+                            <div key={assessment.assessmentId} className="assessment-item">
+                              <div className="assessment-header">
+                                <h4>{assessment.name}</h4>
+                                <span className="weight-badge">{assessment.weightPercent}%</span>
+                              </div>
+                              <p className="assessment-criteria">{assessment.criteria}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>Chưa có dữ liệu</p>
+                      )}
+                    </div>
+                  )}
+
+                  {activeViewTool === 'materials' && (
+                    <div className="view-tool-content">
+                      <h3>Tài liệu tham khảo</h3>
+                      {detailData?.materials && detailData.materials.length > 0 ? (
+                        <div className="materials-list">
+                          {detailData.materials.map((material) => (
+                            <div key={material.materialId} className="material-item">
+                              <div className="material-header">
+                                <h4>{material.title}</h4>
+                                <span className="material-type">{material.materialType}</span>
+                              </div>
+                              <p className="material-author">Tác giả: {material.author}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>Chưa có dữ liệu</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -408,14 +535,33 @@ const StudentDashboard: React.FC = () => {
                   {allCourses.map((course) => (
                     <div key={course.courseId} className="course-card">
                       <div className="course-card-header">
-                        <span>{course.courseCode}</span>
-                        <h3>{course.courseName}</h3>
+                        <span className="course-code">{course.courseCode}</span>
+                        <h3 className="course-title">{course.courseName}</h3>
                       </div>
                       <div className="course-card-body">
                         <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
                         <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
                       </div>
-                      <button className="view-detail-btn" onClick={() => setDetailModalOpen(true)}>Xem ngay</button>
+                      <button 
+                        className="view-detail-btn" 
+                        onClick={() => {
+                          const tempSyllabus: Syllabus = {
+                            syllabusId: course.courseId,
+                            course: course,
+                            program: { programName: '' },
+                            lecturer: { fullName: 'Chưa xác định' },
+                            versionNotes: '',
+                            academicYear: new Date().getFullYear().toString() + '-' + (new Date().getFullYear() + 1).toString(),
+                            versionNo: 1,
+                            currentStatus: 'PUBLISHED'
+                          };
+                          setSelectedSyllabus(tempSyllabus);
+                          setDetailModalOpen(true);
+                          setActiveViewTool('info');
+                        }}
+                      >
+                        Xem ngay
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -457,8 +603,8 @@ const StudentDashboard: React.FC = () => {
 
               <div className="results-status">
                 {loading && <p className="status-text">Đang tải dữ liệu môn học...</p>}
-                {!loading && searched && courses.length === 0 && (
-                  <p className="status-text">Không tìm thấy môn học nào phù hợp với "{searchQuery}"</p>
+                {!loading && searched && syllabi.length === 0 && (
+                  <p className="status-text no-results">❌ Không tìm thấy giáo trình phù hợp với "<strong>{searchQuery}</strong>"</p>
                 )}
                 {!searched && !loading && (
                   <p className="status-text">Nhập tên môn học để bắt đầu tra cứu</p>
@@ -469,13 +615,16 @@ const StudentDashboard: React.FC = () => {
                 {syllabi.length > 0 ? syllabi.map((s) => (
                   <div key={s.syllabusId} className="course-card">
                     <div className="course-card-header">
-                      <span>{s.course?.courseCode}</span>
-                      <h3>{s.course?.courseName}</h3>
+                      <div className="course-code-name">
+                        <span className="course-code">{s.course?.courseCode}</span>
+                        <span className="course-credits">{s.course?.credits} TC</span>
+                      </div>
+                      <h3 className="course-title" title={s.course?.courseName}>{s.course?.courseName}</h3>
                     </div>
                     <div className="course-card-body">
                       <p><strong>Giảng viên:</strong> {s.lecturer?.fullName}</p>
-                      <p><strong>Phiên bản:</strong> {s.versionNo}</p>
-                      <p><strong>Năm học:</strong> {s.academicYear}</p>
+                      <p><strong>Bộ môn:</strong> {s.course?.department?.deptName || 'N/A'}</p>
+                      <p><strong>Trạng thái:</strong> <span className={`status-badge status-${s.currentStatus?.toLowerCase()}`}>{s.currentStatus}</span></p>
                     </div>
                     <div className="course-card-actions">
                       <button 

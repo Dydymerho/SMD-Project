@@ -7,10 +7,60 @@ export interface Syllabus {
     courseCode: string;
     courseName: string;
     credits: number;
+    department?: {
+      departmentId: number;
+      deptName: string;
+    };
   };
   program: { programName: string };
   lecturer: { fullName: string };
   versionNotes: string;
+  academicYear?: string;
+  currentStatus?: string;
+  createdBy?: string;
+  creator?: {
+    fullName: string;
+  };
+}
+
+export interface SessionPlanResponse {
+  sessionId: number;
+  syllabusId: number;
+  weekNo: number;
+  topic: string;
+  teachingMethod: string;
+}
+
+export interface AssessmentResponse {
+  assessmentId: number;
+  syllabusId: number;
+  name: string;
+  weightPercent: number;
+  criteria: string;
+}
+
+export interface MaterialResponse {
+  materialId: number;
+  syllabusId: number;
+  title: string;
+  author: string;
+  materialType: string;
+}
+
+export interface SyllabusDetailResponse {
+  id: number;
+  courseCode: string;
+  courseName: string;
+  deptName: string;
+  aiSumary: string;
+  lecturerName: string;
+  credit: number;
+  academicYear: string;
+  type: string;
+  target: string[];
+  sessionPlans: SessionPlanResponse[];
+  assessments: AssessmentResponse[];
+  materials: MaterialResponse[];
 }
 
 // Authentication API
@@ -104,6 +154,11 @@ export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
   const response = await axiosClient.get(`/syllabuses/search`, {
     params: { keyword: query }
   });
+  return response.data;
+};
+
+export const getSyllabusDetail = async (syllabusId: number): Promise<SyllabusDetailResponse> => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}/detail`);
   return response.data;
 };
 

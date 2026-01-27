@@ -49,11 +49,10 @@ const HomePage: React.FC = () => {
               {courses.map((course) => (
                 <SubjectCard
                   key={course.id}
-                  id={course.id}
-                  name={course.name}
-                  code={course.code}
+                  id={parseInt(course.id)}
+                  courseCode={course.code}
+                  courseName={course.name}
                   credits={course.credits}
-                  description={course.description}
                 />
               ))}
             </div>
