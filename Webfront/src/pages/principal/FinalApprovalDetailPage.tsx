@@ -2,36 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, Home, BarChart3, Bell, User,
-  FileText, Award, Calendar, AlertTriangle, Users, MessageSquare
+  AlertTriangle, BookOpen, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './PrincipalPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
-
-interface ProposalDetail {
-  id: string;
-  type: 'program' | 'plo_change' | 'strategic';
-  title: string;
-  department: string;
-  submittedBy: string;
-  submissionDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  priority: 'high' | 'medium' | 'low';
-  description: string;
-  rationale: string;
-  expectedOutcome: string;
-  affectedPrograms: string[];
-  budget?: number;
-  timeline: string;
-  approvalHistory: Array<{
-    level: string;
-    approver: string;
-    date: string;
-    status: string;
-    notes?: string;
-  }>;
-}
+import { 
+  getPrincipalSyllabusDetail, 
+  principalApproveSyllabus, 
+  principalRejectSyllabus,
+  getUnreadNotificationsCount,
+  PrincipalSyllabusDetail 
+} from '../../services/api';
 
 const FinalApprovalDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,80 +25,68 @@ const FinalApprovalDetailPage: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
-  const notificationCount = 8;
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [syllabus, setSyllabus] = useState<PrincipalSyllabusDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Mock data - replace with API call
-  const [proposal, setProposal] = useState<ProposalDetail>({
-    id: id || '1',
-    type: 'program',
-    title: 'Chương trình Đào tạo CNTT 2024-2025',
-    department: 'Khoa CNTT',
-    submittedBy: 'Academic Affairs',
-    submissionDate: '2024-01-25',
-    status: 'pending',
-    priority: 'high',
-    description: 'Chương trình đào tạo cử nhân Công nghệ Thông tin với tổng số 156 tín chỉ, áp dụng từ năm học 2024-2025',
-    rationale: 'Cập nhật chương trình đào tạo theo chuẩn AUN-QA và yêu cầu của ngành CNTT hiện đại. Tích hợp các kiến thức mới về AI, Data Science, Cloud Computing.',
-    expectedOutcome: 'Sinh viên tốt nghiệp đáp ứng được chuẩn đầu ra quốc tế, có khả năng làm việc tại các công ty công nghệ lớn',
-    affectedPrograms: ['CNTT - Khóa 2024', 'CNTT - Chuyên sâu AI', 'CNTT - An toàn thông tin'],
-    budget: 500000000,
-    timeline: '6 tháng (02/2024 - 08/2024)',
-    approvalHistory: [
-      {
-        level: 'Level 1 - Head of Department',
-        approver: 'TS. Nguyễn Văn A',
-        date: '2024-01-20',
-        status: 'approved',
-        notes: 'Chương trình đã được thảo luận và thông qua tại hội đồng khoa. Nội dung phù hợp với định hướng phát triển.'
-      },
-      {
-        level: 'Level 2 - Academic Affairs',
-        approver: 'PGS.TS Trần Thị B',
-        date: '2024-01-24',
-        status: 'approved',
-        notes: 'Đã kiểm tra PLO mapping, rubrics và prerequisites. Chương trình đáp ứng đầy đủ tiêu chuẩn AUN-QA.'
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const [syllabusData, notifCount] = await Promise.all([
+          getPrincipalSyllabusDetail(parseInt(id)),
+          getUnreadNotificationsCount().catch(() => 0)
+        ]);
+        setSyllabus(syllabusData);
+        setNotificationCount(notifCount);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('Không thể tải thông tin giáo trình');
+      } finally {
+        setLoading(false);
       }
-    ]
-  });
+    };
 
-  const handleApprove = () => {
-    setProposal(prev => ({ ...prev, status: 'approved' }));
-    setShowApproveModal(false);
-    // TODO: Call API to approve
-    setTimeout(() => navigate('/principal/final-approval'), 1500);
-  };
+    fetchData();
+  }, [id]);
 
-  const handleReject = () => {
-    setProposal(prev => ({ ...prev, status: 'rejected' }));
-    setShowRejectModal(false);
-    // TODO: Call API to reject
-    setTimeout(() => navigate('/principal/final-approval'), 1500);
-  };
+  const handleApprove = async () => {
+    if (!syllabus || !id) return;
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'program': return 'Chương trình Đào tạo';
-      case 'plo_change': return 'Thay đổi PLO';
-      case 'strategic': return 'Đề xuất Chiến lược';
-      default: return type;
+    try {
+      setSubmitting(true);
+      await principalApproveSyllabus(parseInt(id), approvalNotes);
+      alert('Phê duyệt thành công!');
+      setShowApproveModal(false);
+      setTimeout(() => navigate('/principal/final-approval'), 1000);
+    } catch (error: any) {
+      console.error('Error approving syllabus:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'program': return '#2196f3';
-      case 'plo_change': return '#ff9800';
-      case 'strategic': return '#9c27b0';
-      default: return '#666';
+  const handleReject = async () => {
+    if (!syllabus || !id || !rejectionReason.trim()) {
+      alert('Vui lòng nhập lý do từ chối');
+      return;
     }
-  };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return '#f44336';
-      case 'medium': return '#ff9800';
-      case 'low': return '#4caf50';
-      default: return '#666';
+    try {
+      setSubmitting(true);
+      await principalRejectSyllabus(parseInt(id), rejectionReason);
+      alert('Từ chối thành công!');
+      setShowRejectModal(false);
+      setTimeout(() => navigate('/principal/final-approval'), 1000);
+    } catch (error: any) {
+      console.error('Error rejecting syllabus:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi từ chối');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -192,242 +163,352 @@ const FinalApprovalDetailPage: React.FC = () => {
         </header>
 
         <div className="content-section" style={{ padding: '40px' }}>
-          {/* Status Banner */}
-          {proposal.status === 'approved' && (
-            <div style={{
-              background: '#e8f5e9',
-              border: '1px solid #4caf50',
-              color: '#2e7d32',
-              padding: '16px 20px',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <CheckCircle size={24} />
-              <div>
-                <strong>Đề xuất đã được phê duyệt</strong>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>Quyết định này đã được lưu vào hệ thống</p>
-              </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              <div className="spinner" style={{ 
+                width: '40px', 
+                height: '40px', 
+                border: '4px solid #f0f0f0',
+                borderTop: '4px solid #667eea',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 20px'
+              }}></div>
+              <p>Đang tải dữ liệu...</p>
             </div>
-          )}
-
-          {proposal.status === 'rejected' && (
-            <div style={{
-              background: '#ffebee',
-              border: '1px solid #f44336',
-              color: '#c62828',
-              padding: '16px 20px',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <XCircle size={24} />
-              <div>
-                <strong>Đề xuất đã bị từ chối</strong>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>Quyết định này đã được thông báo đến các bên liên quan</p>
-              </div>
+          ) : !syllabus ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              <AlertTriangle size={48} color="#f44336" style={{ margin: '0 auto 16px' }} />
+              <h3>Không tìm thấy giáo trình</h3>
+              <button
+                onClick={() => navigate('/principal/final-approval')}
+                style={{
+                  marginTop: '16px',
+                  padding: '10px 20px',
+                  background: '#2196f3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Quay lại danh sách
+              </button>
             </div>
-          )}
-
-          {/* Proposal Header */}
+          ) : (
+            <>
+          {/* Syllabus Header */}
           <div style={{ background: 'white', padding: '28px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
                   <span style={{
-                    background: `${getTypeColor(proposal.type)}15`,
-                    color: getTypeColor(proposal.type),
+                    background: '#2196f315',
+                    color: '#2196f3',
                     padding: '6px 12px',
                     borderRadius: '6px',
                     fontSize: '13px',
                     fontWeight: 600,
                   }}>
-                    {getTypeLabel(proposal.type)}
+                    {syllabus?.courseCode || 'N/A'}
                   </span>
                   <span style={{
-                    background: `${getPriorityColor(proposal.priority)}15`,
-                    color: getPriorityColor(proposal.priority),
+                    background: '#ff980015',
+                    color: '#ff9800',
                     padding: '6px 12px',
                     borderRadius: '6px',
                     fontSize: '13px',
                     fontWeight: 600,
-                    textTransform: 'uppercase',
                   }}>
-                    {proposal.priority} Priority
+                    Chờ phê duyệt cuối
                   </span>
                 </div>
-                <h2 style={{ margin: '0 0 12px 0', fontSize: '24px', color: '#333' }}>{proposal.title}</h2>
+                <h2 style={{ margin: '0 0 12px 0', fontSize: '24px', color: '#333' }}>{syllabus?.courseName || 'Không có tên môn học'}</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', color: '#666', fontSize: '14px' }}>
-                  <div><strong>Bộ môn:</strong> {proposal.department}</div>
-                  <div><strong>Người nộp:</strong> {proposal.submittedBy}</div>
-                  <div><strong>Ngày nộp:</strong> {proposal.submissionDate}</div>
-                  <div><strong>Timeline:</strong> {proposal.timeline}</div>
+                  <div><strong>Khoa:</strong> {syllabus?.deptName || 'N/A'}</div>
+                  <div><strong>Giảng viên:</strong> {syllabus?.lecturerName || 'N/A'}</div>
+                  <div><strong>Số tín chỉ:</strong> {syllabus?.credits || 'N/A'}</div>
+                  <div><strong>Năm học:</strong> {syllabus?.academicYear || 'N/A'}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Proposal Details */}
+          {/* Syllabus Details */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Description */}
+              {/* Course Information */}
               <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText size={20} color="#2196f3" />
-                  Mô tả Chi tiết
+                  <BookOpen size={20} color="#2196f3" />
+                  Thông tin môn học
                 </h3>
-                <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>{proposal.description}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '12px 20px', color: '#666', lineHeight: 1.8 }}>
+                  <strong>Mã môn:</strong>
+                  <span>{syllabus?.courseCode || 'N/A'}</span>
+                  
+                  <strong>Tên môn:</strong>
+                  <span>{syllabus?.courseName || 'N/A'}</span>
+                  
+                  <strong>Số tín chỉ:</strong>
+                  <span>{syllabus?.credits || 'N/A'} tín chỉ</span>
+                  
+                  <strong>Khoa/Bộ môn:</strong>
+                  <span>{syllabus?.deptName || 'N/A'}</span>
+                </div>
               </div>
 
-              {/* Rationale */}
+              {/* Program Information */}
               <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MessageSquare size={20} color="#ff9800" />
-                  Lý do & Căn cứ
+                  <GraduationCap size={20} color="#9c27b0" />
+                  Chương trình đào tạo
                 </h3>
-                <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>{proposal.rationale}</p>
+                <div style={{ color: '#666', lineHeight: 1.8 }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Chương trình:</strong> {syllabus?.programName || 'N/A'}
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Năm học:</strong> {syllabus?.academicYear || 'N/A'}
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Giảng viên phụ trách:</strong> {syllabus?.lecturerName || 'N/A'}
+                  </div>
+                  {syllabus?.versionNotes && (
+                    <div style={{ 
+                      marginTop: '16px', 
+                      padding: '12px', 
+                      background: '#f9f9f9', 
+                      borderRadius: '8px',
+                      borderLeft: '4px solid #2196f3'
+                    }}>
+                      <strong>Ghi chú phiên bản:</strong><br/>
+                      {syllabus.versionNotes}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Expected Outcome */}
+              {/* Workflow Status */}
               <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Award size={20} color="#4caf50" />
-                  Kết quả Kỳ vọng
+                  <CheckCircle size={20} color="#4caf50" />
+                  Quy trình phê duyệt
                 </h3>
-                <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>{proposal.expectedOutcome}</p>
+                <div style={{ position: 'relative', paddingLeft: '32px' }}>
+                  {/* Timeline line */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    left: '11px', 
+                    top: '12px', 
+                    bottom: '12px', 
+                    width: '2px', 
+                    background: 'linear-gradient(to bottom, #4caf50 60%, #ff9800 60%)'
+                  }}></div>
+
+                  {/* Step 1 */}
+                  <div style={{ marginBottom: '20px', position: 'relative' }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: '-32px', 
+                      width: '24px', 
+                      height: '24px', 
+                      borderRadius: '50%', 
+                      background: '#4caf50',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                    }}>
+                      <CheckCircle size={14} color="white" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#4caf50', marginBottom: '4px' }}>
+                        Bước 1: Phê duyệt HOD ✓
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#999' }}>
+                        Đã được trưởng khoa phê duyệt
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div style={{ marginBottom: '20px', position: 'relative' }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: '-32px', 
+                      width: '24px', 
+                      height: '24px', 
+                      borderRadius: '50%', 
+                      background: '#4caf50',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                    }}>
+                      <CheckCircle size={14} color="white" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#4caf50', marginBottom: '4px' }}>
+                        Bước 2: Phê duyệt Academic Affairs ✓
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#999' }}>
+                        Đã được phòng đào tạo phê duyệt
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: '-32px', 
+                      width: '24px', 
+                      height: '24px', 
+                      borderRadius: '50%', 
+                      background: '#ff9800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)',
+                      animation: 'pulse 2s infinite'
+                    }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'white' }}></div>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#ff9800', marginBottom: '4px' }}>
+                        Bước 3: Phê duyệt cuối Principal ⏳
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#999' }}>
+                        Đang chờ quyết định phê duyệt cuối cùng
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Sidebar Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Affected Programs */}
+              {/* Status Card */}
               <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: '#333' }}>Chương trình Ảnh hưởng</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {proposal.affectedPrograms.map((prog, idx) => (
-                    <div key={idx} style={{
-                      padding: '10px 12px',
-                      background: '#f5f5f5',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      color: '#666'
-                    }}>
-                      {prog}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Budget */}
-              {proposal.budget && (
-                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px', color: '#333' }}>Ngân sách Dự kiến</h3>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#2196f3' }}>
-                    {proposal.budget.toLocaleString('vi-VN')} VNĐ
-                  </div>
-                </div>
-              )}
-
-              {/* Timeline */}
-              <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={18} />
-                  Thời gian Thực hiện
-                </h3>
-                <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>{proposal.timeline}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Approval History */}
-          <div style={{ background: 'white', padding: '28px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#333' }}>Lịch sử Phê duyệt</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {proposal.approvalHistory.map((history, idx) => (
-                <div key={idx} style={{
-                  padding: '20px',
-                  background: '#f9f9f9',
-                  borderRadius: '10px',
-                  borderLeft: `4px solid ${history.status === 'approved' ? '#4caf50' : '#f44336'}`
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: '#333' }}>Trạng thái hiện tại</h3>
+                <div style={{ 
+                  padding: '16px', 
+                  background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                  color: 'white',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  fontSize: '15px',
+                  boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#333', marginBottom: '4px' }}>{history.level}</div>
-                      <div style={{ fontSize: '13px', color: '#666' }}>Người duyệt: {history.approver}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        background: history.status === 'approved' ? '#e8f5e9' : '#ffebee',
-                        color: history.status === 'approved' ? '#2e7d32' : '#c62828'
-                      }}>
-                        {history.status === 'approved' ? '✓ Đã duyệt' : '✗ Từ chối'}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#999', marginTop: '4px' }}>{history.date}</div>
-                    </div>
+                  {syllabus?.currentStatus || 'N/A'}
+                </div>
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '12px', 
+                  background: '#fff3e0', 
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#e65100',
+                  textAlign: 'center'
+                }}>
+                  Cần phê duyệt cuối từ Principal
+                </div>
+              </div>
+
+              {/* Quick Info */}
+              <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: '#333' }}>Thông tin thêm</h3>
+                <div style={{ fontSize: '14px', color: '#666', lineHeight: 1.8 }}>
+                  <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #f0f0f0' }}>
+                    <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>ID Giáo trình</div>
+                    <div style={{ fontWeight: 600 }}>#{syllabus?.syllabusId || 'N/A'}</div>
                   </div>
-                  {history.notes && (
-                    <div style={{ fontSize: '14px', color: '#666', fontStyle: 'italic', paddingTop: '12px', borderTop: '1px solid #e0e0e0' }}>
-                      "{history.notes}"
+                  {syllabus?.createdBy && (
+                    <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #f0f0f0' }}>
+                      <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>Người tạo</div>
+                      <div style={{ fontWeight: 600 }}>{syllabus.createdBy}</div>
+                    </div>
+                  )}
+                  {syllabus?.lecturerEmail && (
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>Email Giảng viên</div>
+                      <div style={{ fontWeight: 600 }}>{syllabus.lecturerEmail}</div>
                     </div>
                   )}
                 </div>
-              ))}
+              </div>
+
+              {/* Action Guide */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                padding: '20px', 
+                borderRadius: '12px', 
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                color: 'white'
+              }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '12px', margin: 0 }}>
+                  Hành động cần thực hiện
+                </h3>
+                <p style={{ fontSize: '13px', opacity: 0.9, lineHeight: 1.6, margin: '8px 0 0 0' }}>
+                  Vui lòng xem xét kỹ thông tin giáo trình và quyết định phê duyệt hoặc từ chối. 
+                  Quyết định của bạn sẽ là bước cuối cùng trong quy trình phê duyệt.
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          {proposal.status === 'pending' && (
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', paddingTop: '20px' }}>
-              <button
-                onClick={() => setShowApproveModal(true)}
-                style={{
-                  padding: '14px 32px',
-                  background: '#4caf50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                }}
-              >
-                <CheckCircle size={20} />
-                Phê duyệt
-              </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                style={{
-                  padding: '14px 32px',
-                  background: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(244, 67, 54, 0.3)'
-                }}
-              >
-                <XCircle size={20} />
-                Từ chối
-              </button>
-            </div>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', paddingTop: '20px' }}>
+            <button
+              onClick={() => setShowApproveModal(true)}
+              disabled={submitting}
+              style={{
+                padding: '14px 32px',
+                background: submitting ? '#ccc' : '#4caf50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: submitting ? 'none' : '0 4px 12px rgba(76, 175, 80, 0.3)'
+              }}
+            >
+              <CheckCircle size={20} />
+              {submitting ? 'Đang xử lý...' : 'Phê duyệt'}
+            </button>
+            <button
+              onClick={() => setShowRejectModal(true)}
+              disabled={submitting}
+              style={{
+                padding: '14px 32px',
+                background: submitting ? '#ccc' : '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: submitting ? 'none' : '0 4px 12px rgba(244, 67, 54, 0.3)'
+              }}
+            >
+              <XCircle size={20} />
+              {submitting ? 'Đang xử lý...' : 'Từ chối'}
+            </button>
+          </div>
+            </>
           )}
 
           {/* Approve Modal */}
