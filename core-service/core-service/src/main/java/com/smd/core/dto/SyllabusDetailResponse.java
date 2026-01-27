@@ -1,6 +1,7 @@
 package com.smd.core.dto;
 
 import com.smd.core.entity.Assessment;
+import com.smd.core.entity.CourseRelation; // [Mới] Import Entity
 import com.smd.core.entity.Material;
 import com.smd.core.entity.SessionPlan;
 import com.smd.core.entity.Syllabus;
@@ -19,32 +20,35 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SyllabusDetailResponse {
-    
+        
     // Basic Syllabus Information
-    private Long id;
-    private String courseCode;
-    private String courseName;
-    private String deptName;
-    private String aiSumary;
-    private String lecturerName;
-    private Integer credit;
-    private String academicYear;
+        private Long id;
+        private String courseCode;
+        private String courseName;
+        private String deptName;
+        private String aiSumary;
+        private String lecturerName;
+        private Integer credit;
+        private String academicYear;
     private String type;  // Type of syllabus (e.g., "Chính quy", "Liên thông")
     private List<String> target;  // Learning objectives/targets
-    
+        
     // Related Data
-    private List<SessionPlanResponse> sessionPlans;
-    private List<AssessmentResponse> assessments;
-    private List<MaterialResponse> materials;
-    
-    /**
-     * Convert Syllabus entity and related data to SyllabusDetailResponse DTO
-     */
-    public static SyllabusDetailResponse fromEntity(
-            Syllabus syllabus,
-            List<SessionPlan> sessionPlans,
-            List<Assessment> assessments,
-            List<Material> materials) {
+        private List<SessionPlanResponse> sessionPlans;
+        private List<AssessmentResponse> assessments;
+        private List<MaterialResponse> materials;
+
+        // [Mới] Danh sách môn học liên quan (Môn tiên quyết, song hành...)
+        private List<CourseRelationResponse> courseRelations;
+        
+        /**
+         * Convert Syllabus entity and related data to SyllabusDetailResponse DTO
+         */
+        public static SyllabusDetailResponse fromEntity(
+                Syllabus syllabus,
+                List<SessionPlan> sessionPlans,
+                List<Assessment> assessments,
+                List<Material> materials) {
         
         Long syllabusId = syllabus.getSyllabusId();
         
@@ -80,11 +84,33 @@ public class SyllabusDetailResponse {
                         .materialType(m.getMaterialType())
                         .build())
                 .collect(Collectors.toList());
+
+        // [Mới] Convert Course Relations to DTOs
+        List<CourseRelationResponse> relationResponses = new ArrayList<>();
+        if (syllabus.getCourse() != null && syllabus.getCourse().getPrerequisiteRelations() != null) {
+                relationResponses = syllabus.getCourse().getPrerequisiteRelations().stream()
+                .map(rel -> CourseRelationResponse.builder()
+                        .relationId(rel.getRelationId())
+                        .relationType(rel.getRelationType())
+                        .relatedCourse(CourseResponse.builder()
+                        .courseId(rel.getRelatedCourse().getCourseId())
+                        .courseCode(rel.getRelatedCourse().getCourseCode())
+                        .courseName(rel.getRelatedCourse().getCourseName())
+                        .credits(rel.getRelatedCourse().getCredits())
+                        .department(rel.getRelatedCourse().getDepartment() != null ? 
+                                DepartmentSimpleDto.builder()
+                                .departmentId(rel.getRelatedCourse().getDepartment().getDepartmentId())
+                                .deptName(rel.getRelatedCourse().getDepartment().getDeptName())
+                                .build() : null)
+                        .build())
+                        .build())
+                .collect(Collectors.toList());
+        }
         
         // Get AI summary from latest AI task
         String aiSummary = null;
         if (syllabus.getAiTasks() != null && !syllabus.getAiTasks().isEmpty()) {
-            aiSummary = syllabus.getAiTasks().get(syllabus.getAiTasks().size() - 1).getResultSummary();
+                aiSummary = syllabus.getAiTasks().get(syllabus.getAiTasks().size() - 1).getResultSummary();
         }
         
         // Build and return response
@@ -103,6 +129,7 @@ public class SyllabusDetailResponse {
                 .sessionPlans(sessionPlanResponses)
                 .assessments(assessmentResponses)
                 .materials(materialResponses)
+                .courseRelations(relationResponses) // [Mới] Thêm vào builder
                 .build();
-    }
+        }
 }
