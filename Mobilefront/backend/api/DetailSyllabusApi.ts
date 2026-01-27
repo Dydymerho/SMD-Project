@@ -1,9 +1,11 @@
+// api/DetailSyllabusApi.ts
 import { syllabus } from '../types/syllabusDetail';
-import { AxiosResponse } from 'axios';
-import axiosClient from '../api/axiosClient';
-import { ApiResponse } from '../../backend/types/ApiResponse';
+import axiosClient from './axiosClient';
+import { ApiResponse } from '../types/ApiResponse';
+
 export const syllabusDetailApi = {
-    getSyllabusDetail(): Promise<AxiosResponse<ApiResponse<syllabus>>> {
+
+    getSyllabusDetail(): Promise<ApiResponse<syllabus[]>> {
         return axiosClient.get("/syllabuses");
     },
 };

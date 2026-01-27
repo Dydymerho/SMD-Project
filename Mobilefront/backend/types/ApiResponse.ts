@@ -1,3 +1,3 @@
-export type ApiResponse<t> = {
-    data: t;
+export type ApiResponse<T> = {
+    data: T;
 }

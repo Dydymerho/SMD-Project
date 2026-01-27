@@ -1,9 +1,10 @@
+// api/ploControlerApi.ts
 import { PloControler } from '../types/PloControler';
-import { AxiosResponse } from 'axios';
-import axiosClient from '../api/axiosClient';
-import { ApiResponse } from '../../backend/types/ApiResponse';
+import axiosClient from './axiosClient';
+import { ApiResponse } from '../types/ApiResponse';
+
 export const PloControlerApi = {
-    getPlo(): Promise<AxiosResponse<ApiResponse<PloControler>>> {
+    getPlo(): Promise<ApiResponse<PloControler[]>> {
         return axiosClient.get("/plos");
     },
 };

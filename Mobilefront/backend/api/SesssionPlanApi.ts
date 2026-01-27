@@ -1,9 +1,9 @@
 import { SessionPlan } from '../types/SessionPlan';
-import { AxiosResponse } from 'axios';
-import axiosClient from '../api/axiosClient';
-import { ApiResponse } from '../../backend/types/ApiResponse';
+import axiosClient from './axiosClient';
+import { ApiResponse } from '../types/ApiResponse';
+
 export const SessionPlanApi = {
-    getSessionPlan(): Promise<AxiosResponse<ApiResponse<SessionPlan>>> {
+    getSessionPlan(): Promise<ApiResponse<SessionPlan[]>> {
         return axiosClient.get("/session-plans");
     },
 };
