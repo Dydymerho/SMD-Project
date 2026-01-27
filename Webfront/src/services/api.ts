@@ -40,10 +40,35 @@ export const getCourseById = async (id: string) => {
   return response.data;
 };
 
+// Departments API
+export const getDepartments = async () => {
+  const response = await axiosClient.get("/departments");
+  return response.data;
+};
+
+export const getDepartmentById = async (id: string) => {
+  const response = await axiosClient.get(`/departments/${id}`);
+  return response.data;
+};
+
+// Programs API
+export const getPrograms = async () => {
+  const response = await axiosClient.get("/programs");
+  return response.data;
+};
+
+export const getProgramsByDepartment = async (departmentId: string) => {
+  const response = await axiosClient.get(`/programs/department/${departmentId}`);
+  return response.data;
+};
+
 
 // Syllabus API
-export const getSyllabusByCourseId = async (courseId: string) => {
-  const response = await axiosClient.get(`/syllabus/${courseId}`);
+export const getSyllabusByCourseId = async (courseId: string, academicYear: string = '2024-2025') => {
+  // Get the latest syllabus for a course and academic year
+  const response = await axiosClient.get(`/syllabuses/course/${courseId}/latest`, {
+    params: { academicYear }
+  });
   return response.data;
 };
 
@@ -75,8 +100,9 @@ export const rejectSyllabus = async (syllabusId: string, reason: string) => {
 };
 
 export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
+  // backend expects 'keyword' param name according to docs
   const response = await axiosClient.get(`/syllabuses/search`, {
-    params: { query }
+    params: { keyword: query }
   });
   return response.data;
 };
@@ -185,6 +211,34 @@ export const getAuditLogsByDateRange = async (startDate: string, endDate: string
 
 export const getAuditLogsBySyllabus = async (syllabusId: string) => {
   const response = await axiosClient.get(`/syllabuses/${syllabusId}/audit-logs`);
+  return response.data;
+};
+
+// Notification API
+export const getNotifications = async (page: number = 0, size: number = 20) => {
+  const response = await axiosClient.get("/notifications", {
+    params: { page, size }
+  });
+  return response.data;
+};
+
+export const getUnreadNotifications = async () => {
+  const response = await axiosClient.get("/notifications/unread");
+  return response.data;
+};
+
+export const getNotificationStats = async () => {
+  const response = await axiosClient.get("/notifications/stats");
+  return response.data;
+};
+
+export const markNotificationAsRead = async (id: number) => {
+  const response = await axiosClient.put(`/notifications/${id}/read`);
+  return response.data;
+};
+
+export const markAllNotificationsAsRead = async () => {
+  const response = await axiosClient.put("/notifications/read-all");
   return response.data;
 };
 
