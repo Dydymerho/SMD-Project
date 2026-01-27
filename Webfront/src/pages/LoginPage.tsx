@@ -22,8 +22,14 @@ const LoginPage: React.FC = () => {
       if (data && data.token) {
         localStorage.setItem('token', data.token);
         await login(data);
-        if (data.username === 'admin') {
+        if (data.roleName === 'ADMIN') {
           navigate('/admin/system-management');
+        } else if (data.roleName === 'HEAD_OF_DEPARTMENT') {
+          navigate('/hod/dashboard');
+        } else if (data.roleName === 'ACADEMIC_AFFAIRS') {
+          navigate('/aa/dashboard');
+        } else if (data.roleName === 'PRINCIPAL') {
+          navigate('/principal/dashboard');
         } else {
           navigate('/dashboard');
         }
