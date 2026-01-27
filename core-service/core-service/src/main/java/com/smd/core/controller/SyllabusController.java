@@ -55,6 +55,24 @@ public class SyllabusController {
         // Convert Entity -> DTO
         return ResponseEntity.ok(SyllabusResponse.fromEntity(syllabus));
     }
+    
+    // --- ENDPOINT MỚI: Trả về SyllabusDetailResponse với đầy đủ thông tin ---
+    @GetMapping("/{id}/detail")
+    @Operation(
+        summary = "Get complete syllabus detail",
+        description = "Get full syllabus information including session plans, assessments, and materials. Used for mobile SubjectDetailScreen."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved syllabus detail",
+            content = @Content(schema = @Schema(implementation = SyllabusDetailResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Syllabus not found")
+    })
+    public ResponseEntity<SyllabusDetailResponse> getSyllabusDetail(
+            @Parameter(description = "Syllabus ID", required = true)
+            @PathVariable Long id) {
+        SyllabusDetailResponse detail = syllabusService.getSyllabusDetail(id);
+        return ResponseEntity.ok(detail);
+    }
 
     // --- CẬP NHẬT: Trả về List<SyllabusResponse> DTO ---
     @GetMapping("/search")
