@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare } from 'lucide-react';
-import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, SyllabusDetailResponse } from '../../services/api';
+import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import { useAuth } from '../../context/AuthContext';
 
@@ -28,10 +28,10 @@ interface Syllabus {
     email?: string;
     userId?: number;
   };
-  academicYear: string;
-  versionNo: number;
-  currentStatus: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PUBLISHED' | 'REJECTED' | 'ARCHIVED';
-  versionNotes: string;
+  academicYear?: string;
+  versionNo?: number;
+  currentStatus?: string;
+  versionNotes?: string;
   createdAt?: string;
   publishedAt?: string;
   aiSummary?: string;
@@ -76,10 +76,57 @@ const StudentDashboard: React.FC = () => {
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+
     setLoading(true);
     try {
-      const data = await searchSyllabuses(searchQuery) as Syllabus[];
-      setSyllabi(data);
+      let data: Syllabus[] = [];
+      
+      // Kiểm tra nếu input là số (ID)
+      if (/^\d+$/.test(searchQuery.trim())) {
+        try {
+          const syllabusById = await getSyllabusById(parseInt(searchQuery.trim()));
+          data = [syllabusById];
+        } catch (error) {
+          // Nếu không tìm được bằng ID, thử tìm bằng từ khóa
+          data = await searchSyllabuses(searchQuery);
+        }
+      } else {
+        // Tìm bằng từ khóa
+        data = await searchSyllabuses(searchQuery);
+      }
+      
+      // Chuẩn hóa dữ liệu
+      const normalizedData: Syllabus[] = (data as any[]).map(s => {
+        if (s.course && typeof s.course === 'object') {
+          return s as Syllabus;
+        }
+        return {
+          ...s,
+          course: {
+            courseId: s.courseId || 0,
+            courseCode: s.courseCode || 'N/A',
+            courseName: s.courseName || 'Không rõ tên môn',
+            credits: s.credits || 0,
+            department: s.department || {
+              departmentId: 0,
+              deptName: s.deptName || 'N/A'
+            }
+          },
+          lecturer: s.lecturer || { fullName: s.lecturerName || 'Chưa cập nhật' },
+          program: s.program || { programName: s.programName || '' }
+        };
+      });
+
+      // Áp dụng filter department nếu có chọn
+      let filteredData = normalizedData;
+      if (selectedMajor) {
+        filteredData = normalizedData.filter(s => 
+          s.course?.department?.departmentId?.toString() === selectedMajor
+        );
+      }
+
+      setSyllabi(filteredData);
       setSearched(true);
       setActiveTab('search');
     } catch (error) {
@@ -617,7 +664,6 @@ const StudentDashboard: React.FC = () => {
                     <div className="course-card-header">
                       <div className="course-code-name">
                         <span className="course-code">{s.course?.courseCode}</span>
-                        <span className="course-credits">{s.course?.credits} TC</span>
                       </div>
                       <h3 className="course-title" title={s.course?.courseName}>{s.course?.courseName}</h3>
                     </div>
@@ -631,7 +677,7 @@ const StudentDashboard: React.FC = () => {
                         className="view-detail-btn"
                         onClick={() => handleOpenDetail(s)}
                       >
-                        Xem giáo trình
+                        Xem
                       </button>
                       <button 
                         className={`action-btn subscribe-btn ${subscribedSyllabi.has(s.syllabusId) ? 'active' : ''}`}

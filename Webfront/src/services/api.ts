@@ -149,6 +149,11 @@ export const rejectSyllabus = async (syllabusId: string, reason: string) => {
   return response.data;
 };
 
+export const getSyllabusById = async (syllabusId: number): Promise<Syllabus> => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}`);
+  return response.data;
+};
+
 export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
   // backend expects 'keyword' param name according to docs
   const response = await axiosClient.get(`/syllabuses/search`, {
