@@ -13,14 +13,11 @@ const getListData = (response: any) => {
     return [];
 };
 
-// 🔥 Helper: Lọc thông minh (Smart Filter)
-// Hàm này sẽ kiểm tra xem item có thuộc về syllabusId không, bất kể backend đặt tên là gì
+
 const filterBySyllabus = (list: any[], syllabusId: any) => {
     if (!syllabusId) return [];
 
     return list.filter(item => {
-        // Kiểm tra các trường phổ biến mà Backend có thể trả về
-        // Bạn có thể thêm các trường khác nếu thấy trong Log (vd: subject_id)
         return (
             item.syllabusId === syllabusId ||  // Trường hợp chuẩn camelCase
             item.syllabus_id === syllabusId || // Trường hợp snake_case (thường gặp)
