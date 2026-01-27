@@ -7,6 +7,7 @@ import com.smd.core.entity.ReviewComment;
 import com.smd.core.entity.Syllabus;
 import com.smd.core.entity.User;
 import com.smd.core.exception.ResourceNotFoundException;
+import com.smd.core.repository.CourseSubscriptionRepository;
 import com.smd.core.repository.NotificationRepository;
 import com.smd.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class NotificationService {
     
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final CourseSubscriptionRepository subscriptionRepository;
 
     /**
      * Create notification when syllabus is submitted for review
@@ -183,15 +185,43 @@ public class NotificationService {
     }
 
     /**
-     * Create notification when Principal publishes syllabus
-     */
-    @Transactional
-    public void notifySyllabusPublished(Syllabus syllabus, String publishedBy) {
-        notifyLecturer(syllabus, publishedBy,
-            Notification.NotificationType.SYLLABUS_PUBLISHED,
-            "Syllabus Published",
-            "Congratulations! Your syllabus has been approved and published by the Principal.");
+ * Update logic for Syllabus Published
+ */
+@Transactional
+public void notifySyllabusPublished(Syllabus syllabus, String publishedBy) {
+    // 1. Logic cũ: Thông báo cho giảng viên (Giữ nguyên)
+    notifyLecturer(syllabus, publishedBy,
+        Notification.NotificationType.SYLLABUS_PUBLISHED,
+        "Syllabus Published",
+        "Congratulations! Your syllabus has been approved and published by the Principal.");
+
+    // 2. LOGIC MỚI: Thông báo cho sinh viên đang follow môn học này
+    List<User> followers = subscriptionRepository.findFollowersByCourseId(syllabus.getCourse().getCourseId());
+    
+    if (!followers.isEmpty()) {
+        log.info("Sending update notifications to {} followers of course {}", 
+                followers.size(), syllabus.getCourse().getCourseCode());
+
+        for (User student : followers) {
+            Notification notification = Notification.builder()
+                .recipient(student)
+                .syllabus(syllabus)
+                // Bạn có thể cần thêm enum type mới: COURSE_UPDATE hoặc dùng chung SYLLABUS_PUBLISHED
+                .type(Notification.NotificationType.SYLLABUS_PUBLISHED) 
+                .title("Course Syllabus Updated")
+                .message(String.format("New syllabus version v%d for course %s (%s) has been published.",
+                    syllabus.getVersionNo(),
+                    syllabus.getCourse().getCourseName(),
+                    syllabus.getCourse().getCourseCode()))
+                .actionUrl("/api/syllabuses/" + syllabus.getSyllabusId()) // Hoặc link public view
+                .triggeredBy(publishedBy)
+                .isRead(false)
+                .build();
+            
+            notificationRepository.save(notification);
+        }
     }
+}
 
     /**
      * Create notification when Principal rejects syllabus
