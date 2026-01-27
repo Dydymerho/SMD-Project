@@ -202,4 +202,68 @@ export default StyleSheet.create({
         color: "#fff",
         fontWeight: "600",
     },
+    profileSection: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 24,
+        backgroundColor: "white",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E2E8F0",
+    },
+    avatarPlaceholder: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: "#2563EB",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 16,
+    },
+    avatarText: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "white",
+    },
+    profileInfo: {
+        flex: 1,
+    },
+    profileName: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#1E293B",
+        marginBottom: 4,
+    },
+    profileEmail: {
+        fontSize: 14,
+        color: "#64748B",
+    },
+
+    // Sections
+
+
+
+    destructiveIconBox: {
+        backgroundColor: "#FEF2F2",
+    },
+
+    destructiveLabel: {
+        color: "#EF4444",
+    },
+
+    // App Info
+    appInfo: {
+        alignItems: "center",
+        marginTop: 32,
+        paddingHorizontal: 16,
+    },
+    appVersion: {
+        fontSize: 14,
+        color: "#64748B",
+        marginBottom: 4,
+    },
+    appCopyright: {
+        fontSize: 12,
+        color: "#94A3B8",
+    }
 })

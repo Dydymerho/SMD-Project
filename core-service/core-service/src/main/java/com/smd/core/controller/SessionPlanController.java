@@ -1,5 +1,6 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.SessionPlanResponse;
 import com.smd.core.entity.SessionPlan;
 import com.smd.core.service.SessionPlanService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/session-plans")
@@ -16,33 +18,54 @@ public class SessionPlanController {
     private final SessionPlanService sessionPlanService;
 
     @GetMapping
-    public ResponseEntity<List<SessionPlan>> getAllSessionPlans() {
-        return ResponseEntity.ok(sessionPlanService.getAllSessionPlans());
+    public ResponseEntity<List<SessionPlanResponse>> getAllSessionPlans() {
+        List<SessionPlan> sessionPlans = sessionPlanService.getAllSessionPlans();
+        List<SessionPlanResponse> response = sessionPlans.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SessionPlan> getSessionPlanById(@PathVariable Long id) {
-        return ResponseEntity.ok(sessionPlanService.getSessionPlanById(id));
+    public ResponseEntity<SessionPlanResponse> getSessionPlanById(@PathVariable Long id) {
+        SessionPlan sessionPlan = sessionPlanService.getSessionPlanById(id);
+        return ResponseEntity.ok(convertToDto(sessionPlan));
     }
 
     @GetMapping("/syllabus/{syllabusId}")
-    public ResponseEntity<List<SessionPlan>> getSessionPlansBySyllabusId(@PathVariable Long syllabusId) {
-        return ResponseEntity.ok(sessionPlanService.getSessionPlansBySyllabusId(syllabusId));
+    public ResponseEntity<List<SessionPlanResponse>> getSessionPlansBySyllabusId(@PathVariable Long syllabusId) {
+        List<SessionPlan> sessionPlans = sessionPlanService.getSessionPlansBySyllabusId(syllabusId);
+        List<SessionPlanResponse> response = sessionPlans.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<SessionPlan> createSessionPlan(@RequestBody SessionPlan sessionPlan) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(sessionPlanService.createSessionPlan(sessionPlan));
+    public ResponseEntity<SessionPlanResponse> createSessionPlan(@RequestBody SessionPlan sessionPlan) {
+        SessionPlan created = sessionPlanService.createSessionPlan(sessionPlan);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SessionPlan> updateSessionPlan(@PathVariable Long id, @RequestBody SessionPlan sessionPlan) {
-        return ResponseEntity.ok(sessionPlanService.updateSessionPlan(id, sessionPlan));
+    public ResponseEntity<SessionPlanResponse> updateSessionPlan(@PathVariable Long id, @RequestBody SessionPlan sessionPlan) {
+        SessionPlan updated = sessionPlanService.updateSessionPlan(id, sessionPlan);
+        return ResponseEntity.ok(convertToDto(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSessionPlan(@PathVariable Long id) {
         sessionPlanService.deleteSessionPlan(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private SessionPlanResponse convertToDto(SessionPlan sessionPlan) {
+        return SessionPlanResponse.builder()
+            .sessionId(sessionPlan.getSessionId())
+            .syllabusId(sessionPlan.getSyllabus() != null ? sessionPlan.getSyllabus().getSyllabusId() : null)
+            .weekNo(sessionPlan.getWeekNo())
+            .topic(sessionPlan.getTopic())
+            .teachingMethod(sessionPlan.getTeachingMethod())
+            .build();
     }
 }

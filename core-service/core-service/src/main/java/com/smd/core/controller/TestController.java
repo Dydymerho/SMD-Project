@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/test")
+@RequestMapping("/api/test")
 @RequiredArgsConstructor
 @Tag(name = "Test & Debug", description = "Testing and debugging endpoints - Remove in production")
 public class TestController {

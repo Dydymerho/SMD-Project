@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Pressable } from 'react-native';
+import { Image, View, Text, ScrollView, TouchableOpacity, StatusBar, FlatList, RefreshControl, ActivityIndicator } from "react-native"
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import styles from './styles';
-import { useState } from 'react';
-import { SYLLABUS_CONTENT } from '../../mock/Syllabus';
-import { MOCK_PROFILE } from '../../mock/profile';
-
+import { useState, useEffect } from 'react';
+import { Profile } from '../../../../backend/types/Profile';
+import { ProfileApi } from '../../../../backend/api/ProfileApi';
 const Section = ({
     title,
     children
@@ -76,11 +75,55 @@ const BottomNavItem = ({
 ===================== */
 
 export default function ProfileScreen() {
-    const profile = MOCK_PROFILE;
-    const syllabus = SYLLABUS_CONTENT;
     const [showCourseList, setShowCourseList] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const COURSE_LIMIT = 4;
-    const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
+    // const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+    const fetchProfile = async () => {
+        try {
+            setError(null);
+            // ...
+            const res: any = await ProfileApi.getMyProfile();
+
+            // --- SỬA ĐOẠN NÀY ---
+            // Gộp dữ liệu từ res (chứa country, timezone) và res.user (chứa email, fullName...)
+            const mappedProfile: Profile = {
+                ...res.user,        // Lấy userId, fullName, email, username từ trong object 'user'
+                country: res.country,   // Lấy country từ bên ngoài
+                timezone: res.timezone, // Lấy timezone từ bên ngoài
+                // Map thêm các trường nếu tên không khớp, ví dụ:
+                // studentId: res.user.userId (nếu cần mapping id sang studentId)
+            };
+
+            setProfile(mappedProfile);
+
+        } catch (error: any) {
+            // ... xử lý lỗi
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchProfile();
+    };
+    if (loading) {
+        return <ActivityIndicator size="large" />;
+    }
+
+    if (!profile) {
+        return <Text>Không có dữ liệu hồ sơ</Text>;
+    }
+
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -93,7 +136,7 @@ export default function ProfileScreen() {
                         source={{ uri: profile.avatarUrl }}
                         style={styles.avatar}
                     />
-                    <Text style={styles.userName}>{profile.name}</Text>
+                    <Text style={styles.userName}>{profile.fullName}</Text>
                     <Text style={styles.userRole}>Sinh viên khóa 2024</Text>
                 </View>
 
@@ -117,7 +160,7 @@ export default function ProfileScreen() {
                 </Section>
 
                 {/* COURSES */}
-                <Section title="Các khóa học">
+                {/* <Section title="Các khóa học">
                     {displayShowAllCourses.map((subject, index) => (
                         <Bullet
                             key={index}
@@ -136,7 +179,7 @@ export default function ProfileScreen() {
                             </Text>
                         </TouchableOpacity>
                     )}
-                </Section>
+                </Section>  */}
             </ScrollView>
         </View>
     );

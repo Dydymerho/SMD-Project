@@ -1,30 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { 
-  Home, FolderOpen, MessageSquare, Search, GitCompare, Bell, User,
-  Plus, ArrowLeft, AlertCircle, MessageCircle, Send, X
-} from 'lucide-react';
-import NotificationMenu from '../components/NotificationMenu';
-import { getCourseById } from '../services/api';
+import { useParams, useSearchParams } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import { getCourseById, getSyllabusByCourseId } from '../services/api';
 import './SubjectDetailPage.css';
 import './dashboard/DashboardPage.css';
 
 interface CourseDetail {
-  id: string;
-  name: string;
-  code: string;
+  courseId: number;
+  courseName: string;
+  courseCode: string;
   credits: number;
   description: string;
-  syllabus?: string;
-  prerequisites?: string[];
 }
 
 const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [searchParams] = useSearchParams();
+  const syllabusId = searchParams.get('syllabusId');
+  const [course, setCourse] = useState<any>(null);
+  const [syllabus, setSyllabus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   
@@ -37,205 +31,68 @@ const CourseDetailPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      loadCourseDetail(id);
-    }
-  }, [id]);
+    const loadData = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const courseData = await getCourseById(id);
+        setCourse(courseData);
+        const syllabusData = await getSyllabusByCourseId(id);
+        setSyllabus(syllabusData);
+      } catch (error) {
+        console.error('Lỗi tải dữ liệu:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [id, syllabusId]);
 
-  const loadCourseDetail = async (courseId: string) => {
-    try {
-      const data = await getCourseById(courseId);
-      setCourse(data);
-    } catch (error) {
-      console.error('Error loading course:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitReport = async () => {
-    if (!reportContent.trim()) {
-      alert('Vui lòng nhập nội dung báo cáo');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-      // TODO: Call API to submit report
-      // await api.post(`/api/v1/syllabuses/${id}/reports`, {
-      //   type: reportType,
-      //   content: reportContent
-      // });
-      
-      console.log('Report submitted:', { id, reportType, reportContent });
-      alert('✅ Đã gửi báo cáo thành công!');
-      setShowReportModal(false);
-      setReportContent('');
-      setReportType('content_error');
-    } catch (error) {
-      console.error('Error submitting report:', error);
-      alert('❌ Có lỗi xảy ra khi gửi báo cáo');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmitComment = async () => {
-    if (!commentContent.trim()) {
-      alert('Vui lòng nhập nội dung nhận xét');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-      // TODO: Call API to submit comment
-      // await api.post(`/api/v1/syllabuses/${id}/comments`, {
-      //   content: commentContent
-      // });
-      
-      console.log('Comment submitted:', { id, commentContent });
-      alert('✅ Đã thêm nhận xét thành công!');
-      setShowCommentModal(false);
-      setCommentContent('');
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-      alert('❌ Có lỗi xảy ra khi thêm nhận xét');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="dashboard-page">
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <div className="logo"></div>
-            <h2>SMD System</h2>
-            <p>Giảng viên</p>
-          </div>
-          <nav className="sidebar-nav">
-            <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}>
-              <span className="icon"><Home size={20} /></span>
-              Tổng quan
-            </a>
-          </nav>
-        </aside>
-        <main className="main-content">
-          <div className="detail-container">
-            <p>Đang tải...</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <div className="dashboard-page">
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <div className="logo"></div>
-            <h2>SMD System</h2>
-            <p>Giảng viên</p>
-          </div>
-          <nav className="sidebar-nav">
-            <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}>
-              <span className="icon"><Home size={20} /></span>
-              Tổng quan
-            </a>
-          </nav>
-        </aside>
-        <main className="main-content">
-          <div className="detail-container">
-            <p>Không tìm thấy môn học</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  if (loading) return <div className="loading">Đang tải...</div>;
+  if (!course) return <div className="error">Không tìm thấy môn học</div>;
 
   return (
-    <div className="dashboard-page">
-      {/* Sidebar - Same as LecturerDashboard */}
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <div className="logo"></div>
-          <h2>SMD System</h2>
-          <p>Giảng viên</p>
-        </div>
-
-        <nav className="sidebar-nav">
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
-          >
-            <span className="icon"><Home size={20} /></span>
-            Tổng quan
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
-          >
-            <span className="icon"><FolderOpen size={20} /></span>
-            Giáo trình của tôi
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/syllabus/create'); }}
-          >
-            <span className="icon"><Plus size={20} /></span>
-            Tạo giáo trình mới
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
-          >
-            <span className="icon"><MessageSquare size={20} /></span>
-            Cộng tác Review
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
-          >
-            <span className="icon"><Search size={20} /></span>
-            Tra cứu & Theo dõi
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
-          >
-            <span className="icon"><GitCompare size={20} /></span>
-            Quản lý nâng cao
-          </a>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button onClick={logout} className="logout-btn">
-            Đăng xuất
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        {/* Header - Same as LecturerDashboard */}
-        <header className="page-header">
-          <div className="header-left">
-            <h1>Chi tiết giáo trình</h1>
-            <p>Xem thông tin đầy đủ về giáo trình và nội dung học phần</p>
+    <div className="subject-detail-page">
+      <Navbar />
+      <div className="detail-container">
+        <div className="detail-header">
+          <div className="detail-title">
+            <h1>{course.courseName}</h1>
+            <span className="detail-code">{course.courseCode}</span>
           </div>
-          <div className="header-right">
-            <div className="notification-wrapper">
-              <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
-                <Bell size={24} />
-                <span className="badge">5</span>
+          <div className="detail-credits">
+            <span>{course.credits} tín chỉ</span>
+          </div>
+        </div>
+
+        <div className="detail-content">
+          <section className="detail-section">
+            <h2>Mô tả</h2>
+            <p>{course.description || "Chưa có mô tả cho môn học này."}</p>
+          </section>
+          {/*
+          {course.prerequisites && course.prerequisites.length > 0 && (
+            <section className="detail-section">
+              <h2>Môn học tiên quyết</h2>
+              <ul>
+                {course.prerequisites.map((prereq, index) => (
+                  <li key={index}>{prereq}</li>
+                ))}
+              </ul>
+            </section>
+          )}  */}
+
+          {syllabus && (
+            <section className="detail-section">
+              <h2>Chi tiết giáo trình</h2>
+              <div className="syllabus-card">
+                <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
+                <p><strong>Năm học:</strong> {syllabus.academicYear}</p>
+                <p><strong>Phiên bản:</strong> {syllabus.versionNo}</p>
+                <div className="syllabus-notes">
+                  <h3>Nội dung chính:</h3>
+                  <p>{syllabus.versionNotes}</p>
+                </div>
               </div>
               <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
             </div>

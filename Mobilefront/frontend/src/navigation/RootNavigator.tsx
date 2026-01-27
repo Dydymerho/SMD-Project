@@ -1,27 +1,37 @@
-import React, { useState } from 'react'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import BottomTabNavigator from './BottomTabNavigator'
-import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen'
-import LoginScreen from '../screens/Login/LoginScreen'
-export type RootStackParamList = {
-    Login: undefined
-    Tabs: undefined
-    SubjectDetail: { title: string }
-}
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, View } from 'react-native';
+import BottomTabNavigator from './BottomTabNavigator';
+import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen';
+import LoginScreen from '../screens/Login/LoginScreen';
+import { useAuth } from '../../../backend/Contexts/AuthContext';
 
-const Stack = createNativeStackNavigator<RootStackParamList>()
+export type RootStackParamList = {
+    Login: undefined;
+    Tabs: undefined;
+    SubjectDetail: { title: string };
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { isLoggedIn, isLoading } = useAuth();
 
-    // Truyền hàm setIsLoggedIn cho LoginScreen qua props
+    // Hiển thị loading khi đang kiểm tra auth status
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#2563eb" />
+            </View>
+        );
+    }
+
     return (
         <Stack.Navigator>
             {!isLoggedIn ? (
                 <Stack.Screen
                     name="Login"
-                    // Truyền setIsLoggedIn cho LoginScreen
-                    children={() => <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
+                    component={LoginScreen}
                     options={{ headerShown: false }}
                 />
             ) : (
@@ -34,12 +44,9 @@ export default function RootNavigator() {
                     />
 
                     {/* Subject Detail */}
-                    <Stack.Screen
-                        name="SubjectDetail"
-                        component={SubjectDetailScreen}
-                    />
+                    <Stack.Screen name="SubjectDetail" component={SubjectDetailScreen} />
                 </>
             )}
         </Stack.Navigator>
-    )
+    );
 }

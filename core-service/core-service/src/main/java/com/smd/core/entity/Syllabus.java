@@ -110,7 +110,8 @@ public class Syllabus {
     @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
 
-    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "syllabus", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("createdAt ASC")
     @ToString.Exclude
     @JsonIgnore
     private List<AITask> aiTasks;

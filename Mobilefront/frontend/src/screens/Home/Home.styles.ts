@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingTop: 20,
         paddingBottom: 30,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#008f81",
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         shadowColor: "#000",
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     },
     subText: {
         fontSize: 16,
-        color: "#64748B",
+        color: "#000000",
         marginTop: 4,
         fontWeight: "500",
     },
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: "800",
-        color: "#3B82F6",
+        color: "#000000",
         textTransform: "uppercase",
         letterSpacing: 2,
         marginBottom: 20,
@@ -239,8 +239,305 @@ const styles = StyleSheet.create({
     title_button: {
         color: "#fff",
         fontWeight: "bold"
-    }
+    },
+    // Loading
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#64748B',
+    },
 
+    // Error
+    errorContainer: {
+        padding: 20,
+        alignItems: 'center',
+        backgroundColor: '#FFF5F5',
+        margin: 16,
+        borderRadius: 12,
+    },
+    errorText: {
+        color: '#FF3B30',
+        textAlign: 'center',
+        marginVertical: 12,
+        fontSize: 14,
+    },
+    retryButton: {
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+
+    // Empty state
+    emptyContainer: {
+        padding: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#64748B',
+        textAlign: 'center',
+        marginTop: 12,
+    },
+    clearSearchButton: {
+        marginTop: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+    },
+    clearSearchText: {
+        color: '#007AFF',
+        fontSize: 14,
+    },
+
+    // Filter
+    filterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    filterButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        borderRadius: 20,
+    },
+    filterButtonText: {
+        color: '#007AFF',
+        marginLeft: 4,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    clearFilterButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    clearFilterText: {
+        color: '#FF3B30',
+        marginRight: 4,
+        fontSize: 14,
+    },
+    activeFilters: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 12,
+        gap: 8,
+    },
+    filterChip: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    filterChipText: {
+        color: '#007AFF',
+        fontSize: 12,
+    },
+
+    // Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    filterModal: {
+        backgroundColor: 'white',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '80%',
+    },
+    filterHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7',
+    },
+    filterTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    filterContent: {
+        padding: 16,
+    },
+    filterSection: {
+        marginBottom: 24,
+    },
+    filterSectionTitle: {
+        fontSize: 16,
+        fontWeight: '500',
+        marginBottom: 8,
+        color: '#1C1C1E',
+    },
+    filterDropdown: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#C7C7CC',
+        borderRadius: 8,
+    },
+    filterDropdownText: {
+        fontSize: 16,
+        color: '#1C1C1E',
+    },
+    filterList: {
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: '#F2F2F7',
+        borderRadius: 8,
+        maxHeight: 200,
+    },
+    filterOption: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7',
+    },
+    filterOptionSelected: {
+        backgroundColor: '#F0F9FF',
+    },
+    filterOptionText: {
+        fontSize: 16,
+        color: '#1C1C1E',
+    },
+    filterOptionTextSelected: {
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    filterFooter: {
+        flexDirection: 'row',
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F2F2F7',
+        gap: 12,
+    },
+    filterCancelButton: {
+        flex: 1,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#C7C7CC',
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    filterCancelText: {
+        color: '#FF3B30',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    filterApplyButton: {
+        flex: 1,
+        padding: 16,
+        backgroundColor: '#007AFF',
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    filterApplyText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+
+    // Course Card
+    courseCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    cardHeader: {
+        backgroundColor: '#30c4b0',
+        padding: 16,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    codeBadge: {
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginRight: 12,
+    },
+    codeText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 12,
+    },
+    courseTitle: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#ffffff',
+    },
+    cardBody: {
+        padding: 16,
+    },
+    courseInfoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    courseInfoText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#64748B',
+    },
+    descriptionBox: {
+        marginTop: 12,
+        padding: 12,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 8,
+    },
+    descriptionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1C1C1E',
+        marginBottom: 4,
+    },
+    descriptionText: {
+        fontSize: 14,
+        color: '#64748B',
+        lineHeight: 20,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F2F2F7',
+    },
+    viewDetailText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
 })
 
 export default styles
