@@ -1,11 +1,9 @@
 import os
 import asyncio
 from celery import Celery
-from app.services.file_reader import read_file_from_path
-# Import Service LLM
 from app.services.llm_service import LLMService 
-# --- MỚI: Import Service Syllabus (Chứa BERT & Highlight) ---
 from app.services import syllabus_service
+from app.services.file_reader import ocr_mixed_file
 
 # Cấu hình Redis
 REDIS_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -25,71 +23,113 @@ celery_app.conf.update(
     task_track_started=True,
 )
 
-# --- TASK 1: XỬ LÝ OCR ---
-@celery_app.task(name="app.worker.process_ocr_task", bind=True)
-def process_ocr_task(self, file_path: str):
-    try:
-        self.update_state(state='PROGRESS', meta={'message': 'Đang đọc tài liệu...'})
-        full_text = read_file_from_path(file_path)
-        
-        if not full_text.strip():
-            return {"status": "Failed", "error": "File rỗng"}
-            
-        if os.path.exists(file_path):
-            os.remove(file_path)
+# Hàm tiện ích để lưu file tạm
+def save_temp_file(content_bytes, filename, task_id):
+    temp_path = f"/tmp/{task_id}_{filename}"
+    with open(temp_path, "wb") as f:
+        f.write(content_bytes)
+    return temp_path
 
+# --- TASK 1: OCR ---
+@celery_app.task(name="app.worker.process_ocr_task", bind=True)
+def process_ocr_task(self, file_content, filename):  
+    path = save_temp_file(file_content, filename, self.request.id)
+    try:
+        text = ocr_mixed_file(path)
+        return {"status": "Done", "text": text}
+    except Exception as e:
+        return {"status": "Failed", "error": str(e)}
+    finally:
+        if os.path.exists(path): os.remove(path)
+
+# --- TASK 2: TÓM TẮT (SUMMARIZE) ---
+@celery_app.task(name="app.worker.task_summarize", bind=True)
+def task_summarize(self, file_content, filename):
+    path = save_temp_file(file_content, filename, self.request.id)
+    try:
+        # 1. OCR lấy text
+        text = ocr_mixed_file(path)
+        if len(text) < 10:
+            return {"status": "Failed", "error": "File rỗng hoặc không đọc được chữ"}
+
+        # 2. Gọi AI Tóm tắt (Sử dụng LLMService trực tiếp)
+        llm = LLMService()
+        # Chạy hàm async trong môi trường sync của Celery
+        summary = asyncio.run(llm.generate_summary(text[:15000])) # Cắt bớt nếu quá dài
+        
+        return {"status": "Success", "summary": summary}
+    except Exception as e:
+        return {"status": "Failed", "error": str(e)}
+    finally:
+        if os.path.exists(path): os.remove(path)
+
+# --- TASK 3: SO SÁNH (COMPARE) ---
+@celery_app.task(name="app.worker.task_diff", bind=True)
+def task_diff(self, old_bytes, old_name, new_bytes, new_name):
+    path_old = save_temp_file(old_bytes, old_name, self.request.id + "_old")
+    path_new = save_temp_file(new_bytes, new_name, self.request.id + "_new")
+    
+    try:
+        self.update_state(state='PROGRESS', meta={'message': 'Đang đọc và OCR dữ liệu...'})
+        text_old = ocr_mixed_file(path_old)
+        text_new = ocr_mixed_file(path_new)
+
+        if not text_old.strip() or not text_new.strip():
+            return {"status": "Failed", "error": "Không đọc được nội dung từ file tải lên"}
+
+        # Logic So Sánh
+        self.update_state(state='PROGRESS', meta={'message': 'Đang tính điểm tương đồng...'})
+        score = syllabus_service.calculate_similarity(text_old, text_new)
+        
+        self.update_state(state='PROGRESS', meta={'message': 'Đang so sánh chi tiết...'})
+        highlights = syllabus_service.get_diff_highlight(text_old, text_new)
+        
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang phân tích...'})
+        llm = LLMService()
+        analysis = asyncio.run(llm.analyze_changes(text_old, text_new))
+        
         return {
             "status": "Success", 
-            "filename": os.path.basename(file_path),
-            "extracted_text": full_text
+            "similarity_percent": round(score * 100, 2),
+            "highlight_data": highlights, 
+            "ai_analysis": analysis
         }
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
+    finally:
+        if os.path.exists(path_old): os.remove(path_old)
+        if os.path.exists(path_new): os.remove(path_new)
 
-# --- TASK 2: TÓM TẮT ---
-@celery_app.task(name="app.worker.task_summarize", bind=True)
-def task_summarize(self, text: str):
-    try:
-        self.update_state(state='PROGRESS', meta={'message': 'AI đang đọc và tóm tắt...'})
-        service = LLMService()
-        result = asyncio.run(service.generate_summary(text))
-        return {"status": "Success", "summary": result}
-    except Exception as e:
-        return {"status": "Failed", "error": str(e)}
+# --- TASK 4: CHECK CLO-PLO (Giữ nguyên input text vì logic này thường là text ngắn) ---
+# Thay thế hàm task_check_clo_plo cũ bằng hàm này:
 
-# --- TASK 3: CHECK CLO-PLO ---
 @celery_app.task(name="app.worker.task_check_clo_plo", bind=True)
-def task_check_clo_plo(self, clo: str, plo: str):
+def task_check_clo_plo(self, clo_bytes, clo_filename, plo_bytes, plo_filename):
+    # Tạo đường dẫn file tạm
+    path_clo = save_temp_file(clo_bytes, clo_filename, self.request.id + "_clo")
+    path_plo = save_temp_file(plo_bytes, plo_filename, self.request.id + "_plo")
+    
     try:
+        self.update_state(state='PROGRESS', meta={'message': 'Đang đọc dữ liệu từ file...'})
+
+        # 1. Dùng OCR đa năng để lấy chữ từ file (PDF/Ảnh/Word đều chơi tất)
+        clo_text = ocr_mixed_file(path_clo)
+        plo_text = ocr_mixed_file(path_plo)
+
+        # 2. Kiểm tra lỗi đọc file
+        if not clo_text.strip() or not plo_text.strip():
+            return {"status": "Failed", "error": "Không đọc được nội dung (File rỗng hoặc ảnh quá mờ)"}
+
+        # 3. Gọi AI đánh giá
         self.update_state(state='PROGRESS', meta={'message': 'AI đang đánh giá độ khớp...'})
         service = LLMService()
-        result = asyncio.run(service.check_clo_plo_alignment(clo, plo))
+        result = asyncio.run(service.check_clo_plo_alignment(clo_text, plo_text))
+        
         return {"status": "Success", "data": result}
-    except Exception as e:
-        return {"status": "Failed", "error": str(e)}
 
-# --- TASK 4: SO SÁNH (ĐÃ NÂNG CẤP BERT + HIGHLIGHT) ---
-@celery_app.task(name="app.worker.task_diff", bind=True)
-def task_diff(self, old_text: str, new_text: str):
-    try:
-        # 1. Tính độ tương đồng bằng BERT
-        self.update_state(state='PROGRESS', meta={'message': 'Đang chạy BERT Model...'})
-        similarity_score = syllabus_service.calculate_similarity(old_text, new_text)
-        
-        # 2. Tìm vị trí khác biệt để tô màu (Highlight)
-        self.update_state(state='PROGRESS', meta={'message': 'Đang tìm vị trí thay đổi...'})
-        highlights = syllabus_service.get_diff_highlight(old_text, new_text)
-        
-        # 3. Nhờ LLM nhận xét bằng lời (Optional)
-        self.update_state(state='PROGRESS', meta={'message': 'AI đang viết nhận xét...'})
-        llm_service = LLMService()
-        ai_analysis = asyncio.run(llm_service.analyze_changes(old_text, new_text))
-        
-        return {
-            "status": "Success", 
-            "similarity_percent": round(similarity_score * 100, 2), # Đổi sang %
-            "highlight_data": highlights, # Dùng cái này để FE tô màu
-            "ai_analysis": ai_analysis
-        }
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
+    finally:
+        # 4. Dọn dẹp chiến trường
+        if os.path.exists(path_clo): os.remove(path_clo)
+        if os.path.exists(path_plo): os.remove(path_plo)

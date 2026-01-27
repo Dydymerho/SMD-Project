@@ -1,44 +1,30 @@
-import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer, util
 import difflib
 
-# Load model (Sẽ tải về lần đầu chạy, khoảng 80MB)
+# Load Model một lần duy nhất khi khởi động để tiết kiệm thời gian
 try:
     print("Đang load BERT Model (all-MiniLM-L6-v2)...")
     model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("Load BERT Model thành công!")
+    print("✅ Load BERT Model thành công!")
 except Exception as e:
-    print(f"Lỗi load model BERT: {e}")
+    print(f"❌ Lỗi load model BERT: {e}")
     model = None
 
-def extract_text_from_pdf(file_bytes):
-    try:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        return text
-    except Exception as e:
-        print(f"Lỗi đọc PDF: {e}")
-        return ""
-
-def calculate_similarity(text1, text2):
+def calculate_similarity(text1: str, text2: str) -> float:
     """Trả về độ tương đồng (0.0 đến 1.0)"""
-    if model is None:
+    if model is None or not text1 or not text2:
         return 0.0
     
-    # Encode
+    # Encode sang vector và so sánh Cosine Similarity
     embeddings1 = model.encode(text1, convert_to_tensor=True)
     embeddings2 = model.encode(text2, convert_to_tensor=True)
     
-    # Cosine Similarity
     score = util.cos_sim(embeddings1, embeddings2)
     return float(score[0][0])
 
-def get_diff_highlight(text1, text2):
-    """Trả về list các dòng diff để Frontend tô màu"""
+def get_diff_highlight(text1: str, text2: str) -> list:
+    """Trả về danh sách các dòng khác biệt để Frontend tô màu"""
     d = difflib.Differ()
-    # Tách dòng
     lines1 = text1.splitlines()
     lines2 = text2.splitlines()
     

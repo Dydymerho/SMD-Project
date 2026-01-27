@@ -1,78 +1,50 @@
 import os
-import shutil
-import platform
+import docx
 import pytesseract
 from pdf2image import convert_from_path
-from fastapi import UploadFile
-from docx import Document
-from pypdf import PdfReader 
+from PIL import Image
+import platform
 
+# Cấu hình đường dẫn Tesseract/Poppler (chỉ cần thiết cho Windows)
 if platform.system() == "Windows":
-    # Cấu hình cho máy Windows của bạn
-    PATH_TO_TESSERACT = r'D:\AI SMD\tesseract.exe'
-    PATH_TO_TESSDATA = r'D:\AI SMD\tessdata'
+    # LƯU Ý: Đảm bảo đường dẫn này đúng trên máy bạn
+    pytesseract.pytesseract.tesseract_cmd = r'D:\AI SMD\tesseract.exe'
+    os.environ['TESSDATA_PREFIX'] = r'D:\AI SMD\tessdata'
     PATH_TO_POPPLER = r'D:\AI SMD\poppler-24.02.0\Library\bin'
-    
-    pytesseract.pytesseract.tesseract_cmd = PATH_TO_TESSERACT
-    os.environ['TESSDATA_PREFIX'] = PATH_TO_TESSDATA
 else:
-    # Cấu hình cho Docker (Linux) - Không cần set path vì đã cài trong hệ thống
     PATH_TO_POPPLER = None 
-    # Linux tự tìm thấy tesseract, không cần set tesseract_cmd
 
-TEMP_DIR = "temp_uploads"
-os.makedirs(TEMP_DIR, exist_ok=True)
-
-def ocr_pdf_to_text(file_path: str) -> str:
-    """Hàm OCR: Chỉ chạy khi file là ảnh/scan"""
+def ocr_mixed_file(file_path: str) -> str:
+    """
+    Hàm ĐA NĂNG: Đọc nội dung từ file Ảnh (.jpg, .png), PDF (.pdf) và Word (.docx).
+    Trả về: Chuỗi văn bản (String).
+    """
     try:
-        print(f"Đang chạy OCR cho file: {file_path}...")
-        pages = convert_from_path(file_path, dpi=300, poppler_path=PATH_TO_POPPLER)
-        full_text = ""
-        for i, page in enumerate(pages):
-            text = pytesseract.image_to_string(page, lang='vie', config='--psm 6') 
-            full_text += text + "\n"
-        return full_text
-    except Exception as e:
-        print(f"Lỗi OCR: {e}")
-        return ""
+        text_result = ""
+        file_lower = file_path.lower()
 
-def read_file_from_path(file_path: str) -> str:
-    """Hàm đọc file thông minh (Dùng chung cho cả API và Worker)"""
-    content = ""
-    try:
-        if file_path.lower().endswith(".pdf"):
-            # BƯỚC A: Thử đọc nhanh bằng pypdf
-            try:
-                reader = PdfReader(file_path)
-                for page in reader.pages:
-                    extracted = page.extract_text()
-                    if extracted:
-                        content += extracted + "\n"
-            except Exception as e:
-                print(f"PdfReader lỗi nhẹ: {e}, sẽ thử OCR sau.")
+        # 1. Xử lý FILE ẢNH (OCR)
+        if file_lower.endswith(('.png', '.jpg', '.jpeg')):
+            image = Image.open(file_path)
+            text_result = pytesseract.image_to_string(image, lang='vie')
 
-            # BƯỚC B: Nếu ít chữ quá -> Dùng OCR
-            if len(content.strip()) < 50:
-                content = ocr_pdf_to_text(file_path)
-            else:
-                print("Đã đọc thành công bằng ")
+        # 2. Xử lý FILE PDF (Chuyển sang ảnh -> OCR)
+        elif file_lower.endswith('.pdf'):
+            # dpi=300 để đọc rõ chữ nhỏ
+            pages = convert_from_path(file_path, dpi=300, poppler_path=PATH_TO_POPPLER)
+            for page in pages:
+                text_result += pytesseract.image_to_string(page, lang='vie') + "\n"
 
-        elif file_path.lower().endswith(".docx"):
-            doc = Document(file_path)
-            content = "\n".join([p.text for p in doc.paragraphs])
+        # 3. Xử lý FILE WORD (Đọc trực tiếp text)
+        elif file_lower.endswith('.docx'):
+            doc = docx.Document(file_path)
+            text_result = "\n".join([para.text for para in doc.paragraphs])
             
-        return content
-    except Exception as e:
-        raise Exception(f"Lỗi đọc file: {str(e)}")
+        else:
+            return "Lỗi: Định dạng file không hỗ trợ (Chỉ nhận JPG, PNG, PDF, DOCX)"
 
-async def process_uploaded_file(file: UploadFile) -> str:
-    """Hàm wrapper dùng cho API upload trực tiếp"""
-    file_path = os.path.join(TEMP_DIR, file.filename)
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return read_file_from_path(file_path)
-    finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        return text_result.strip()
+
+    except Exception as e:
+        print(f"Lỗi đọc file {file_path}: {e}")
+        return ""
