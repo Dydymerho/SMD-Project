@@ -1,8 +1,8 @@
 // types/SubjectDetails.ts
-import { syllabus } from './syllabusDetail'; // File bạn vừa cung cấp
+import { syllabus } from './syllabusDetail';
 import { SessionPlan } from './SessionPlan';
 import { Assessment } from './Assessment';
-import { Material } from './Material'; // Hoặc MaterialApi nếu bạn chưa sửa tên file
+import { Material } from './Material';
 
 export interface SubjectDetailData {
     info: syllabus;               // Thông tin môn học (có id, target, clos)

@@ -7,21 +7,35 @@ import {
   Filter, Download, Upload, Star, Trash2, Send, X, MessageCircle
 } from 'lucide-react';
 import './DashboardPage.css';
+import Toast, { useToast } from '../../components/Toast';
 import NotificationMenu from '../../components/NotificationMenu';
 import { 
-  getMySyllabi, searchSyllabuses, followCourse, unfollowCourse, 
-  markNotificationAsRead, markAllNotificationsAsRead, createReport,
-  getNotifications
+  getAllSyllabuses,
+  searchSyllabuses,
+  createReport,
+  getNotifications,
+  followCourse,
+  unfollowCourse,
+  submitSyllabusForReview,
+  createSyllabusVersion,
+  deleteSyllabus,
 } from '../../services/api';
 
 interface Syllabus {
-  id: string;
+  syllabusId: number;
+  courseId: number;
+  id: string; // courseCode for routing
   name: string;
   semester?: string;
   status?: string;
   lastUpdated?: string;
   version: string;
   instructor?: string;
+  lecturerEmail?: string;
+  deptName?: string;
+  programName?: string;
+  credit?: number;
+  aiSummary?: string;
   submittedDate?: string;
   approvedDate?: string;
   comments?: number;
@@ -31,31 +45,42 @@ interface Syllabus {
 
 interface APISyllabus {
   syllabusId: number;
-  course: {
-    courseId: number;
-    courseCode: string;
-    courseName: string;
-    credits: number;
-  };
-  lecturer: {
-    fullName: string;
-  };
-  currentStatus?: string;
-  versionNotes?: string;
-  academicYear?: string;
-  createdAt?: string;
+  courseId: number;
+  courseName: string;
+  courseCode: string;
+  lecturerId: number;
+  lecturerName: string;
+  lecturerEmail: string;
+  deptName: string;
+  academicYear: string;
+  versionNo: number;
+  currentStatus: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  archivedAt: string | null;
+  isLatestVersion: boolean;
+  previousVersionId: number | null;
+  versionNotes: string | null;
+  pdfFileName: string | null;
+  pdfUploadedAt: string | null;
+  programId: number;
+  programName: string;
+  aiSumary: string | null;
+  credit: number;
 }
 
 const LecturerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error: showError, info } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'my-syllabi' | 'collaborative' | 'search' | 'management'>('overview');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   
   // Data states
-  const [mySyllabi, setMySyllabi] = useState<Syllabus[]>([]);
+  const [syllabuses, setSyllabuses] = useState<Syllabus[]>([]);
   const [searchResults, setSearchResults] = useState<Syllabus[]>([]);
   const [collaborativeSyllabi, setCollaborativeSyllabi] = useState<Syllabus[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -65,7 +90,8 @@ const LecturerDashboard: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [currentSyllabusId, setCurrentSyllabusId] = useState<string>('');
+  const [currentSyllabus, setCurrentSyllabus] = useState<Syllabus | null>(null);
+  const [currentSyllabusCode, setCurrentSyllabusCode] = useState<string>('');
   const [reportContent, setReportContent] = useState('');
   const [reportType, setReportType] = useState('content_error');
   const [commentContent, setCommentContent] = useState('');
@@ -83,9 +109,19 @@ const LecturerDashboard: React.FC = () => {
   });
 
   // Fetch data on component mount
+
   useEffect(() => {
-    fetchMyData();
+    fetchSyllabuses();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'search' && searchQuery.trim().length > 0) {
+      handleSearchSyllabuses(searchQuery);
+    } else if (activeTab === 'search') {
+      setSearchResults([]);
+    }
+    // eslint-disable-next-line
+  }, [searchQuery, activeTab]);
 
   // Fetch notification count
   useEffect(() => {
@@ -106,40 +142,64 @@ const LecturerDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchMyData = async () => {
+
+
+  const fetchSyllabuses = async () => {
     try {
       setLoadingData(true);
-      const syllabi = await getMySyllabi();
-      
-      // Convert API response to UI format
-      const convertedSyllabi = syllabi.map((s: APISyllabus) => ({
-        id: s.course.courseCode,
-        name: s.course.courseName,
-        semester: s.academicYear,
-        status: mapStatus(s.currentStatus),
-        lastUpdated: s.createdAt ? new Date(s.createdAt).toLocaleDateString('vi-VN') : 'N/A',
-        version: s.versionNotes ? `v${s.versionNotes.split('v')[1]?.split(' ')[0] || '1.0'}` : 'v1.0',
-        following: false,
-        comments: 0,
+      const data = await getAllSyllabuses();
+      console.log('API getAllSyllabuses raw data:', data);
+      const converted = (data as unknown as APISyllabus[]).map((s: APISyllabus) => ({
+          syllabusId: s.syllabusId,
+          courseId: s.courseId,
+          id: s.courseCode,
+          name: s.courseName,
+          semester: s.academicYear,
+          status: mapStatus(s.currentStatus),
+          lastUpdated: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('vi-VN') : 'N/A',
+          version: s.versionNo ? `v${s.versionNo}` : 'v1.0',
+          instructor: s.lecturerName,
+          lecturerEmail: s.lecturerEmail,
+          deptName: s.deptName,
+          programName: s.programName,
+          credit: s.credit,
+          aiSummary: s.aiSumary || undefined,
+          following: false,
+          comments: 0,
       }));
-
-      setMySyllabi(convertedSyllabi);
-
-      // Calculate stats
-      const inProgress = convertedSyllabi.filter((s: Syllabus) => s.status === 'Đang soạn').length;
-      const pendingApproval = convertedSyllabi.filter((s: Syllabus) => s.status === 'Chờ duyệt').length;
-      const approved = convertedSyllabi.filter((s: Syllabus) => s.status === 'Đã duyệt').length;
-
-      setStats({
-        totalSyllabi: convertedSyllabi.length,
-        inProgress,
-        pendingApproval,
-        approved,
-        collaborative: 0,
-        followed: 0,
-      });
+      setSyllabuses(converted);
     } catch (error) {
-      console.error('Lỗi lấy dữ liệu giáo trình:', error);
+      setSyllabuses([]);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleSearchSyllabuses = async (query: string) => {
+    setLoadingData(true);
+    try {
+      const data = await searchSyllabuses(query);
+        const converted = (data as unknown as APISyllabus[]).map((s: APISyllabus) => ({
+          syllabusId: s.syllabusId,
+          courseId: s.courseId,
+          id: s.courseCode,
+          name: s.courseName,
+          semester: s.academicYear,
+          status: mapStatus(s.currentStatus),
+          lastUpdated: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('vi-VN') : 'N/A',
+          version: s.versionNo ? `v${s.versionNo}` : 'v1.0',
+          instructor: s.lecturerName,
+          lecturerEmail: s.lecturerEmail,
+          deptName: s.deptName,
+          programName: s.programName,
+          credit: s.credit,
+          aiSummary: s.aiSumary || undefined,
+          following: false,
+          comments: 0,
+        }));
+      setSearchResults(converted);
+    } catch (error) {
+      setSearchResults([]);
     } finally {
       setLoadingData(false);
     }
@@ -161,18 +221,35 @@ const LecturerDashboard: React.FC = () => {
     navigate(`/subject/${id}`);
   };
 
-  const handleToggleFollow = (id: string) => {
-    console.log('Toggle follow:', id);
-    // TODO: Implement follow/unfollow logic
+  const handleToggleFollow = async (id: string) => {
+    const target = syllabuses.find((s) => s.id === id);
+    if (!target || !target.courseId) return;
+
+    const nextFollow = !target.following;
+    setSyllabuses((prev) => prev.map((s) => s.id === id ? { ...s, following: nextFollow } : s));
+    setSearchResults((prev) => prev.map((s) => s.id === id ? { ...s, following: nextFollow } : s));
+    try {
+      if (nextFollow) {
+        await followCourse(target.courseId);
+      } else {
+        await unfollowCourse(target.courseId);
+      }
+    } catch (error) {
+      console.error('Toggle follow failed:', error);
+      // revert on error
+      setSyllabuses((prev) => prev.map((s) => s.id === id ? { ...s, following: !nextFollow } : s));
+      setSearchResults((prev) => prev.map((s) => s.id === id ? { ...s, following: !nextFollow } : s));
+      showError('Không thể cập nhật trạng thái theo dõi');
+    }
   };
 
   const handleAddComment = (id: string) => {
-    setCurrentSyllabusId(id);
+    setCurrentSyllabusCode(id);
     setShowCommentModal(true);
   };
 
   const handleReportError = (id: string) => {
-    setCurrentSyllabusId(id);
+    setCurrentSyllabusCode(id);
     setShowReportModal(true);
   };
 
@@ -180,25 +257,65 @@ const LecturerDashboard: React.FC = () => {
     navigate(`/syllabus/compare/${id}`);
   };
 
+  const handleCreateNewVersion = async (syllabus: Syllabus) => {
+    try {
+      setIsSubmitting(true);
+      const response = await createSyllabusVersion({
+        sourceSyllabusId: syllabus.syllabusId,
+        versionNotes: `New version from v${syllabus.version}`,
+        copyMaterials: true,
+        copySessionPlans: true,
+        copyAssessments: true,
+        copyCLOs: true
+      });
+      const newId = (response as any)?.syllabusId || (response as any)?.id;
+      success(' Đã tạo phiên bản mới để chỉnh sửa');
+      fetchSyllabuses();
+      if (newId) {
+        navigate(`/syllabus/edit/${newId}`);
+      }
+    } catch (error) {
+      console.error('Error creating new version:', error);
+      showError(' Không thể tạo phiên bản mới');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSyllabus = async (syllabus: Syllabus) => {
+    if (!window.confirm(`Xóa syllabus ${syllabus.id}?`)) return;
+    try {
+      setIsSubmitting(true);
+      await deleteSyllabus(syllabus.syllabusId);
+      success(' Đã xóa syllabus');
+      fetchSyllabuses();
+    } catch (error) {
+      console.error('Delete syllabus failed:', error);
+      showError(' Không thể xóa syllabus');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmitReport = async () => {
     if (!reportContent.trim()) {
-      alert('Vui lòng nhập nội dung báo cáo');
+      showError('Vui lòng nhập nội dung báo cáo');
       return;
     }
     
     setIsSubmitting(true);
     try {
       await createReport({
-        title: `[${reportType.toUpperCase()}] ${currentSyllabusId}`,
+        title: `[${reportType.toUpperCase()}] ${currentSyllabusCode || 'SYLLABUS'}`,
         description: reportContent
       });
-      alert('✅ Đã gửi báo cáo thành công!');
+      success('Đã gửi báo cáo thành công!');
       setShowReportModal(false);
       setReportContent('');
       setReportType('content_error');
     } catch (error) {
       console.error('Error submitting report:', error);
-      alert('❌ Có lỗi xảy ra khi gửi báo cáo');
+      showError('Có lỗi xảy ra khi gửi báo cáo');
     } finally {
       setIsSubmitting(false);
     }
@@ -206,7 +323,7 @@ const LecturerDashboard: React.FC = () => {
 
   const handleSubmitComment = async () => {
     if (!commentContent.trim()) {
-      alert('Vui lòng nhập nội dung nhận xét');
+      showError('Vui lòng nhập nội dung nhận xét');
       return;
     }
     
@@ -214,13 +331,13 @@ const LecturerDashboard: React.FC = () => {
     try {
       // TODO: Call API to submit comment
       // POST /api/v1/syllabuses/{id}/comments
-      console.log('Comment submitted:', { currentSyllabusId, commentContent });
-      alert('✅ Đã thêm nhận xét thành công!');
+      console.log('Comment submitted:', { syllabusCode: currentSyllabusCode, commentContent });
+      success(' Đã thêm nhận xét thành công!');
       setShowCommentModal(false);
       setCommentContent('');
     } catch (error) {
       console.error('Error submitting comment:', error);
-      alert('❌ Có lỗi xảy ra khi thêm nhận xét');
+      showError(' Có lỗi xảy ra khi thêm nhận xét');
     } finally {
       setIsSubmitting(false);
     }
@@ -228,25 +345,24 @@ const LecturerDashboard: React.FC = () => {
 
   const handleSubmitToHoD = async () => {
     if (!submitNote.trim()) {
-      alert('Vui lòng nhập ghi chú cho trưởng khoa');
+      showError('Vui lòng nhập ghi chú cho trưởng khoa');
+      return;
+    }
+    if (!currentSyllabus) {
+      showError('Không tìm thấy giáo trình cần gửi');
       return;
     }
     
     setIsSubmitting(true);
     try {
-      // TODO: Call API to submit syllabus to HoD
-      // PUT /api/v1/syllabuses/${currentSyllabusId}/submit
-      console.log('Submitting to HoD:', { currentSyllabusId, submitNote });
-      
-      alert('✅ Đã gửi giáo trình cho Trưởng khoa duyệt thành công!');
+      await submitSyllabusForReview(currentSyllabus.syllabusId, submitNote, false);
+      success(' Đã gửi giáo trình cho Trưởng khoa duyệt thành công!');
       setShowSubmitModal(false);
       setSubmitNote('');
-      
-      // Refresh syllabus list
-      fetchMyData();
+      fetchSyllabuses();
     } catch (error) {
       console.error('Error submitting to HoD:', error);
-      alert('❌ Có lỗi xảy ra khi gửi giáo trình');
+      showError(' Có lỗi xảy ra khi gửi giáo trình');
     } finally {
       setIsSubmitting(false);
     }
@@ -406,22 +522,27 @@ const LecturerDashboard: React.FC = () => {
                   <div style={{ textAlign: 'center', padding: '30px' }}>
                     <p>Đang tải dữ liệu...</p>
                   </div>
-                ) : mySyllabi.length > 0 ? (
+                ) : syllabuses.length > 0 ? (
                   <table className="data-table">
                     <thead>
                       <tr>
                         <th>Mã MH</th>
                         <th>Tên môn học</th>
+                        <th>Giảng viên</th>
+                        <th>Học kỳ</th>
                         <th>Trạng thái</th>
+                        <th>Phiên bản</th>
                         <th>Cập nhật</th>
                         <th>Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {mySyllabi.slice(0, 3).map((syllabus) => (
+                      {syllabuses.slice(0, 5).map((syllabus) => (
                         <tr key={syllabus.id}>
                           <td>{syllabus.id}</td>
                           <td>{syllabus.name}</td>
+                          <td>{syllabus.instructor || 'N/A'}</td>
+                          <td>{syllabus.semester || ''}</td>
                           <td>
                             <span className={`status-badge ${
                               syllabus.status === 'Đã duyệt' ? 'active' : 
@@ -430,6 +551,7 @@ const LecturerDashboard: React.FC = () => {
                               {syllabus.status}
                             </span>
                           </td>
+                          <td>{syllabus.version}</td>
                           <td>{syllabus.lastUpdated}</td>
                           <td>
                             <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
@@ -468,7 +590,7 @@ const LecturerDashboard: React.FC = () => {
                 <div style={{ textAlign: 'center', padding: '30px' }}>
                   <p>Đang tải dữ liệu...</p>
                 </div>
-              ) : mySyllabi.length > 0 ? (
+              ) : syllabuses.length > 0 ? (
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -483,7 +605,7 @@ const LecturerDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {mySyllabi.map((syllabus) => (
+                    {syllabuses.map((syllabus) => (
                       <tr key={syllabus.id}>
                         <td><strong>{syllabus.id}</strong></td>
                         <td>{syllabus.name}</td>
@@ -530,12 +652,20 @@ const LecturerDashboard: React.FC = () => {
                             >
                               <GitCompare size={18} />
                             </button>
+                            <button
+                              className="icon-btn"
+                              onClick={() => handleCreateNewVersion(syllabus)}
+                              title="Tạo phiên bản mới để chỉnh sửa"
+                            >
+                              <Upload size={18} />
+                            </button>
                             {syllabus.status === 'Đang soạn' && (
                               <>
                                 <button 
                                   className="icon-btn success" 
                                   onClick={() => {
-                                    setCurrentSyllabusId(syllabus.id);
+                                    setCurrentSyllabus(syllabus);
+                                    setCurrentSyllabusCode(syllabus.id);
                                     setShowSubmitModal(true);
                                   }} 
                                   title="Gửi Trưởng khoa duyệt"
@@ -544,7 +674,7 @@ const LecturerDashboard: React.FC = () => {
                                 </button>
                                 <button 
                                   className="icon-btn danger" 
-                                  onClick={() => {}} 
+                                  onClick={() => handleDeleteSyllabus(syllabus)} 
                                   title="Xóa bản nháp"
                                 >
                                   <Trash2 size={18} />
@@ -974,7 +1104,7 @@ const LecturerDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="form-group">
-                <label>Mã giáo trình: <strong>{currentSyllabusId}</strong></label>
+                <label>Mã giáo trình: <strong>{currentSyllabus?.id || ''}</strong></label>
               </div>
               <div className="form-group">
                 <label>Ghi chú cho Trưởng khoa</label>
@@ -1014,6 +1144,9 @@ const LecturerDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

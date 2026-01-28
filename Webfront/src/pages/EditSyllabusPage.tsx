@@ -6,8 +6,11 @@ import {
   Plus, ArrowLeft, Save, Send
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
+import Toast, { useToast } from '../components/Toast';
+import { getSyllabusDetailForReview } from '../services/workflowService';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
+import { getSyllabusById, updateSyllabus } from '../services/api';
 
 interface CLOItem {
   id: string;
@@ -43,6 +46,7 @@ const EditSyllabusPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error, info } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -95,23 +99,45 @@ const EditSyllabusPage: React.FC = () => {
 
   const loadSyllabusData = async (syllabusId: string) => {
     try {
-      // TODO: Call API to get syllabus by ID
-      // const response = await api.get(`/api/v1/syllabuses/${syllabusId}`);
-      // const data = response.data;
+      const data = await getSyllabusDetailForReview(parseInt(syllabusId));
       
-      // Mock data for now
-      setCourseCode('CS101');
-      setCourseName('Nhập môn Công nghệ thông tin');
-      setCredits('3');
-      setAcademicYear('2023-2024');
-      setSemester('HK1');
-      setCourseObjectives('Giới thiệu các khái niệm cơ bản về CNTT');
-      setCourseDescription('Môn học cung cấp kiến thức nền tảng về công nghệ thông tin');
+      if (data) {
+        // Set basic info
+        setCourseCode(data.courseCode || '');
+        setCourseName(data.courseName || '');
+        setCredits(data.credits?.toString() || '');
+        setAcademicYear(data.academicYear || '');
+        setCourseObjectives(''); // Not available in API response
+        setCourseDescription(data.description || '');
+        
+        // Set CLOs - normalize from multiple possible sources
+        const loadedClos = data.clos && Array.isArray(data.clos) && data.clos.length > 0
+          ? data.clos.map((clo: any, index: number) => ({
+              id: clo.id?.toString() || (index + 1).toString(),
+              code: clo.code || clo.cloCode || `CLO${index + 1}`,
+              description: clo.description || clo.cloDescription || '',
+              bloomLevel: clo.bloomLevel || 'Remember'
+            }))
+          : [{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }];
+        
+        setClos(loadedClos);
+        
+        // Initialize PLO mappings if they exist
+        const mappings: { [cloId: string]: PLOMapping[] } = {};
+        loadedClos.forEach((clo: any) => {
+          mappings[clo.id] = clo.ploMappings && Array.isArray(clo.ploMappings)
+            ? clo.ploMappings
+            : [{ ploCode: 'PLO1', weight: 0 }];
+        });
+        setPloMappings(mappings);
+      }
       
       setLoading(false);
     } catch (error) {
       console.error('Error loading syllabus:', error);
-      alert('Không thể tải dữ liệu giáo trình');
+      // Fallback to empty form if API fails
+      setClos([{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }]);
+      setPloMappings({ '1': [{ ploCode: 'PLO1', weight: 0 }] });
       setLoading(false);
     }
   };
@@ -237,7 +263,7 @@ const EditSyllabusPage: React.FC = () => {
     try {
       // Validate
       if (!courseCode || !courseName || !credits || !academicYear) {
-        alert('Vui lòng điền đầy đủ thông tin cơ bản');
+        error('Vui lòng điền đầy đủ thông tin cơ bản');
         setIsSubmitting(false);
         return;
       }
@@ -245,7 +271,7 @@ const EditSyllabusPage: React.FC = () => {
       // Calculate total assessment weight
       const totalWeight = assessments.reduce((sum, a) => sum + Number(a.weight), 0);
       if (Math.abs(totalWeight - 100) > 0.01) {
-        alert(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
+        error(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
         setIsSubmitting(false);
         return;
       }
@@ -274,22 +300,25 @@ const EditSyllabusPage: React.FC = () => {
 
       console.log('Updating syllabus:', syllabusData);
 
-      // TODO: Call API to update syllabus
-      // const response = await api.put(`/api/v1/syllabuses/${id}`, syllabusData);
+      await updateSyllabus(Number(id), syllabusData);
 
-      // TODO: Upload PDF if exists
+      // TODO: Upload PDF if backend supports
       // if (pdfFile) {
       //   const formData = new FormData();
       //   formData.append('file', pdfFile);
-      //   await api.post(`/api/v1/syllabuses/${id}/upload-pdf`, formData);
+      //   await uploadSyllabusPdf(Number(id), formData);
       // }
 
-      alert('✅ Cập nhật đề cương thành công!');
+      success('✅ Cập nhật đề cương thành công!');
       navigate('/dashboard');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi cập nhật đề cương');
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật đề cương';
+      error(`❌ ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -895,6 +924,9 @@ const EditSyllabusPage: React.FC = () => {
           </form>
         </div>
       </main>
+      
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

@@ -122,8 +122,55 @@ export const getSyllabusByCourseId = async (courseId: string, academicYear: stri
   return response.data;
 };
 
-export const getMySyllabi = async () => {
-  const response = await axiosClient.get("/syllabus/my-syllabi");
+
+
+// Lấy tất cả syllabuses (alias rõ ràng)
+export const getAllSyllabuses = async () => {
+  const response = await axiosClient.get("/syllabuses");
+  return response.data;
+};
+
+// Tạo syllabus mới
+export const createSyllabus = async (syllabusData: any) => {
+  const response = await axiosClient.post("/syllabuses", syllabusData);
+  return response.data;
+};
+
+// Tạo syllabus từ phiên bản trước đó
+export const createSyllabusFromVersion = async (syllabusData: any) => {
+  const response = await axiosClient.post("/syllabuses/create-with-dto", syllabusData);
+  return response.data;
+};
+
+// Tạo phiên bản syllabus mới
+export const createSyllabusVersion = async (syllabusData: any) => {
+  const response = await axiosClient.post("/syllabuses/create-version", syllabusData);
+  return response.data;
+};
+
+// Cập nhật syllabus
+export const updateSyllabus = async (syllabusId: number, syllabusData: any) => {
+  const response = await axiosClient.put(`/syllabuses/${syllabusId}`, syllabusData);
+  return response.data;
+};
+
+// Gửi syllabus cho HoD duyệt
+export const submitSyllabusForReview = async (
+  syllabusId: number,
+  comment: string,
+  returnToDraft: boolean = false
+) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/submit-for-review`, {
+    syllabusId,
+    comment,
+    returnToDraft,
+  });
+  return response.data;
+};
+
+// Xoa syllabus
+export const deleteSyllabus = async (syllabusId: number) => {
+  const response = await axiosClient.delete(`/syllabuses/${syllabusId}`);
   return response.data;
 };
 

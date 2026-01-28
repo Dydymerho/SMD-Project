@@ -6,8 +6,10 @@ import {
   Plus, ArrowLeft, Send
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
+import Toast, { useToast } from '../components/Toast';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
+import { createSyllabus, getCourses, getPrograms } from '../services/api';
 
 interface CLOItem {
   id: string;
@@ -42,12 +44,14 @@ interface Material {
 const CreateSyllabusPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error, info } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   
   // Basic Info
-  const [courseCode, setCourseCode] = useState('');
-  const [courseName, setCourseName] = useState('');
-  const [credits, setCredits] = useState('');
+  const [courseId, setCourseId] = useState<number>(0);
+  const [programId, setProgramId] = useState<number>(0);
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const [availablePrograms, setAvailablePrograms] = useState<any[]>([]);
   const [academicYear, setAcademicYear] = useState('');
   const [semester, setSemester] = useState('');
   const [courseObjectives, setCourseObjectives] = useState('');
@@ -83,6 +87,27 @@ const CreateSyllabusPage: React.FC = () => {
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load courses and programs on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [courses, programs] = await Promise.all([
+          getCourses(),
+          getPrograms()
+        ]);
+        setAvailableCourses(courses);
+        setAvailablePrograms(programs);
+        // Set default program if available
+        if (programs.length > 0) {
+          setProgramId(programs[0].programId);
+        }
+      } catch (error) {
+        console.error('Error loading courses/programs:', error);
+      }
+    };
+    loadData();
+  }, []);
 
   // CLO Functions
   const addCLO = () => {
@@ -204,8 +229,8 @@ const CreateSyllabusPage: React.FC = () => {
     
     try {
       // Validate
-      if (!courseCode || !courseName || !credits || !academicYear) {
-        alert('Vui lòng điền đầy đủ thông tin cơ bản');
+      if (!courseId || !academicYear) {
+        error('Vui lòng chọn môn học và năm học');
         setIsSubmitting(false);
         return;
       }
@@ -213,53 +238,91 @@ const CreateSyllabusPage: React.FC = () => {
       // Calculate total assessment weight
       const totalWeight = assessments.reduce((sum, a) => sum + Number(a.weight), 0);
       if (Math.abs(totalWeight - 100) > 0.01) {
-        alert(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
+        error(`Tổng trọng số đánh giá phải bằng 100% (hiện tại: ${totalWeight}%)`);
         setIsSubmitting(false);
         return;
       }
 
-      // Prepare syllabus data
+      // Prepare syllabus data - match API spec
+      const selectedCourse = availableCourses.find(c => c.courseId === courseId);
       const syllabusData = {
         course: {
-          courseCode,
-          courseName,
-          credits: Number(credits)
+          courseId: courseId,
+          courseCode: selectedCourse?.courseCode || '',
+          courseName: selectedCourse?.courseName || '',
+          credits: selectedCourse?.credits || 0
+        },
+        lecturer: {
+          userId: Number(user?.id),
+          username: user?.username || '',
+          fullName: user?.name || '',
+          email: user?.email || '',
+          status: 'ACTIVE'
+        },
+        program: availablePrograms.find(p => p.programId === programId) || {
+          programId: programId,
+          programName: ''
         },
         academicYear,
-        semester,
         versionNo: 1,
         currentStatus: 'DRAFT',
-        courseObjectives,
-        courseDescription,
-        clos: clos.map(clo => ({
-          cloCode: clo.code,
-          cloDescription: clo.description,
-          bloomLevel: clo.bloomLevel,
-          ploMappings: ploMappings[clo.id] || []
-        })),
-        assessments: assessments.filter(a => a.name),
-        sessionPlans: sessionPlans.filter(s => s.topic),
-        materials: materials.filter(m => m.title)
+        isLatestVersion: true,
+        // Optional fields
+        ...(courseObjectives && { courseObjectives }),
+        ...(courseDescription && { courseDescription }),
+        ...(semester && { semester }),
+        // TODO: Add CLOs, assessments, sessionPlans, materials when backend supports
+        // clos: clos.map(clo => ({
+        //   cloCode: clo.code,
+        //   cloDescription: clo.description,
+        //   bloomLevel: clo.bloomLevel,
+        //   ploMappings: ploMappings[clo.id] || []
+        // })),
+        // assessments: assessments.filter(a => a.name),
+        // sessionPlans: sessionPlans.filter(s => s.topic),
+        // materials: materials.filter(m => m.title)
       };
 
-      console.log('Submitting syllabus:', syllabusData);
+      console.log('Submitting syllabus with payload:', syllabusData);
+      console.log('CourseId value:', courseId, 'Type:', typeof courseId);
 
-      // TODO: Call API to create syllabus
-      // const response = await api.post('/api/v1/syllabuses', syllabusData);
+      const created = await createSyllabus(syllabusData);
+      const newId = (created as any)?.syllabusId || (created as any)?.id;
 
-      // TODO: Upload PDF if exists
-      // if (pdfFile) {
+      // TODO: Upload PDF if backend supports
+      // if (pdfFile && newId) {
       //   const formData = new FormData();
       //   formData.append('file', pdfFile);
-      //   await api.post(`/api/v1/syllabuses/${response.data.syllabusId}/upload-pdf`, formData);
+      //   await uploadSyllabusPdf(newId, formData);
       // }
 
-      alert('✅ Tạo đề cương thành công!');
-      navigate('/dashboard');
+      success('✅ Tạo đề cương thành công!');
+      if (newId) {
+        navigate(`/syllabus/edit/${newId}`);
+      } else {
+        navigate('/dashboard');
+      }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi tạo đề cương');
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      
+      // Handle specific error codes
+      if (error.response?.status === 409) {
+        const message = error.response?.data?.message || 'Đã tồn tại giáo trình cho môn học này trong năm học này';
+        const existingSyllabusId = error.response?.data?.existingSyllabusId;
+        
+        if (existingSyllabusId && window.confirm(`${message}\n\nBạn có muốn chỉnh sửa giáo trình hiện có không?`)) {
+          navigate(`/syllabus/edit/${existingSyllabusId}`);
+        } else {
+          error(`❌ ${message}`);
+        }
+      } else if (error.response?.data?.message) {
+        error(`❌ ${error.response.data.message}`);
+      } else {
+        error('❌ Có lỗi xảy ra khi tạo đề cương');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -274,39 +337,41 @@ const CreateSyllabusPage: React.FC = () => {
             
             <div className="form-row">
               <div className="form-group">
-                <label>Mã môn học *</label>
-                <input
-                  type="text"
-                  value={courseCode}
-                  onChange={(e) => setCourseCode(e.target.value)}
-                  placeholder="VD: CS101"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Tên môn học *</label>
-                <input
-                  type="text"
-                  value={courseName}
-                  onChange={(e) => setCourseName(e.target.value)}
-                  placeholder="VD: Nhập môn lập trình"
-                />
+                <label>Chọn môn học *</label>
+                <select 
+                  value={courseId} 
+                  onChange={(e) => setCourseId(Number(e.target.value))}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                >
+                  <option value={0}>-- Chọn môn học --</option>
+                  {availableCourses.map((course) => (
+                    <option key={course.courseId} value={course.courseId}>
+                      {course.courseCode} - {course.courseName} ({course.credits} tín chỉ)
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Số tín chỉ *</label>
-                <input
-                  type="number"
-                  value={credits}
-                  onChange={(e) => setCredits(e.target.value)}
-                  placeholder="3"
-                  min="1"
-                  max="6"
-                />
+                <label>Chương trình học *</label>
+                <select 
+                  value={programId} 
+                  onChange={(e) => setProgramId(Number(e.target.value))}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                >
+                  <option value={0}>-- Chọn chương trình --</option>
+                  {availablePrograms.map((program) => (
+                    <option key={program.programId} value={program.programId}>
+                      {program.programName}
+                    </option>
+                  ))}
+                </select>
               </div>
-              
+            </div>
+
+            <div className="form-row">
               <div className="form-group">
                 <label>Năm học *</label>
                 <input
@@ -845,6 +910,9 @@ const CreateSyllabusPage: React.FC = () => {
         </form>
         </div>
       </main>
+      
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
