@@ -1,357 +1,551 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, MessageCircle, AlertCircle, Send, X } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import { getCourseById, getSyllabusByCourseId } from '../services/api';
-import './SubjectDetailPage.css';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, CheckCircle, AlertTriangle, FileText, Send, Bell, User, Zap, Home
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import * as api from '../services/api';
+import NotificationMenu from '../components/NotificationMenu';
 import './dashboard/DashboardPage.css';
 
-interface CourseDetail {
-  courseId: number;
-  courseName: string;
-  courseCode: string;
-  credits: number;
-  description: string;
+interface SessionPlan {
+  sessionId: number;
+  weekNo: number;
+  topic: string;
+  teachingMethod: string;
 }
 
-const CourseDetailPage: React.FC = () => {
+interface Assessment {
+  assessmentId: number;
+  name: string;
+  weightPercent: number;
+  criteria: string;
+}
+
+interface Material {
+  materialId: number;
+  title: string;
+  author: string;
+  materialType: string;
+}
+
+interface SyllabusDetail {
+  syllabusId: number;
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  deptName?: string;
+  lecturerName: string;
+  academicYear?: string;
+  aiSummary?: string;
+  sessionPlans?: SessionPlan[];
+  assessments?: Assessment[];
+  materials?: Material[];
+  clos: string[];
+}
+
+const SubjectDetailPage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const syllabusId = searchParams.get('syllabusId');
-  const [course, setCourse] = useState<any>(null);
-  const [syllabus, setSyllabus] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { syllabusId } = useParams<{ syllabusId: string }>();
+  const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  
-  // Report & Comment modals
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showCommentModal, setShowCommentModal] = useState(false);
-  const [reportContent, setReportContent] = useState('');
-  const [reportType, setReportType] = useState('content_error');
-  const [commentContent, setCommentContent] = useState('');
+  const [syllabus, setSyllabus] = useState<SyllabusDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [submitNote, setSubmitNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const courseData = await getCourseById(id);
-        setCourse(courseData);
-        const syllabusData = await getSyllabusByCourseId(id);
-        setSyllabus(syllabusData);
-      } catch (error) {
-        console.error('Lỗi tải dữ liệu:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [id, syllabusId]);
+    loadSyllabusDetail();
+  }, [syllabusId]);
 
-  const handleSubmitReport = async () => {
-    if (!reportContent.trim()) {
-      alert('Vui lòng nhập nội dung báo cáo');
-      return;
-    }
+  const loadSyllabusDetail = async () => {
+    if (!syllabusId) return;
+    
     try {
-      setIsSubmitting(true);
-      // Add your API call here to submit the report
-      // await submitReport({ courseId: id, type: reportType, content: reportContent });
-      alert('Báo cáo được gửi thành công');
-      setShowReportModal(false);
-      setReportContent('');
-      setReportType('content_error');
+      setLoading(true);
+      const [syllabusData, unreadCount] = await Promise.all([
+        api.getSyllabusDetail(parseInt(syllabusId)),
+        api.getUnreadNotificationsCount().catch(() => 0)
+      ]);
+
+      // Transform API data to local format
+      setSyllabus({
+        syllabusId: syllabusData.id,
+        courseCode: syllabusData.courseCode,
+        courseName: syllabusData.courseName,
+        credits: syllabusData.credit,
+        deptName: syllabusData.deptName,
+        lecturerName: syllabusData.lecturerName,
+        academicYear: syllabusData.academicYear,
+        aiSummary: syllabusData.aiSumary,
+        sessionPlans: syllabusData.sessionPlans || [],
+        assessments: syllabusData.assessments || [],
+        materials: syllabusData.materials || [],
+        clos: syllabusData.target || [],
+      });
+      setNotificationCount(unreadCount);
     } catch (error) {
-      console.error('Lỗi gửi báo cáo:', error);
-      alert('Có lỗi xảy ra khi gửi báo cáo');
+      console.error('Error loading syllabus:', error);
+      alert('Không thể tải thông tin giáo trình');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    if (!syllabusId) return;
+    
+    setIsSubmitting(true);
+    try {
+      await api.submitForReview(parseInt(syllabusId), submitNote);
+      alert('✅ Giáo trình đã được gửi cho HoD duyệt!\nVui lòng chờ phản hồi.');
+      setShowSubmitModal(false);
+      setTimeout(() => navigate('/dashboard'), 1500);
+    } catch (error: any) {
+      console.error('Error submitting:', error);
+      alert(error.response?.data?.message || '❌ Có lỗi xảy ra khi gửi giáo trình');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmitComment = async () => {
-    if (!commentContent.trim()) {
-      alert('Vui lòng nhập nội dung nhận xét');
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-      // Add your API call here to submit the comment
-      // await submitComment({ courseId: id, content: commentContent });
-      alert('Nhận xét được gửi thành công');
-      setShowCommentModal(false);
-      setCommentContent('');
-    } catch (error) {
-      console.error('Lỗi gửi nhận xét:', error);
-      alert('Có lỗi xảy ra khi gửi nhận xét');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (loading) return <div className="loading">Đang tải...</div>;
-  if (!course) return <div className="error">Không tìm thấy môn học</div>;
-
-  return (
-    <div className="subject-detail-page">
-      <Navbar />
-      <div className="detail-container">
-        <div className="detail-header">
-          <div className="detail-title">
-            <h1>{course.courseName}</h1>
-            <span className="detail-code">{course.courseCode}</span>
-          </div>
-          <div className="detail-credits">
-            <span>{course.credits} tín chỉ</span>
-          </div>
-        </div>
-
-        <div className="detail-content">
-          <section className="detail-section">
-            <h2>Mô tả</h2>
-            <p>{course.description || "Chưa có mô tả cho môn học này."}</p>
-          </section>
-          {/*
-          {course.prerequisites && course.prerequisites.length > 0 && (
-            <section className="detail-section">
-              <h2>Môn học tiên quyết</h2>
-              <ul>
-                {course.prerequisites.map((prereq, index) => (
-                  <li key={index}>{prereq}</li>
-                ))}
-              </ul>
-            </section>
-          )}  */}
-
-        {syllabus && (
-          <section className="detail-section">
-            <h2>Chi tiết giáo trình</h2>
-            <div className="syllabus-card">
-              <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
-              <p><strong>Năm học:</strong> {syllabus.academicYear}</p>
-              <p><strong>Phiên bản:</strong> {syllabus.versionNo}</p>
-              <div className="syllabus-notes">
-                <h3>Nội dung chính:</h3>
-                <p>{syllabus.versionNotes}</p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Detail Content */}
-        <div className="content-section" style={{ margin: '20px 40px' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <button onClick={() => navigate('/dashboard')} className="btn-back" style={{ 
-              background: 'white', 
-              border: '1px solid #ddd', 
-              padding: '10px 20px', 
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease'
-            }}>
-              <ArrowLeft size={20} />
-              Quay lại Dashboard
-            </button>
-          </div>
-
-          <div className="detail-container">
-            <div className="detail-header">
-              <div className="detail-title">
-                <h1>{course.name}</h1>
-                <span className="detail-code">{course.code}</span>
-              </div>
-              <div className="detail-credits">
-                <span>{course.credits} tín chỉ</span>
-              </div>
-            </div>
-
-            <div className="detail-content">
-              <section className="detail-section">
-                <h2>Mô tả</h2>
-                <p>{course.description}</p>
-              </section>
-
-              {course.prerequisites && course.prerequisites.length > 0 && (
-                <section className="detail-section">
-                  <h2>Môn học tiên quyết</h2>
-                  <ul>
-                    {course.prerequisites.map((prereq: string, index: number) => (
-                      <li key={index}>{prereq}</li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {course.syllabus && (
-                <section className="detail-section">
-                  <h2>Đề cương</h2>
-                  <div className="syllabus-content">
-                    {course.syllabus}
-                  </div>
-                </section>
-              )}
-
-              {/* Action buttons */}
-              <section className="detail-section">
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button 
-                    onClick={() => navigate(`/syllabus/review/${id}`)}
-                    className="btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <MessageSquare size={18} />
-                    Xem tất cả Review
-                  </button>
-                  <button 
-                    onClick={() => setShowCommentModal(true)}
-                    className="btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <MessageCircle size={18} />
-                    Thêm nhận xét
-                  </button>
-                  <button 
-                    onClick={() => setShowReportModal(true)}
-                    className="btn-secondary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #ef4444', color: '#ef4444' }}
-                  >
-                    <AlertCircle size={18} />
-                    Báo cáo vấn đề
-                  </button>
-                </div>
-              </section>
-            </div>
-          </div>
-
-          {/* Report Modal */}
-          {showReportModal && (
-            <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                <div className="modal-header">
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <AlertCircle size={24} color="#ef4444" />
-                    Báo cáo vấn đề
-                  </h2>
-                  <button onClick={() => setShowReportModal(false)} className="btn-close">
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Loại vấn đề</label>
-                    <select 
-                      value={reportType} 
-                      onChange={(e) => setReportType(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                    >
-                      <option value="content_error">Sai sót nội dung</option>
-                      <option value="outdated">Nội dung lỗi thời</option>
-                      <option value="missing_info">Thiếu thông tin</option>
-                      <option value="formatting">Lỗi định dạng</option>
-                      <option value="other">Khác</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Nội dung báo cáo</label>
-                    <textarea
-                      value={reportContent}
-                      onChange={(e) => setReportContent(e.target.value)}
-                      placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
-                      rows={6}
-                      style={{ 
-                        width: '100%', 
-                        padding: '12px', 
-                        borderRadius: '8px', 
-                        border: '1px solid #ddd',
-                        fontSize: '14px',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button 
-                    onClick={() => setShowReportModal(false)} 
-                    className="btn-secondary"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    onClick={handleSubmitReport} 
-                    className="btn-primary"
-                    disabled={isSubmitting}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <Send size={18} />
-                    {isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Comment Modal */}
-          {showCommentModal && (
-            <div className="modal-overlay" onClick={() => setShowCommentModal(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                <div className="modal-header">
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <MessageCircle size={24} color="#3b82f6" />
-                    Thêm nhận xét
-                  </h2>
-                  <button onClick={() => setShowCommentModal(false)} className="btn-close">
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Nội dung nhận xét</label>
-                    <textarea
-                      value={commentContent}
-                      onChange={(e) => setCommentContent(e.target.value)}
-                      placeholder="Chia sẻ ý kiến, góp ý của bạn về giáo trình này..."
-                      rows={6}
-                      style={{ 
-                        width: '100%', 
-                        padding: '12px', 
-                        borderRadius: '8px', 
-                        border: '1px solid #ddd',
-                        fontSize: '14px',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button 
-                    onClick={() => setShowCommentModal(false)} 
-                    className="btn-secondary"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    onClick={handleSubmitComment} 
-                    className="btn-primary"
-                    disabled={isSubmitting}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <Send size={18} />
-                    {isSubmitting ? 'Đang gửi...' : 'Gửi nhận xét'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f5f5f5' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+          <p style={{ color: '#666' }}>Đang tải thông tin giáo trình...</p>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (!syllabus) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f5f5f5' }}>
+        <div style={{ textAlign: 'center' }}>
+          <AlertTriangle size={48} color="#f44336" style={{ marginBottom: '16px' }} />
+          <p style={{ color: '#666' }}>Không tìm thấy giáo trình</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      {/* Navbar */}
+      <nav style={{ background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', padding: '16px 40px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <button 
+              onClick={() => navigate('/dashboard')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2196f3', fontWeight: 600 }}
+            >
+              <Home size={20} />
+            </button>
+            <h2 style={{ margin: 0, color: '#333' }}>Giáo trình chi tiết</h2>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
+              >
+                <Bell size={20} color="#333" />
+                {notificationCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: '#f44336',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    {notificationCount}
+                  </span>
+                )}
+              </button>
+              {isNotificationOpen && <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={20} color="#333" />
+              <span style={{ color: '#333' }}>{user?.name}</span>
+            </div>
+            <button 
+              onClick={logout}
+              style={{
+                padding: '8px 16px',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 40px' }}>
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'white',
+            border: '1px solid #ddd',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            marginBottom: '24px',
+            color: '#2196f3',
+            fontWeight: 500,
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f5f5f5';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white';
+          }}
+        >
+          <ArrowLeft size={18} />
+          Quay lại
+        </button>
+
+        {/* Header */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{ background: '#2196f315', color: '#2196f3', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 600 }}>
+              {syllabus.courseCode}
+            </span>
+          </div>
+          <h1 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '32px', fontWeight: 700 }}>
+            {syllabus.courseName}
+          </h1>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px' }}>
+            <div>
+              <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Giảng viên</p>
+              <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.lecturerName}</p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Tín chỉ</p>
+              <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.credits}</p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Năm học</p>
+              <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.academicYear || 'N/A'}</p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Bộ môn</p>
+              <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.deptName || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Summary */}
+        {syllabus.aiSummary && (
+          <div style={{
+            background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)',
+            color: 'white',
+            padding: '24px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+              <Zap size={20} style={{ marginTop: '2px', flexShrink: 0 }} />
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700 }}>Tóm tắt AI</h3>
+                <p style={{ margin: 0, lineHeight: 1.6, opacity: 0.95 }}>{syllabus.aiSummary}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Session Plans */}
+        {syllabus.sessionPlans && syllabus.sessionPlans.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} color="#2196f3" />
+              Kế hoạch Giảng dạy ({syllabus.sessionPlans.length} buổi học)
+            </h3>
+            <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tuần</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Chủ đề</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Phương pháp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {syllabus.sessionPlans.map((session, idx) => (
+                    <tr key={session.sessionId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
+                      <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
+                      <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Assessments */}
+        {syllabus.assessments && syllabus.assessments.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle size={20} color="#4caf50" />
+              Đánh giá & Kiểm tra ({syllabus.assessments.length} hình thức)
+            </h3>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {syllabus.assessments.map((assessment) => (
+                <div key={assessment.assessmentId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>{assessment.name}</h4>
+                    <span style={{ background: '#4caf5015', color: '#4caf50', padding: '4px 12px', borderRadius: '12px', fontWeight: 600, fontSize: '14px' }}>
+                      {assessment.weightPercent}%
+                    </span>
+                  </div>
+                  <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '13px' }}>{assessment.criteria}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Materials */}
+        {syllabus.materials && syllabus.materials.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} color="#ff9800" />
+              Tài liệu Tham khảo ({syllabus.materials.length} tài liệu)
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
+              {syllabus.materials.map((material) => (
+                <div key={material.materialId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
+                    <FileText size={18} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px' }}>{material.title}</h4>
+                      <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
+                      <span style={{ background: '#ff980015', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                        {material.materialType}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CLOs */}
+        {syllabus.clos && syllabus.clos.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Kết quả học tập (CLOs)</h3>
+            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {syllabus.clos.map((clo, idx) => (
+                  <li key={idx} style={{ color: '#333', marginBottom: '8px', lineHeight: 1.5 }}>
+                    {clo}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            style={{
+              flex: 1,
+              padding: '14px',
+              background: '#4caf50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '15px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#45a049';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#4caf50';
+            }}
+          >
+            <Send size={18} />
+            Gửi cho HoD duyệt
+          </button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              flex: 1,
+              padding: '14px',
+              background: '#f5f5f5',
+              color: '#333',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '15px',
+              fontWeight: 600,
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#eee';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+
+      {/* Submit Modal */}
+      {showSubmitModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowSubmitModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '32px',
+              maxWidth: '600px',
+              width: '90%',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CheckCircle size={24} color="#4caf50" />
+              Gửi giáo trình cho HoD duyệt
+            </h2>
+            <p style={{ color: '#666', margin: '0 0 20px 0' }}>
+              Bạn có chắc chắn muốn gửi giáo trình này cho Trưởng bộ môn duyệt không? Sau khi gửi, giáo trình sẽ không thể chỉnh sửa cho đến khi HoD phê duyệt hoặc yêu cầu chỉnh sửa.
+            </p>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: 600 }}>
+                Ghi chú (tùy chọn)
+              </label>
+              <textarea
+                value={submitNote}
+                onChange={(e) => setSubmitNote(e.target.value)}
+                placeholder="Nhập bất kỳ ghi chú hoặc lưu ý nào cho HoD..."
+                rows={6}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#f5f5f5',
+                  color: '#333',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#eee';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitForReview}
+                disabled={isSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: isSubmitting ? '#ccc' : '#4caf50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSubmitting) e.currentTarget.style.background = '#45a049';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSubmitting) e.currentTarget.style.background = '#4caf50';
+                }}
+              >
+                <Send size={18} />
+                {isSubmitting ? 'Đang gửi...' : 'Xác nhận gửi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default CourseDetailPage;
+export default SubjectDetailPage;

@@ -217,8 +217,8 @@ const LecturerDashboard: React.FC = () => {
     return statusMap[status] || 'Đang soạn';
   };
 
-  const handleViewDetails = (id: string) => {
-    navigate(`/subject/${id}`);
+  const handleViewDetails = (syllabusId: number) => {
+    navigate(`/subject/${syllabusId}`);
   };
 
   const handleToggleFollow = async (id: string) => {
@@ -554,7 +554,7 @@ const LecturerDashboard: React.FC = () => {
                           <td>{syllabus.version}</td>
                           <td>{syllabus.lastUpdated}</td>
                           <td>
-                            <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
+                            <button className="icon-btn" onClick={() => handleViewDetails(syllabus.syllabusId)}>
                               <Eye size={18} />
                             </button>
                           </td>
@@ -633,7 +633,7 @@ const LecturerDashboard: React.FC = () => {
                           <div className="action-buttons">
                             <button 
                               className="icon-btn" 
-                              onClick={() => handleViewDetails(syllabus.id)} 
+                              onClick={() => handleViewDetails(syllabus.syllabusId)} 
                               title="Xem chi tiết"
                             >
                               <Eye size={18} />
@@ -848,7 +848,7 @@ const LecturerDashboard: React.FC = () => {
                           </button>
                         </td>
                         <td>
-                          <button className="icon-btn" onClick={() => handleViewDetails(syllabus.id)}>
+                          <button className="icon-btn" onClick={() => handleViewDetails(syllabus.syllabusId)}>
                             <Eye size={18} />
                           </button>
                         </td>

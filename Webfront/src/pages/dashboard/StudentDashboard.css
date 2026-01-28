@@ -775,6 +775,27 @@
 }
 
 /* ===== NEW: Detail Modal Sections ===== */
+.ai-summary-box {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.08) 0%, rgba(156, 39, 176, 0.04) 100%);
+  border-left: 4px solid #9c27b0;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.ai-summary-box h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #9c27b0;
+}
+
+.ai-summary-box p {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
+}
+
 .info-section {
   background: #f8f9fa;
   padding: 20px;

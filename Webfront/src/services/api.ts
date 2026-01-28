@@ -557,6 +557,15 @@ export const principalRejectSyllabus = async (syllabusId: number, comment: strin
   return response.data;
 };
 
+// Lecturer API - Submit for review
+export const submitForReview = async (syllabusId: number, comment: string = '') => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/submit-for-review`, {
+    syllabusId,
+    comment
+  });
+  return response.data;
+};
+
 // Academic Affairs specific API calls
 export const aaApproveSyllabus = async (syllabusId: number, comment: string = '') => {
   const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {

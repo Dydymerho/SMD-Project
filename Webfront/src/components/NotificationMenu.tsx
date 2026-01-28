@@ -21,7 +21,7 @@ interface NotificationMenuProps {
 const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  const [activeTab, setActiveTab] = useState<'unread' | 'all'>('unread');
 
   useEffect(() => {
     if (isOpen) {
