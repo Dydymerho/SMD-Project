@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, Eye, MessageSquare, 
-  Home, Users, Search, Bell, User, Loader, AlertCircle 
+  Home, Users, Search, Bell, User, Loader, AlertCircle, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSyllabusesForHoD, approveSyllabus, rejectSyllabus } from '../../services/workflowService';
+import { getPendingSyllabusesForHoD, approveSyllabus, rejectSyllabus, getSyllabusDetailForReview } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -48,14 +48,20 @@ const HoDSyllabusReviewPage: React.FC = () => {
     try {
       const result = await getPendingSyllabusesForHoD();
       const data = Array.isArray(result.data) ? result.data : [];
+      
+      console.log('All syllabuses from API:', data); // Debug log
+      
+      // Map all syllabuses regardless of status for now
       setSyllabuses(data.map((item: any) => {
-        const normalizedStatus = (item.currentStatus || '').toLowerCase();
+        const normalizedStatus = (item.currentStatus || item.status || '').toLowerCase();
+        console.log(`Syllabus ${item.id || item.syllabusId}: currentStatus="${item.currentStatus}", status="${item.status}", normalized="${normalizedStatus}"`); // Debug
+        
         const uiStatus: 'pending' | 'approved' | 'rejected' =
           normalizedStatus.includes('pending') ? 'pending'
           : normalizedStatus.includes('approve') ? 'approved'
           : normalizedStatus.includes('reject') ? 'rejected'
           : 'pending';
-
+        
         return {
           id: (item.syllabusId || item.id || '').toString(),
           syllabusId: item.syllabusId || item.id,
@@ -81,35 +87,38 @@ const HoDSyllabusReviewPage: React.FC = () => {
   };
 
   const handleApprove = async (id: string) => {
+    const approvalNote = prompt('Nhập ghi chú phê duyệt (tùy chọn):');
+    if (approvalNote === null) return; // User cancelled
+    
     try {
       const syllabusId = parseInt(id);
-      await approveSyllabus(syllabusId, 'Phê duyệt từ cấp trưởng bộ môn');
+      await approveSyllabus(syllabusId, approvalNote || 'Phê duyệt từ cấp trưởng bộ môn');
       // Update local state
       setSyllabuses(prev =>
         prev.map(s => s.id === id ? { ...s, status: 'approved' } : s)
       );
       alert('Đã phê duyệt giáo trình thành công!');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error approving syllabus:', err);
-      alert('Lỗi khi phê duyệt giáo trình');
+      const errorMsg = err.response?.data?.message || err.message || 'Lỗi khi phê duyệt giáo trình';
+      alert(`❌ ${errorMsg}`);
     }
   };
 
   const handleReject = async (id: string) => {
     const reason = prompt('Vui lòng nhập lý do từ chối:');
     if (!reason) return;
-    
     try {
       const syllabusId = parseInt(id);
       await rejectSyllabus(syllabusId, reason);
-      // Update local state
       setSyllabuses(prev =>
         prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
       );
-      alert('Đã từ chối giáo trình');
-    } catch (err) {
+      alert('Đã từ chối giáo trình!');
+    } catch (err: any) {
       console.error('Error rejecting syllabus:', err);
-      alert('Lỗi khi từ chối giáo trình');
+      const errorMsg = err.response?.data?.message || err.message || 'Lỗi khi từ chối giáo trình';
+      alert(`❌ ${errorMsg}`);
     }
   };
 
@@ -124,6 +133,12 @@ const HoDSyllabusReviewPage: React.FC = () => {
       );
     }
     return true;
+  });
+
+  // Filter for PENDING_REVIEW status (what HOD can actually approve/reject)
+  const pendingReviewSyllabuses = syllabuses.filter((s: any) => {
+    const status = (s.currentStatus || '').toUpperCase();
+    return status === 'PENDING_REVIEW';
   });
 
   return (
@@ -320,7 +335,9 @@ const HoDSyllabusReviewPage: React.FC = () => {
                 <tr key={syllabus.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
                   <td style={{ padding: '16px', color: '#007bff', fontWeight: 600 }}>{syllabus.courseCode}</td>
                   <td style={{ padding: '16px', color: '#333' }}>{syllabus.courseName}</td>
-                  <td style={{ padding: '16px', color: '#666' }}>{syllabus.lecturer}</td>
+                  <td style={{ padding: '16px', color: '#666' }}>
+                    {typeof syllabus.lecturer === 'string' ? syllabus.lecturer : (syllabus.lecturerName || 'Chưa rõ')}
+                  </td>
                   <td style={{ padding: '16px', color: '#666' }}>{syllabus.submissionDate}</td>
                   <td style={{ padding: '16px', textAlign: 'center', color: '#666' }}>v{syllabus.version}</td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -333,86 +350,40 @@ const HoDSyllabusReviewPage: React.FC = () => {
                     )}
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
-                    {syllabus.status === 'pending' && (
-                      <span style={{ color: '#ff9800', fontWeight: 500 }}>Chờ xử lý</span>
-                    )}
-                    {syllabus.status === 'approved' && (
-                      <span style={{ color: '#4caf50', fontWeight: 500 }}>✓ Đã duyệt</span>
-                    )}
-                    {syllabus.status === 'rejected' && (
-                      <span style={{ color: '#f44336', fontWeight: 500 }}>✗ Từ chối</span>
-                    )}
+                    {(() => {
+                      const status = (syllabus.currentStatus || '').toUpperCase();
+                      const statusConfig: { [key: string]: { color: string; label: string } } = {
+                        'DRAFT': { color: '#999', label: 'Nháp' },
+                        'PENDING_REVIEW': { color: '#ff9800', label: 'Chờ HOD' },
+                        'PENDING_APPROVAL': { color: '#2196f3', label: 'Chờ AA' },
+                        'PUBLISHED': { color: '#4caf50', label: 'Công bố' },
+                        'ARCHIVED': { color: '#9e9e9e', label: 'Lưu trữ' },
+                        'REJECTED': { color: '#f44336', label: 'Từ chối' }
+                      };
+                      const config = statusConfig[status] || { color: '#999', label: status };
+                      return <span style={{ color: config.color, fontWeight: 500, fontSize: '12px' }}>{config.label}</span>;
+                    })()}
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
-                    {syllabus.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => navigate(`/hod/syllabus-review/${syllabus.id}`)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#2196f3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Eye size={14} />
-                          Xem
-                        </button>
-                        <button
-                          onClick={() => handleApprove(syllabus.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#4caf50',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          <CheckCircle size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                          Phê duyệt
-                        </button>
-                        <button
-                          onClick={() => handleReject(syllabus.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          <XCircle size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                          Từ chối
-                        </button>
-                      </div>
-                    )}
-                    {syllabus.status !== 'pending' && (
-                      <button
-                        onClick={() => navigate(`/hod/syllabus-review/${syllabus.id}`)}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#666',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        <Eye size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                        Chi tiết
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/hod/syllabus-review/${syllabus.id}`)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#2196f3',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Eye size={14} />
+                      Xem
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -420,7 +391,7 @@ const HoDSyllabusReviewPage: React.FC = () => {
           </table>
         </div>
 
-        {filteredSyllabuses.length === 0 && (
+        {filteredSyllabuses.length === 0 && pendingReviewSyllabuses.length === 0 && (
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
@@ -429,12 +400,47 @@ const HoDSyllabusReviewPage: React.FC = () => {
             borderRadius: '12px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}>
-            <h3>Không có giáo trình nào trong danh sách</h3>
-            <p>Tất cả giáo trình đã được xử lý hoặc không có nội dung để hiển thị</p>
+            <AlertCircle size={48} style={{ color: '#ffb74d', marginBottom: '16px' }} />
+            <h3>Không có giáo trình nào để phê duyệt</h3>
+            <p>Tất cả giáo trình hiện có đều ở trạng thái DRAFT hoặc đã được xử lý.</p>
+            <p style={{ fontSize: '12px', marginTop: '16px', color: '#aaa' }}>
+              💡 Giáo trình chỉ có thể được phê duyệt khi lecturer submit từ trạng thái DRAFT → PENDING_REVIEW
+            </p>
+          </div>
+        )}
+        
+        {filteredSyllabuses.length === 0 && pendingReviewSyllabuses.length > 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#999',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3>Không tìm thấy kết quả phù hợp</h3>
+            <p>Vui lòng điều chỉnh bộ lọc hoặc tìm kiếm</p>
+          </div>
+        )}
+
+        {filteredSyllabuses.length === 0 && filter === 'all' && syllabuses.length > 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 20px',
+            background: '#f5f5f5',
+            borderRadius: '12px',
+            marginTop: '16px'
+          }}>
+            <p style={{ color: '#666', marginBottom: '16px' }}>
+              ℹ️ <strong>Ghi chú:</strong> Hiện tại hệ thống đang hiển thị tất cả giáo trình ({syllabuses.length} items) từ endpoint `/syllabuses` để hỗ trợ testing.<br/>
+              Để hoạt động bình thường, chỉ những giáo trình ở status PENDING_REVIEW (đã được lecturer submit) mới được HOD phê duyệt.
+            </p>
           </div>
         )}
         </>
         )}
+
+
         </div>
       </main>
     </div>

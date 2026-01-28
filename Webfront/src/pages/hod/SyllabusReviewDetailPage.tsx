@@ -6,7 +6,7 @@ import {
   Edit, MessageSquare, TrendingUp, Zap, Loader, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getSyllabusDetailForReview, approveSyllabus, rejectSyllabus } from '../../services/workflowService';
+import { getSyllabusDetailForReview, approveSyllabus, rejectSyllabus, getPendingSyllabusesForHoD } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -24,6 +24,8 @@ interface SyllabusDetail {
   submissionDate: string;
   academicYear: string;
   description: string;
+  currentStatus?: string;
+  rejectionReason?: string;
   clos: string[];
   modules: Array<{
     moduleNo: number;
@@ -72,7 +74,24 @@ const SyllabusReviewDetailPage: React.FC = () => {
       setError(null);
       if (!id) throw new Error('Không có ID giáo trình');
       const syllabusId = parseInt(id);
+      
+      // Get full detail
       const data = await getSyllabusDetailForReview(syllabusId);
+      console.log('Syllabus loaded:', data);
+      
+      // Get status from the list
+      try {
+        const listResult = await getPendingSyllabusesForHoD();
+        const syllabusFromList = listResult.data.find((s: any) => (s.id || s.syllabusId) == syllabusId);
+        if (syllabusFromList) {
+          console.log('Syllabus from list:', syllabusFromList);
+          console.log('currentStatus from list:', syllabusFromList.currentStatus);
+          data.currentStatus = syllabusFromList.currentStatus || syllabusFromList.status;
+        }
+      } catch (e) {
+        console.error('Error getting status from list:', e);
+      }
+      
       setSyllabus(data);
     } catch (err) {
       console.error('Error loading syllabus:', err);
@@ -95,9 +114,14 @@ const SyllabusReviewDetailPage: React.FC = () => {
       await approveSyllabus(syllabusId, approvalNote);
       alert('✅ Đã phê duyệt giáo trình thành công!\nGiáo trình sẽ được chuyển đến phòng Đào tạo.');
       navigate('/hod/syllabus-review');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi phê duyệt');
+      // Check if error is due to status
+      if (error.response?.data?.message?.includes('PENDING_REVIEW')) {
+        alert(`❌ Giáo trình không ở trạng thái "Chờ xử lý"\n\n${error.response.data.message}`);
+      } else {
+        alert('❌ Có lỗi xảy ra khi phê duyệt');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -116,12 +140,58 @@ const SyllabusReviewDetailPage: React.FC = () => {
       await rejectSyllabus(syllabusId, rejectionReason);
       alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về cho giảng viên với lý do từ chối.');
       navigate('/hod/syllabus-review');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rejecting syllabus:', error);
-      alert('❌ Có lỗi xảy ra khi từ chối');
+      // Check if error is due to status
+      if (error.response?.data?.message?.includes('PENDING_REVIEW')) {
+        alert(`❌ Giáo trình không ở trạng thái "Chờ xử lý"\n\n${error.response.data.message}`);
+      } else {
+        alert('❌ Có lỗi xảy ra khi từ chối');
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Status config helper (without icons, for data)
+  const getStatusConfig = (status: string | undefined): { bg: string; color: string; text: string; iconName: string } => {
+    const configs: Record<string, { bg: string; color: string; text: string; iconName: string }> = {
+      DRAFT: { bg: '#f5f5f5', color: '#666', text: 'Nháp', iconName: 'file' },
+      PENDING_REVIEW: { bg: '#fff3cd', color: '#856404', text: 'Chờ phê duyệt', iconName: 'clock' },
+      PENDING_APPROVAL: { bg: '#d1ecf1', color: '#0c5460', text: 'Chờ xác nhận', iconName: 'alert' },
+      PUBLISHED: { bg: '#d4edda', color: '#155724', text: 'Công bố', iconName: 'check' },
+      ARCHIVED: { bg: '#e2e3e5', color: '#383d41', text: 'Lưu trữ', iconName: 'file' },
+      REJECTED: { bg: '#f8d7da', color: '#721c24', text: 'Bị từ chối', iconName: 'x' }
+    };
+    return configs[status || 'DRAFT'] || configs.DRAFT;
+  };
+
+  // Render icon by name
+  const renderStatusIcon = (iconName: string) => {
+    const iconStyle = { display: 'inline', marginRight: '4px', verticalAlign: 'middle' };
+    switch(iconName) {
+      case 'clock':
+        return <Clock size={16} style={iconStyle} />;
+      case 'alert':
+        return <AlertCircle size={16} style={iconStyle} />;
+      case 'check':
+        return <CheckCircle size={16} style={iconStyle} />;
+      case 'x':
+        return <XCircle size={16} style={iconStyle} />;
+      case 'file':
+      default:
+        return <FileText size={16} style={iconStyle} />;
+    }
+  };
+
+  // Status config for display
+  const statusConfig: Record<string, { bg: string; color: string; text: string; icon: React.ReactNode }> = {
+    DRAFT: { bg: '#f5f5f5', color: '#666', text: 'Nháp', icon: <FileText size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
+    PENDING_REVIEW: { bg: '#fff3cd', color: '#856404', text: 'Chờ phê duyệt', icon: <Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
+    PENDING_APPROVAL: { bg: '#d1ecf1', color: '#0c5460', text: 'Chờ xác nhận', icon: <AlertCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
+    PUBLISHED: { bg: '#d4edda', color: '#155724', text: 'Công bố', icon: <CheckCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
+    ARCHIVED: { bg: '#e2e3e5', color: '#383d41', text: 'Lưu trữ', icon: <FileText size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
+    REJECTED: { bg: '#f8d7da', color: '#721c24', text: 'Bị từ chối', icon: <XCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> }
   };
 
   if (loading) {
@@ -160,6 +230,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  console.log('syllabus.currentStatus:', syllabus.currentStatus);
+  console.log('Status check - isPending:', (syllabus.currentStatus || '').trim().toUpperCase() === 'PENDING_REVIEW');
 
   return (
     <div className="dashboard-page">
@@ -285,17 +358,22 @@ const SyllabusReviewDetailPage: React.FC = () => {
                   Phiên bản {syllabus.version} | Năm học {syllabus.academicYear} | {syllabus.credits} tín chỉ
                 </p>
               </div>
-              <div style={{
-                background: '#fff3cd',
-                color: '#856404',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontWeight: 500,
-                fontSize: '14px'
-              }}>
-                <Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                Chờ phê duyệt
-              </div>
+              {(() => {
+                const config = getStatusConfig(syllabus.currentStatus);
+                return (
+                  <div style={{
+                    background: config.bg,
+                    color: config.color,
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontWeight: 500,
+                    fontSize: '14px'
+                  }}>
+                    {renderStatusIcon(config.iconName)}
+                    {config.text}
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{
@@ -321,6 +399,36 @@ const SyllabusReviewDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Rejection Reason Section */}
+          {syllabus.currentStatus === 'REJECTED' && syllabus.rejectionReason && (
+            <div style={{
+              background: '#f8d7da',
+              border: '2px solid #f5c6cb',
+              padding: '24px',
+              borderRadius: '12px',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#721c24', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <XCircle size={20} color="#721c24" />
+                Lý do từ chối giáo trình
+              </h3>
+              <div style={{
+                background: 'white',
+                padding: '16px',
+                borderRadius: '8px',
+                color: '#333',
+                lineHeight: '1.6',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {syllabus.rejectionReason}
+              </div>
+              <p style={{ margin: '16px 0 0 0', color: '#721c24', fontSize: '14px' }}>
+                💡 Vui lòng xem lý do từ chối trên và chỉnh sửa giáo trình của bạn trước khi nộp lại.
+              </p>
+            </div>
+          )}
 
           {/* AI Change Detection */}
           {syllabus.changes && syllabus.changes.length > 0 && (
@@ -399,7 +507,9 @@ const SyllabusReviewDetailPage: React.FC = () => {
             marginBottom: '24px'
           }}>
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Mô tả môn học</h3>
-            <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>{syllabus.description}</p>
+            <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>
+              {typeof syllabus.description === 'string' ? syllabus.description : (typeof syllabus.description === 'object' && syllabus.description ? JSON.stringify(syllabus.description) : 'Chưa có mô tả')}
+            </p>
           </div>
 
           {/* CLOs */}
@@ -489,25 +599,29 @@ const SyllabusReviewDetailPage: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            justifyContent: 'flex-end',
-            padding: '24px',
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-          }}>
-            <button
-              onClick={() => setShowRejectModal(true)}
-              style={{
-                padding: '12px 24px',
-                background: 'white',
-                color: '#f44336',
-                border: '2px solid #f44336',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
+          {(() => {
+            const status = (syllabus.currentStatus || '').trim().toUpperCase();
+            return status === 'PENDING_REVIEW';
+          })() && (
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              justifyContent: 'flex-end',
+              padding: '24px',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            }}>
+              <button
+                onClick={() => setShowRejectModal(true)}
+                style={{
+                  padding: '12px 24px',
+                  background: 'white',
+                  color: '#f44336',
+                  border: '2px solid #f44336',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
                 fontSize: '14px',
                 display: 'flex',
                 alignItems: 'center',
@@ -539,7 +653,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
               Phê duyệt
             </button>
           </div>
-        </div>
+          )}
 
         {/* Approve Modal */}
         {showApproveModal && (
@@ -744,6 +858,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );
