@@ -44,14 +44,18 @@ export interface WorkflowRequest {
 // HoD Dashboard Stats API
 export const getHoDDashboardStats = async (departmentId?: number) => {
   try {
-    const response = await axiosClient.get('/workflow/hod/stats', {
-      params: departmentId ? { departmentId } : {}
-    });
+    // Use existing /syllabuses/by-status endpoints
+    const [pendingReview, pendingApproval, approved] = await Promise.all([
+      axiosClient.get('/syllabuses/by-status/PENDING_REVIEW'),
+      axiosClient.get('/syllabuses/by-status/PENDING_APPROVAL'),
+      axiosClient.get('/syllabuses/by-status/APPROVED')
+    ]);
+    
     return {
-      pendingApprovals: response.data?.pendingApprovals || 0,
-      collaborativeReviewActive: response.data?.collaborativeReviewActive || 0,
-      totalSyllabusInDept: response.data?.totalSyllabusInDept || 0,
-      recentNotifications: response.data?.recentNotifications || 0
+      pendingApprovals: pendingReview.data?.length || 0,
+      collaborativeReviewActive: 0, // Not available from backend yet
+      totalSyllabusInDept: (pendingReview.data?.length || 0) + (pendingApproval.data?.length || 0) + (approved.data?.length || 0),
+      recentNotifications: 0 // Not available from backend yet
     };
   } catch (error) {
     console.error('Error fetching HoD dashboard stats:', error);
@@ -104,6 +108,15 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
     // use detail endpoint to retrieve full syllabus structure (CLOs, modules, assessments, etc.)
     const response = await axiosClient.get(`/syllabuses/${syllabusId}/detail`);
     const data = response.data || {};
+    
+    console.log('API response data:', data);
+    console.log('All keys in API response:', Object.keys(data));
+    console.log('data.currentStatus:', data.currentStatus);
+    console.log('data.status:', data.status);
+    console.log('data.state:', data.state);
+    console.log('data.workflowStatus:', data.workflowStatus);
+    console.log('data.syllabusStatus:', data.syllabusStatus);
+    console.log('data.reviewStatus:', data.reviewStatus);
 
     const course = data.course || {};
 
@@ -158,6 +171,8 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
       submissionDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
       academicYear: data.academicYear || 'Chưa xác định',
       description: data.description || data.content || data.summary || 'Chưa có mô tả',
+      currentStatus: data.currentStatus || data.status || 'DRAFT',
+      rejectionReason: data.rejectionReason || data.rejectionNote || undefined,
       clos,
       modules: modules.map((m: any, idx: number) => ({
         moduleNo: m.moduleNo || m.module || m.week || m.order || idx + 1,
@@ -200,10 +215,9 @@ export const searchSyllabuses = async (keyword: string) => {
 // Workflow & Approval APIs
 export const getPendingSyllabusesForHoD = async (departmentId?: number) => {
   try {
-    const url = departmentId 
-      ? `/workflow/pending?level=LEVEL_1&departmentId=${departmentId}`
-      : `/workflow/pending?level=LEVEL_1`;
-    const response = await axiosClient.get(url);
+    // Use existing endpoint - backend auto-filters by user's department
+    // Try /syllabuses endpoint first to get all syllabuses, then filter in frontend
+    const response = await axiosClient.get('/syllabuses');
     return { 
       data: Array.isArray(response.data) ? response.data : response.data?.data || [] 
     };
@@ -215,7 +229,7 @@ export const getPendingSyllabusesForHoD = async (departmentId?: number) => {
 
 export const getPendingSyllabusesForAA = async () => {
   try {
-    const response = await axiosClient.get('/workflow/pending?level=LEVEL_2');
+    const response = await axiosClient.get('/syllabuses/by-status/PENDING_APPROVAL');
     return { 
       data: Array.isArray(response.data) ? response.data : response.data?.data || [] 
     };
@@ -227,7 +241,8 @@ export const getPendingSyllabusesForAA = async () => {
 
 export const getPendingProposalsForPrincipal = async () => {
   try {
-    const response = await axiosClient.get('/workflow/pending?level=FINAL');
+    // Principal reviews APPROVED syllabuses for final signature
+    const response = await axiosClient.get('/syllabuses/by-status/APPROVED');
     return { 
       data: Array.isArray(response.data) ? response.data : response.data?.data || [] 
     };
@@ -239,7 +254,7 @@ export const getPendingProposalsForPrincipal = async () => {
 
 export const getSyllabusWorkflowHistory = async (syllabusId: number) => {
   try {
-    const response = await axiosClient.get(`/workflow/history/${syllabusId}`);
+    const response = await axiosClient.get(`/syllabuses/${syllabusId}/workflow-history`);
     return response.data;
   } catch (error) {
     console.error('Error fetching workflow history:', error);
@@ -249,9 +264,9 @@ export const getSyllabusWorkflowHistory = async (syllabusId: number) => {
 
 export const approveSyllabus = async (syllabusId: number, notes?: string) => {
   try {
-    const response = await axiosClient.post(`/workflow/approve/${syllabusId}`, {
-      actionType: 'APPROVE',
-      notes: notes || ''
+    const response = await axiosClient.post(`/syllabuses/${syllabusId}/hod-approve`, {
+      comment: notes || '',
+      syllabusId: syllabusId
     });
     return response.data;
   } catch (error) {
@@ -262,9 +277,9 @@ export const approveSyllabus = async (syllabusId: number, notes?: string) => {
 
 export const rejectSyllabus = async (syllabusId: number, rejectionReason: string) => {
   try {
-    const response = await axiosClient.post(`/workflow/reject/${syllabusId}`, {
-      actionType: 'REJECT',
-      rejectionReason: rejectionReason
+    const response = await axiosClient.post(`/syllabuses/${syllabusId}/hod-reject`, {
+      comment: rejectionReason,
+      syllabusId: syllabusId
     });
     return response.data;
   } catch (error) {
@@ -349,14 +364,13 @@ export const getReviewCommentCount = async (syllabusId: number) => {
   }
 };
 
-// Create Collaborative Review
-export const createCollaborativeReview = async (syllabusId: number, description: string, deadline: string, participants?: string[]) => {
+// Create Collaborative Review (tạo comment để collaborative review)
+export const createCollaborativeReview = async (syllabusId: number, description: string, deadline?: string, participants?: string[]) => {
   try {
-    const response = await axiosClient.post('/workflow/collaborative-review', {
-      syllabusId,
-      description,
-      deadline,
-      participants: participants || []
+    // Collaborative review được implement bằng cách tạo comments
+    const response = await axiosClient.post(`/syllabuses/${syllabusId}/comments`, {
+      content: description,
+      type: 'COLLABORATIVE_REVIEW'
     });
     return response.data;
   } catch (error) {

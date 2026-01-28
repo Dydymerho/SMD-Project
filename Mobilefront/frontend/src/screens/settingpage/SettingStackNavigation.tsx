@@ -19,12 +19,6 @@ export default function SettingStackNavigator() {
     return (
         <Stack.Navigator
             initialRouteName="SettingMain"
-            screenOptions={{
-                headerShown: true,
-                headerStyle: { backgroundColor: '#ffffff' },
-                headerTintColor: '#1e293b',
-                headerTitleStyle: { fontWeight: '600' },
-            }}
         >
             <Stack.Screen
                 name="SettingMain"

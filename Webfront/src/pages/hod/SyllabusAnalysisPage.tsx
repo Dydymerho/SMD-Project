@@ -78,7 +78,6 @@ const SyllabusAnalysisPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDept, setFilterDept] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   const [minCredits, setMinCredits] = useState('');
   const [maxCredits, setMaxCredits] = useState('');
@@ -141,7 +140,6 @@ const SyllabusAnalysisPage: React.FC = () => {
     loadSyllabuses();
   }, []);
 
-  const departments = ['all', ...Array.from(new Set(syllabuses.map(s => s.department)))];
   const academicYears = ['all', ...Array.from(new Set(syllabuses.flatMap(s => s.versions.map(v => v.academicYear))))];
 
   const filteredSyllabuses = syllabuses.filter((s) => {
@@ -150,12 +148,11 @@ const SyllabusAnalysisPage: React.FC = () => {
       s.courseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.lecturer.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilter = filterDept === 'all' || s.department === filterDept;
     const matchesYear = filterYear === 'all' || s.versions.some((v) => v.academicYear === filterYear);
     const minOk = minCredits ? s.credits >= Number(minCredits) : true;
     const maxOk = maxCredits ? s.credits <= Number(maxCredits) : true;
 
-    return matchesSearch && matchesFilter && matchesYear && minOk && maxOk;
+    return matchesSearch && matchesYear && minOk && maxOk;
   }).sort((a, b) => {
     if (sortBy === 'updated') {
       return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
@@ -402,31 +399,6 @@ const SyllabusAnalysisPage: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
-              Bộ môn
-            </label>
-            <select
-              value={filterDept}
-              onChange={(e) => setFilterDept(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                background: 'white',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              {departments.map(dept => (
-                <option key={dept} value={dept}>
-                  {dept === 'all' ? 'Tất cả bộ môn' : dept}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
               Năm học
             </label>
             <select
@@ -535,7 +507,6 @@ const SyllabusAnalysisPage: React.FC = () => {
                 <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên môn</th>
                 <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Giảng viên</th>
                 <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Phiên bản</th>
-                <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Bộ môn</th>
                 <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Cập nhật</th>
                 <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
               </tr>
@@ -565,9 +536,6 @@ const SyllabusAnalysisPage: React.FC = () => {
                     }}>
                       v{syllabus.currentVersion}
                     </span>
-                  </td>
-                  <td style={{ padding: '16px', color: '#666', fontSize: '13px' }}>
-                    {syllabus.department}
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
                     {syllabus.lastUpdated}

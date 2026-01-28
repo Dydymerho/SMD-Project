@@ -342,6 +342,15 @@ const StudentDashboard: React.FC = () => {
                       <h3>Thông tin chung</h3>
                       {detailData && (
                         <div className="info-section">
+                          {detailData.aiSumary && (
+                            <div className="ai-summary-box">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '18px' }}>✨</span>
+                                <h4 style={{ margin: 0, color: '#9c27b0' }}>Tóm tắt AI</h4>
+                              </div>
+                              <p style={{ margin: 0, color: '#666', lineHeight: '1.6' }}>{detailData.aiSumary}</p>
+                            </div>
+                          )}
                           <div className="info-row">
                             <span className="info-label">Mã môn:</span>
                             <span className="info-value">{detailData.courseCode}</span>
@@ -370,12 +379,6 @@ const StudentDashboard: React.FC = () => {
                             <span className="info-label">Loại:</span>
                             <span className="info-value">{detailData.type}</span>
                           </div>
-                          {detailData.aiSumary && (
-                            <div className="info-row full-width">
-                              <span className="info-label">AI Tóm tắt:</span>
-                              <p className="info-value">{detailData.aiSumary}</p>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>

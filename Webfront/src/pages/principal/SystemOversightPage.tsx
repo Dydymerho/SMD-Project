@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, CheckCircle, BarChart3, Bell, User, TrendingUp, 
@@ -8,27 +8,86 @@ import { useAuth } from '../../context/AuthContext';
 import './PrincipalPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import { getPrograms, getAllSyllabuses, getUnreadNotificationsCount, Syllabus } from '../../services/api';
 
 const SystemOversightPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
-  const notificationCount = 8;
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // System KPIs
-  const kpis = {
-    totalUsers: 245,
-    activeSyllabuses: 156,
+  const [kpis, setKpis] = useState({
+    totalUsers: 0,
+    activeSyllabuses: 0,
     pendingApprovals: {
-      level1: 12,
-      level2: 8,
-      final: 5,
+      level1: 0,
+      level2: 0,
+      final: 0,
     },
-    completionRate: 94.2,
-    avgApprovalTime: 3.5,
+    completionRate: 0,
+    avgApprovalTime: 0,
     systemUptime: 99.8,
-  };
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const [programs, syllabuses, notifCount] = await Promise.all([
+          getPrograms(),
+          getAllSyllabuses(),
+          getUnreadNotificationsCount().catch(() => 0)
+        ]);
+        setNotificationCount(notifCount);
+
+        const syllabusArray = Array.isArray(syllabuses) ? syllabuses : [];
+        
+        // Count syllabuses by status
+        const activeSyllabuses = syllabusArray.filter((s: Syllabus) => 
+          s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
+        ).length;
+        
+        const pendingReview = syllabusArray.filter((s: Syllabus) => 
+          s.currentStatus === 'PENDING_REVIEW'
+        ).length;
+        
+        const pendingApproval = syllabusArray.filter((s: Syllabus) => 
+          s.currentStatus === 'PENDING_APPROVAL'
+        ).length;
+        
+        const finalApproval = syllabusArray.filter((s: Syllabus) => 
+          s.currentStatus === 'APPROVED'
+        ).length;
+
+        const totalSyllabuses = syllabusArray.length;
+        const completionRate = totalSyllabuses > 0 
+          ? ((activeSyllabuses / totalSyllabuses) * 100).toFixed(1)
+          : 0;
+
+        setKpis({
+          totalUsers: 245, // Mock data
+          activeSyllabuses,
+          pendingApprovals: {
+            level1: pendingReview,
+            level2: pendingApproval,
+            final: finalApproval,
+          },
+          completionRate: parseFloat(completionRate.toString()),
+          avgApprovalTime: 3.5, // Mock data
+          systemUptime: 99.8, // Mock data
+        });
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   // Department Performance
   const departments = [

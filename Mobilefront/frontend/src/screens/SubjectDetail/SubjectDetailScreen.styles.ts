@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
 
   /* ===== HEADER ===== */
   header: {
-    backgroundColor: "#4F1CFF", // tím đậm
+    backgroundColor: "#ffffff", // tím đậm
     marginHorizontal: -16,
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
   },
   /* ===== BULLET ===== */
   bullet: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#475569",
-    lineHeight: 22,
+    lineHeight: 10,
     marginBottom: 8,
     fontWeight: "400",
   },
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
     borderLeftColor: "#3B82F6",
   },
   week: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "700",
     color: "#3B82F6",
     marginBottom: 4,
     textTransform: "uppercase",
   },
   topic: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "600",
     color: "#0F172A",
     marginBottom: 4,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   missions: {
-    fontSize: 16,
+    fontSize: 12,
     color: "#0F172A",
   },
   /* ===== TREE & MAPPING ===== */

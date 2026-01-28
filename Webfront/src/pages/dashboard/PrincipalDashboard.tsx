@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, BarChart3, TrendingUp, Users, FileText, 
@@ -7,28 +7,77 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import './DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import { 
+  getPrincipalDashboardStats, 
+  getUnreadNotifications,
+  Syllabus 
+} from '../../services/api';
 
 const PrincipalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const notificationCount = 8;
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Stats data
-  const stats = {
-    pendingApprovals: 5,
-    totalPrograms: 24,
-    activeSyllabuses: 156,
+  const [stats, setStats] = useState({
+    pendingApprovals: 0,
+    totalPrograms: 0,
+    activeSyllabuses: 0,
     systemHealth: 98.5,
-  };
+  });
 
-  const recentActivities = [
-    { id: 1, type: 'approval', text: 'Chương trình CNTT 2024-2025 chờ phê duyệt cuối', time: '2 giờ trước', urgent: true },
-    { id: 2, type: 'system', text: 'AA đã phê duyệt 12 giáo trình mới', time: '5 giờ trước', urgent: false },
-    { id: 3, type: 'report', text: 'Báo cáo tháng 1/2026 đã sẵn sàng', time: '1 ngày trước', urgent: false },
-    { id: 4, type: 'approval', text: 'Đề xuất thay đổi PLO - Khoa Toán chờ duyệt', time: '1 ngày trước', urgent: true },
-    { id: 5, type: 'system', text: 'HoD Khoa Vật Lý đã hoàn thành review Q1', time: '2 ngày trước', urgent: false },
-  ];
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch dashboard stats
+        const dashboardStats = await getPrincipalDashboardStats();
+        setStats(dashboardStats);
+
+        // Fetch recent notifications as activities
+        const notifications = await getUnreadNotifications();
+        const notificationCount = Array.isArray(notifications) ? notifications.length : 0;
+        setNotificationCount(notificationCount);
+
+        // Map notifications to activities format
+        const activities = Array.isArray(notifications) 
+          ? notifications.slice(0, 5).map((notif: any) => ({
+              id: notif.notificationId,
+              type: notif.type === 'APPROVAL_REQUIRED' ? 'approval' : 'system',
+              text: notif.message,
+              time: formatTime(notif.createdAt),
+              urgent: notif.type === 'APPROVAL_REQUIRED',
+            }))
+          : [];
+        
+        setRecentActivities(activities);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) return 'Vừa xong';
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    if (diffDays === 1) return '1 ngày trước';
+    return `${diffDays} ngày trước`;
+  };
 
   const quickActions = [
     {
@@ -103,6 +152,21 @@ const PrincipalDashboard: React.FC = () => {
         </header>
 
         <div className="content-section">
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              <div className="spinner" style={{ 
+                width: '40px', 
+                height: '40px', 
+                border: '4px solid #f0f0f0',
+                borderTop: '4px solid #667eea',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 20px'
+              }}></div>
+              <p>Đang tải dữ liệu...</p>
+            </div>
+          ) : (
+            <>
           {/* Stats Cards */}
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}>
             <div className="stat-card" style={{
@@ -239,6 +303,7 @@ const PrincipalDashboard: React.FC = () => {
           {/* Recent Activities */}
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '20px', color: '#333' }}>Hoạt động Gần đây</h3>
+            {recentActivities.length > 0 ? (
             <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
               {recentActivities.map((activity) => (
                 <div
@@ -291,7 +356,22 @@ const PrincipalDashboard: React.FC = () => {
                 </div>
               ))}
             </div>
+            ) : (
+              <div style={{ 
+                background: 'white', 
+                borderRadius: '12px', 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                padding: '40px',
+                textAlign: 'center',
+                color: '#999'
+              }}>
+                <AlertCircle size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                <p>Không có hoạt động gần đây</p>
+              </div>
+            )}
           </div>
+            </>
+          )}
         </div>
       </main>
     </div>

@@ -228,7 +228,7 @@ export default function SubjectDetailScreen() {
             <ScrollView contentContainerStyle={styles.contentContainer}>
 
                 {/* A. HEADER GRADIENT & INFO */}
-                <LinearGradient colors={["#4F1CFF", "#2D5BFF"]} style={styles.header}>
+                <LinearGradient colors={["#32502a", "#20331b"]} style={styles.header}>
                     <Text style={styles.code}>{info.courseCode}</Text>
                     <Text style={styles.title}>{info.courseName}</Text>
                     <Text style={styles.subtitle}>{info.deptName}</Text>
@@ -255,7 +255,7 @@ export default function SubjectDetailScreen() {
                     <InfoRow label="Loại hình" value={info.type} />
                 </Section>
 
-                {/* Mục tiêu */}
+                {/* Mục tiêu
                 {info.target && info.target.length > 0 && (
                     <Section title="Mục tiêu học phần">
                         {info.target.map((t, index) => (
@@ -267,16 +267,16 @@ export default function SubjectDetailScreen() {
                             </View>
                         ))}
                     </Section>
-                )}
+                )} */}
 
                 {/* Chuẩn đầu ra */}
-                {info.clos && info.clos.length > 0 && (
+                {/* {info.clos && info.clos.length > 0 && (
                     <Section title="Chuẩn đầu ra (CLOs)">
                         {info.clos.map((c, index) => (
                             <Text key={index} style={styles.bullet}>• {c}</Text>
                         ))}
                     </Section>
-                )}
+                )} */}
 
                 {/* Kế hoạch giảng dạy */}
                 {plans.length > 0 && (
@@ -310,10 +310,11 @@ export default function SubjectDetailScreen() {
                             <View key={index} style={{ marginBottom: 15 }}>
                                 <Text style={styles.bullet}>
                                     [{index + 1}] <Text style={{ fontWeight: '600' }}>{item.title}</Text>
+                                    <Text style={[styles.subtitle, { color: '#666', fontSize: 13 }]}>
+                                        {item.author} ({item.materialType})
+                                    </Text>
                                 </Text>
-                                <Text style={[styles.subtitle, { color: '#666', marginLeft: 15, fontSize: 13 }]}>
-                                    {item.author} ({item.materialType})
-                                </Text>
+
                                 <TouchableOpacity onPress={() => handleReport(item)} style={styles.reportBtn}>
                                     <Text style={styles.reportText}>Báo lỗi</Text>
                                 </TouchableOpacity>

@@ -23,6 +23,33 @@ export interface Syllabus {
   };
 }
 
+// Interface for Principal detail view (flat structure from API)
+export interface PrincipalSyllabusDetail {
+  syllabusId: number;
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  deptId?: number;
+  deptName?: string;
+  programId?: number;
+  programName?: string;
+  lecturerId: number;
+  lecturerName: string;
+  lecturerEmail?: string;
+  versionNo?: number;
+  versionNotes?: string;
+  academicYear?: string;
+  currentStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  publishedAt?: string | null;
+  archivedAt?: string | null;
+  isLatestVersion?: boolean;
+  previousVersionId?: string | null;
+}
+
 export interface SessionPlanResponse {
   sessionId: number;
   syllabusId: number;
@@ -201,6 +228,12 @@ export const getSyllabusById = async (syllabusId: number): Promise<Syllabus> => 
   return response.data;
 };
 
+// Get syllabus detail for Principal (returns flat structure)
+export const getPrincipalSyllabusDetail = async (syllabusId: number): Promise<PrincipalSyllabusDetail> => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}`);
+  return response.data;
+};
+
 export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
   // backend expects 'keyword' param name according to docs
   const response = await axiosClient.get(`/syllabuses/search`, {
@@ -365,6 +398,67 @@ export const getFollowedCourses = async () => {
   return response.data;
 };
 
+// Dashboard Stats API for AA
+export const getPendingApprovalsCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/PENDING_APPROVAL");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching pending approvals:", error);
+    return 0;
+  }
+};
+
+export const getTotalPrograms = async () => {
+  try {
+    const response = await axiosClient.get("/programs");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching programs:", error);
+    return 0;
+  }
+};
+
+export const getTotalPLOs = async () => {
+  try {
+    const response = await axiosClient.get("/plos");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching PLOs:", error);
+    return 0;
+  }
+};
+
+export const getApprovedCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/APPROVED");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching approved syllabuses:", error);
+    return 0;
+  }
+};
+
+export const getRejectedCount = async () => {
+  try {
+    const response = await axiosClient.get("/syllabuses/by-status/REJECTED");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching rejected syllabuses:", error);
+    return 0;
+  }
+};
+
+export const getUnreadNotificationsCount = async () => {
+  try {
+    const response = await axiosClient.get("/notifications/unread");
+    return (Array.isArray(response.data) ? response.data.length : 0);
+  } catch (error) {
+    console.error("Error fetching unread notifications:", error);
+    return 0;
+  }
+};
+
 // Reports API
 export interface CreateReportRequest {
   title: string;
@@ -392,6 +486,142 @@ export const getMyReports = async (page: number = 0, size: number = 10) => {
     params: { page, size }
   });
   return response.data;
+};
+
+// AA-specific API calls
+export const getSyllabusesByStatus = async (status: string): Promise<Syllabus[]> => {
+  try {
+    const response = await axiosClient.get(`/syllabuses/by-status/${status}`);
+    return response.data || [];
+  } catch (error) {
+    console.error(`Error fetching syllabuses by status ${status}:`, error);
+    return [];
+  }
+};
+
+export const getPLOs = async () => {
+  try {
+    const response = await axiosClient.get("/plos");
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching PLOs:", error);
+    return [];
+  }
+};
+
+export const approveSyllabusAA = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+export const rejectSyllabusAA = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-reject`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+// Principal-specific API calls
+export const getPrincipalPendingSyllabuses = async (): Promise<Syllabus[]> => {
+  try {
+    // Get syllabuses that are APPROVED (waiting for final principal approval)
+    const response = await axiosClient.get(`/syllabuses/by-status/APPROVED`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching principal pending syllabuses:', error);
+    return [];
+  }
+};
+
+export const principalApproveSyllabus = async (syllabusId: number, comment: string = '') => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/principal-approve`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+export const principalRejectSyllabus = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/principal-reject`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+// Lecturer API - Submit for review
+export const submitForReview = async (syllabusId: number, comment: string = '') => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/submit-for-review`, {
+    syllabusId,
+    comment
+  });
+  return response.data;
+};
+
+// Academic Affairs specific API calls
+export const aaApproveSyllabus = async (syllabusId: number, comment: string = '') => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+export const aaRejectSyllabus = async (syllabusId: number, comment: string) => {
+  const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-reject`, {
+    syllabusId,
+    comment,
+    returnToDraft: false
+  });
+  return response.data;
+};
+
+// Dashboard statistics for Principal
+export const getPrincipalDashboardStats = async () => {
+  try {
+    const [
+      pendingSyllabuses,
+      allPrograms,
+      allSyllabuses,
+      notificationStats
+    ] = await Promise.all([
+      getPrincipalPendingSyllabuses(),
+      getPrograms(),
+      getAllSyllabuses(),
+      getNotificationStats().catch(() => ({ totalUnread: 0, pendingApprovals: 0 }))
+    ]);
+
+    // Count active syllabuses (APPROVED or PUBLISHED)
+    const activeSyllabuses = Array.isArray(allSyllabuses) 
+      ? allSyllabuses.filter((s: Syllabus) => 
+          s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
+        ).length 
+      : 0;
+
+    return {
+      pendingApprovals: Array.isArray(pendingSyllabuses) ? pendingSyllabuses.length : 0,
+      totalPrograms: Array.isArray(allPrograms) ? allPrograms.length : 0,
+      activeSyllabuses,
+      systemHealth: 98.5, // Mock data - can be removed or hidden
+    };
+  } catch (error) {
+    console.error('Error fetching principal dashboard stats:', error);
+    return {
+      pendingApprovals: 0,
+      totalPrograms: 0,
+      activeSyllabuses: 0,
+      systemHealth: 98.5,
+    };
+  }
 };
 
 export default axiosClient;

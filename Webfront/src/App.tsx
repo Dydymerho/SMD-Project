@@ -251,7 +251,7 @@ function App() {
               }
             />
             <Route
-              path="/subject/:id"
+              path="/subject/:syllabusId"
               element={
                 <PrivateRoute>
                   <SubjectDetailPage />

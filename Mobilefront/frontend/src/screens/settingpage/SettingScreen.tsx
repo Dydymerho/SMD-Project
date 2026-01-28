@@ -127,7 +127,7 @@ export default function SettingScreen() {
     try {
       await Promise.all([
         fetchProfile(),
-        loadSettings() // ✅ Gọi hàm load settings
+        loadSettings()
       ]);
     } catch (e) {
       console.error(e);

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Home, FileText, CheckCircle, Settings, Search, Bell, 
-  XCircle, AlertCircle, Clock, TrendingUp, User, Award
+  Home, CheckCircle, Settings, Search, Bell, 
+  AlertCircle, Clock, User, Award
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import * as api from '../../services/api';
 
 interface DashboardStats {
   pendingLevel2Approvals: number;
@@ -17,31 +18,113 @@ interface DashboardStats {
   rejectedThisMonth: number;
 }
 
+interface RecentActivity {
+  id: string;
+  title: string;
+  description: string;
+  type: 'approved' | 'rejected' | 'created';
+  timestamp: string;
+  courseName?: string;
+  department?: string;
+}
+
 const AADashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview'>('overview');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
-    pendingLevel2Approvals: 8,
-    totalPrograms: 12,
-    totalPLOs: 45,
-    recentNotifications: 5,
-    approvedThisMonth: 23,
-    rejectedThisMonth: 3,
+    pendingLevel2Approvals: 0,
+    totalPrograms: 0,
+    totalPLOs: 0,
+    recentNotifications: 0,
+    approvedThisMonth: 0,
+    rejectedThisMonth: 0,
   });
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   useEffect(() => {
     fetchStats();
   }, []);
 
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return 'vừa xong';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} phút trước`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} giờ trước`;
+    const days = Math.floor(hours / 24);
+    return `${days} ngày trước`;
+  };
+
   const fetchStats = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      // TODO: Call API to fetch AA statistics
-      // const response = await getAADashboardStats();
-      // setStats(response);
-    } catch (error) {
-      console.error('Lỗi tải thống kê:', error);
+      // Fetch all stats in parallel for better performance
+      const [
+        pendingCount,
+        programsCount,
+        plosCount,
+        unreadNotifications,
+        approvedCount,
+        rejectedCount,
+        recentLogs
+      ] = await Promise.all([
+        api.getPendingApprovalsCount(),
+        api.getTotalPrograms(),
+        api.getTotalPLOs(),
+        api.getUnreadNotificationsCount(),
+        api.getApprovedCount(),
+        api.getRejectedCount(),
+        api.getRecentAuditLogs(7).catch(() => []) // Get last 7 days of activity
+      ]);
+
+      console.log('AA Dashboard Stats:', {
+        pendingCount,
+        programsCount,
+        plosCount,
+        unreadNotifications,
+        approvedCount,
+        rejectedCount
+      });
+
+      setStats({
+        pendingLevel2Approvals: pendingCount,
+        totalPrograms: programsCount,
+        totalPLOs: plosCount,
+        recentNotifications: unreadNotifications,
+        approvedThisMonth: approvedCount,
+        rejectedThisMonth: rejectedCount,
+      });
+
+      // Transform audit logs to recent activities
+      if (Array.isArray(recentLogs) && recentLogs.length > 0) {
+        const activities = recentLogs.slice(0, 3).map((log: any, idx: number) => {
+          const type: 'approved' | 'rejected' | 'created' = log.action?.includes('APPROVE') ? 'approved' : 
+                 log.action?.includes('REJECT') ? 'rejected' : 'created';
+          return {
+            id: `activity-${idx}`,
+            title: log.action || 'Cập nhật',
+            description: log.description || 'Hệ thống',
+            type,
+            timestamp: log.timestamp || log.createdAt || new Date().toISOString(),
+            courseName: log.syllabus?.course?.courseName || '',
+            department: log.syllabus?.course?.department?.deptName || ''
+          };
+        });
+        setRecentActivities(activities);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError('Lỗi tải thống kê. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,7 +135,7 @@ const AADashboard: React.FC = () => {
         <div className="sidebar-header">
           <div className="logo">🎓</div>
           <h2>SMD System</h2>
-          <p>Academic Affairs</p>
+          <p>{user?.name || 'Academic Affairs'}</p>
         </div>
         
         <nav className="sidebar-nav">
@@ -102,7 +185,7 @@ const AADashboard: React.FC = () => {
         {/* Header */}
         <header className="page-header">
           <div className="header-left">
-            <h1>Bảng điều khiển Academic Affairs</h1>
+            <h1>Bảng điều khiển {user?.name || 'Academic Affairs'}</h1>
             <p>Quản lý và giám sát tiêu chuẩn học thuật toàn khoa</p>
           </div>
           <div className="header-right">
@@ -132,6 +215,34 @@ const AADashboard: React.FC = () => {
 
         {/* Dashboard Content */}
         <div className="content-section" style={{ padding: '40px' }}>
+          {error && (
+            <div style={{
+              background: '#ffebee',
+              color: '#c62828',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle size={20} />
+              {error}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              color: '#999'
+            }}>
+              <div>Đang tải dữ liệu...</div>
+            </div>
+          ) : (
+            <>
           {/* Statistics Cards */}
           <div className="stats-grid" style={{
             display: 'grid',
@@ -290,64 +401,48 @@ const AADashboard: React.FC = () => {
           }}>
             <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Hoạt động gần đây</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                padding: '16px',
-                background: '#f9f9f9',
-                borderRadius: '8px',
-                borderLeft: '4px solid #4caf50'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333' }}>
-                      Đã phê duyệt: CS301 - Trí tuệ nhân tạo
-                    </p>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                      PLO mapping đã được xác minh • Bộ môn CNTT
-                    </p>
-                  </div>
-                  <span style={{ fontSize: '12px', color: '#999' }}>2 giờ trước</span>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity) => {
+                  const borderColor = 
+                    activity.type === 'approved' ? '#4caf50' :
+                    activity.type === 'rejected' ? '#f44336' : '#2196f3';
+                  
+                  return (
+                    <div key={activity.id} style={{
+                      padding: '16px',
+                      background: '#f9f9f9',
+                      borderRadius: '8px',
+                      borderLeft: `4px solid ${borderColor}`
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <div>
+                          <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333' }}>
+                            {activity.title}: {activity.courseName || 'N/A'}
+                          </p>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
+                            {activity.description} {activity.department ? `• ${activity.department}` : ''}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#999' }}>
+                          {formatTimeAgo(activity.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  color: '#999'
+                }}>
+                  Chưa có hoạt động gần đây
                 </div>
-              </div>
-
-              <div style={{
-                padding: '16px',
-                background: '#f9f9f9',
-                borderRadius: '8px',
-                borderLeft: '4px solid #f44336'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333' }}>
-                      Đã từ chối: MATH205 - Giải tích nâng cao
-                    </p>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                      Rubrics không đạt tiêu chuẩn • Bộ môn Toán
-                    </p>
-                  </div>
-                  <span style={{ fontSize: '12px', color: '#999' }}>5 giờ trước</span>
-                </div>
-              </div>
-
-              <div style={{
-                padding: '16px',
-                background: '#f9f9f9',
-                borderRadius: '8px',
-                borderLeft: '4px solid #2196f3'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333' }}>
-                      Chương trình mới được tạo: Computer Science - AI Track
-                    </p>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                      20 PLOs đã được thiết lập
-                    </p>
-                  </div>
-                  <span style={{ fontSize: '12px', color: '#999' }}>1 ngày trước</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
+            </>
+          )}
         </div>
       </main>
     </div>
