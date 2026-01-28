@@ -243,44 +243,23 @@ const CreateSyllabusPage: React.FC = () => {
         return;
       }
 
-      // Prepare syllabus data - match API spec
-      const selectedCourse = availableCourses.find(c => c.courseId === courseId);
+      // Prepare syllabus data - Send minimal structure with only IDs
+      // Spring Data JPA will resolve entities from IDs through @ManyToOne relationships
       const syllabusData = {
         course: {
-          courseId: courseId,
-          courseCode: selectedCourse?.courseCode || '',
-          courseName: selectedCourse?.courseName || '',
-          credits: selectedCourse?.credits || 0
+          courseId: courseId
         },
         lecturer: {
-          userId: Number(user?.id),
-          username: user?.username || '',
-          fullName: user?.name || '',
-          email: user?.email || '',
-          status: 'ACTIVE'
+          userId: Number(user?.id)
         },
-        program: availablePrograms.find(p => p.programId === programId) || {
-          programId: programId,
-          programName: ''
-        },
+        ...(programId && {
+          program: {
+            programId: programId
+          }
+        }),
         academicYear,
-        versionNo: 1,
-        currentStatus: 'DRAFT',
-        isLatestVersion: true,
-        // Optional fields
-        ...(courseObjectives && { courseObjectives }),
-        ...(courseDescription && { courseDescription }),
-        ...(semester && { semester }),
-        // TODO: Add CLOs, assessments, sessionPlans, materials when backend supports
-        // clos: clos.map(clo => ({
-        //   cloCode: clo.code,
-        //   cloDescription: clo.description,
-        //   bloomLevel: clo.bloomLevel,
-        //   ploMappings: ploMappings[clo.id] || []
-        // })),
-        // assessments: assessments.filter(a => a.name),
-        // sessionPlans: sessionPlans.filter(s => s.topic),
-        // materials: materials.filter(m => m.title)
+        currentStatus: 'DRAFT'
+        // versionNo and isLatestVersion will be auto-set by backend
       };
 
       console.log('Submitting syllabus with payload:', syllabusData);
