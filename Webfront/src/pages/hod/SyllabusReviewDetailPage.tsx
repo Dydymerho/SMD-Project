@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  CheckCircle, XCircle, ArrowLeft, Eye, AlertTriangle, 
+  CheckCircle, XCircle, ArrowLeft, AlertTriangle, 
   Home, Users, Search, Bell, User, FileText, Clock, 
-  Edit, MessageSquare, TrendingUp, Zap, Loader, AlertCircle
+  TrendingUp, Zap, Loader, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getSyllabusDetailForReview, approveSyllabus, rejectSyllabus, getPendingSyllabusesForHoD } from '../../services/workflowService';
@@ -24,6 +24,7 @@ interface SyllabusDetail {
   submissionDate: string;
   academicYear: string;
   description: string;
+  aiSummary?: string | null;
   currentStatus?: string;
   rejectionReason?: string;
   clos: string[];
@@ -64,10 +65,6 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const notificationCount = 0;
 
-  useEffect(() => {
-    loadSyllabusDetail();
-  }, [id]);
-
   const loadSyllabusDetail = async () => {
     try {
       setLoading(true);
@@ -82,7 +79,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
       // Get status from the list
       try {
         const listResult = await getPendingSyllabusesForHoD();
-        const syllabusFromList = listResult.data.find((s: any) => (s.id || s.syllabusId) == syllabusId);
+        const syllabusFromList = listResult.data.find((s: any) => (s.id || s.syllabusId) === syllabusId);
         if (syllabusFromList) {
           console.log('Syllabus from list:', syllabusFromList);
           console.log('currentStatus from list:', syllabusFromList.currentStatus);
@@ -100,6 +97,11 @@ const SyllabusReviewDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadSyllabusDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleApprove = async () => {
     if (!approvalNote.trim()) {
@@ -182,16 +184,6 @@ const SyllabusReviewDetailPage: React.FC = () => {
       default:
         return <FileText size={16} style={iconStyle} />;
     }
-  };
-
-  // Status config for display
-  const statusConfig: Record<string, { bg: string; color: string; text: string; icon: React.ReactNode }> = {
-    DRAFT: { bg: '#f5f5f5', color: '#666', text: 'Nháp', icon: <FileText size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
-    PENDING_REVIEW: { bg: '#fff3cd', color: '#856404', text: 'Chờ phê duyệt', icon: <Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
-    PENDING_APPROVAL: { bg: '#d1ecf1', color: '#0c5460', text: 'Chờ xác nhận', icon: <AlertCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
-    PUBLISHED: { bg: '#d4edda', color: '#155724', text: 'Công bố', icon: <CheckCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
-    ARCHIVED: { bg: '#e2e3e5', color: '#383d41', text: 'Lưu trữ', icon: <FileText size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> },
-    REJECTED: { bg: '#f8d7da', color: '#721c24', text: 'Bị từ chối', icon: <XCircle size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> }
   };
 
   if (loading) {
@@ -498,6 +490,37 @@ const SyllabusReviewDetailPage: React.FC = () => {
             </div>
           )}
 
+          {/* AI Summary */}
+          {syllabus.aiSummary && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.08) 0%, rgba(156, 39, 176, 0.04) 100%)',
+              border: '2px solid #9c27b0',
+              borderLeft: '4px solid #9c27b0',
+              padding: '24px',
+              borderRadius: '12px',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ 
+                margin: '0 0 16px 0', 
+                color: '#9c27b0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '20px' }}>✨</span>
+                Tóm tắt AI
+              </h3>
+              <p style={{ 
+                margin: 0, 
+                color: '#555', 
+                lineHeight: 1.8,
+                fontSize: '15px'
+              }}>
+                {syllabus.aiSummary}
+              </p>
+            </div>
+          )}
+
           {/* Description */}
           <div style={{
             background: 'white',
@@ -545,26 +568,34 @@ const SyllabusReviewDetailPage: React.FC = () => {
             marginBottom: '24px'
           }}>
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Nội dung học phần</h3>
-            {syllabus.modules.map((module) => (
-              <div
-                key={module.moduleNo}
-                style={{
-                  padding: '16px',
-                  background: '#f9f9f9',
-                  borderRadius: '8px',
-                  marginBottom: '12px'
-                }}
-              >
-                <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>
-                  Module {module.moduleNo}: {module.moduleName} ({module.hours} giờ)
-                </h4>
-                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                  {module.topics.map((topic, idx) => (
-                    <li key={idx} style={{ margin: '4px 0', color: '#666' }}>{topic}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {syllabus.modules && syllabus.modules.length > 0 ? (
+              syllabus.modules.map((module) => (
+                <div
+                  key={module.moduleNo}
+                  style={{
+                    padding: '16px',
+                    background: '#f9f9f9',
+                    borderRadius: '8px',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>
+                    Module {module.moduleNo}: {module.moduleName} ({module.hours} giờ)
+                  </h4>
+                  {module.topics && module.topics.length > 0 ? (
+                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                      {module.topics.map((topic, idx) => (
+                        <li key={idx} style={{ margin: '4px 0', color: '#666' }}>{topic}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có nội dung chi tiết</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có module được định nghĩa</p>
+            )}
           </div>
 
           {/* Assessments */}
@@ -576,26 +607,30 @@ const SyllabusReviewDetailPage: React.FC = () => {
             marginBottom: '24px'
           }}>
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Đánh giá</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Loại đánh giá</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tỷ lệ</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mô tả</th>
-                </tr>
-              </thead>
-              <tbody>
-                {syllabus.assessments.map((assessment, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                    <td style={{ padding: '12px', color: '#333' }}>{assessment.type}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#2196f3' }}>
-                      {assessment.percentage}%
-                    </td>
-                    <td style={{ padding: '12px', color: '#666' }}>{assessment.description}</td>
+            {syllabus.assessments && syllabus.assessments.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Loại đánh giá</th>
+                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tỷ lệ</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mô tả</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {syllabus.assessments.map((assessment, index) => (
+                    <tr key={index} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                      <td style={{ padding: '12px', color: '#333' }}>{assessment.type}</td>
+                      <td style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#2196f3' }}>
+                        {assessment.percentage}%
+                      </td>
+                      <td style={{ padding: '12px', color: '#666' }}>{assessment.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có phương pháp đánh giá được định nghĩa</p>
+            )}
           </div>
 
           {/* Action Buttons */}
