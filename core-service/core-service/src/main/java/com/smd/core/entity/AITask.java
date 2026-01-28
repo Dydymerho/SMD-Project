@@ -19,7 +19,7 @@ public class AITask {
     private Long aiTaskId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "syllabus_id", nullable = false)
+    @JoinColumn(name = "syllabus_id", nullable = true)
     @ToString.Exclude
     @JsonIgnore
     private Syllabus syllabus;
@@ -56,8 +56,6 @@ public class AITask {
 
     public enum TaskStatus {
         PENDING,
-        IN_PROGRESS,
-        COMPLETED,
-        FAILED
+        SUCCESS
     }
 }

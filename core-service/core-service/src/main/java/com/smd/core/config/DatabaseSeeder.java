@@ -71,7 +71,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         initAiTasks();
         initCourseSubscriptions();
 
-        log.info("DATABASE SEEDING COMPLETED.");
+        log.info("DATABASE SEEDING SUCCESS.");
     }
 
     // ==========================================
@@ -510,7 +510,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 aiTaskRepository.save(AITask.builder()
                         .syllabus(s)
                         .taskType(AITask.TaskType.GENERATE_CLO)
-                        .status(AITask.TaskStatus.COMPLETED)
+                        .status(AITask.TaskStatus.SUCCESS)
                         .resultSummary("AI created 5 CLOs successfully.")
                         .createdAt(LocalDateTime.now().minusDays(5))
                         .build());
@@ -520,7 +520,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 aiTaskRepository.save(AITask.builder()
                         .syllabus(s)
                         .taskType(AITask.TaskType.GRAMMAR_CHECK)
-                        .status(AITask.TaskStatus.COMPLETED)
+                        .status(AITask.TaskStatus.SUCCESS)
                         .resultSummary("Found 3 typo errors in Description.")
                         .createdAt(LocalDateTime.now().minusDays(1))
                         .build());
@@ -530,7 +530,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 aiTaskRepository.save(AITask.builder()
                         .syllabus(s)
                         .taskType(AITask.TaskType.SUGGEST_ASSESSMENT)
-                        .status(AITask.TaskStatus.IN_PROGRESS)
+                        .status(AITask.TaskStatus.SUCCESS)
                         .createdAt(LocalDateTime.now())
                         .build());
             }
