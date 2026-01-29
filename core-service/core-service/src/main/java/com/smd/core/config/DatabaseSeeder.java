@@ -47,9 +47,23 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final NotificationRepository notificationRepository;
     private final CourseSubscriptionRepository courseSubscriptionRepository;
 
+    // 6. Workflow & History Repositories (THÊM MỚI)
+    private final WorkflowStepRepository workflowStepRepository;
+    private final SyllabusWorkflowHistoryRepository workflowHistoryRepository;
+    private final SyllabusAuditLogRepository auditLogRepository;
+
+    // 7. System Repositories (THÊM MỚI)
+    private final ReportRepository reportRepository;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // Kiểm tra xem user có username là "admin" đã tồn tại chưa
+        if (checkAdminExist()) {
+            log.info("Admin account already exists. Database seeding skipped.");
+            return; // Lệnh này sẽ dừng toàn bộ việc khởi tạo dữ liệu phía sau
+        }
+
         log.info("STARTING DATABASE SEEDING...");
 
         // --- BƯỚC 1: CẤU HÌNH CƠ BẢN ---
@@ -66,12 +80,29 @@ public class DatabaseSeeder implements CommandLineRunner {
         initSyllabi();
         // initSyllabusDetails(); // Gọi bên trong initSyllabi để tiện quản lý
 
+        // --- BƯỚC 4: WORKFLOW & AUDIT (MỚI) ---
+        initWorkflowSteps();      // Cần có Step trước khi tạo History
+        initWorkflowHistory();    // Tạo lịch sử duyệt
+        initAuditLogs();          // Tạo nhật ký hệ thống
+
         // --- BƯỚC 4: TƯƠNG TÁC ---
         initInteractions();
         initAiTasks();
         initCourseSubscriptions();
+        initReviewComments();
+        initReports();
 
         log.info("DATABASE SEEDING SUCCESS.");
+    }
+
+    private boolean checkAdminExist() {
+        // Cách 1: Kiểm tra theo username cụ thể (Khuyên dùng)
+        Optional<User> adminUser = userRepository.findByUsername("admin");
+        return adminUser.isPresent();
+
+        // Cách 2: Nếu bạn muốn kiểm tra xem có BẤT KỲ admin nào không (dựa vào Role)
+        // return userRepository.existsByUserRoles_Role_RoleName("ADMIN"); 
+        // (Lưu ý: Cách 2 yêu cầu bạn phải có method existsBy... trong UserRepository)
     }
 
     // ==========================================
@@ -569,5 +600,243 @@ public class DatabaseSeeder implements CommandLineRunner {
         } else {
             log.warn("   [!] Could not find user 'student' to create subscriptions.");
         }
+    }
+
+    private void initReviewComments() {
+        // if (reviewCommentRepository.count() > 0) {
+        //     return;
+        // }
+
+        // 1. Lấy dữ liệu mẫu Syllabus và User để gắn comment
+        Syllabus syllabus = syllabusRepository.findAll().stream().findFirst().orElse(null);
+        User reviewer = userRepository.findByUsername("head_it").orElse(
+            userRepository.findAll().stream().findFirst().orElse(null)
+        );
+
+        if (syllabus == null || reviewer == null) {
+            System.out.println("Skipping ReviewComment seeding: No Syllabus or User found.");
+            return;
+        }
+
+        List<ReviewComment> comments = new ArrayList<>();
+
+        // Comment 1: Nhận xét chung về đề cương (General) - Trạng thái đã giải quyết
+        comments.add(ReviewComment.builder()
+                .content("Cấu trúc đề cương nhìn chung đã ổn. Tuy nhiên cần xem lại phần phân bổ thời gian thực hành cho cân đối hơn.")
+                .status(CommentStatus.RESOLVED)
+                .contextType(CommentContextType.SYLLABUS_GENERAL)
+                .contextId(null) // Không gắn vào phần tử con cụ thể
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        // Comment 2: Nhận xét về Chuẩn đầu ra môn học (CLO) - Trạng thái đang chờ xử lý
+        comments.add(ReviewComment.builder()
+                .content("CLO 3 đang viết ở mức độ 'Hiểu' (Understand), nhưng bài tập lớn lại yêu cầu mức độ 'Vận dụng' (Apply). Đề nghị nâng mức độ của CLO này lên.")
+                .status(CommentStatus.OPEN)
+                .contextType(CommentContextType.CLO)
+                .contextId(null) // Giả lập ID của CLO đang được nhận xét
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        // Comment 3: Nhận xét về Kế hoạch giảng dạy (Session Plan) - Đang chờ
+        comments.add(ReviewComment.builder()
+                .content("Nội dung tuần 5 quá nặng lý thuyết. Nên bổ sung thêm hoạt động thảo luận nhóm (Group discussion) để sinh viên đỡ nhàm chán.")
+                .status(CommentStatus.OPEN)
+                .contextType(CommentContextType.SESSION_PLAN)
+                .contextId(null) // Giả lập ID của buổi học
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        // Comment 4: Nhận xét về Tài liệu tham khảo (Material) - Đã xong
+        comments.add(ReviewComment.builder()
+                .content("Link tài liệu tham khảo số [2] bị lỗi 404, giảng viên vui lòng cập nhật link mới hoặc thay thế bằng sách giáo trình 2024.")
+                .status(CommentStatus.RESOLVED)
+                .contextType(CommentContextType.MATERIAL)
+                .contextId(null)
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        // Comment 5: Nhận xét về Đánh giá (Assessment) - Đang chờ
+        comments.add(ReviewComment.builder()
+                .content("Tỉ lệ điểm quá trình 50% là hơi cao so với quy định mới của khoa. Đề nghị điều chỉnh về 40% - 60%.")
+                .status(CommentStatus.OPEN)
+                .contextType(CommentContextType.ASSESSMENT)
+                .contextId(null)
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        // Comment 6: Một comment tích cực (General)
+        comments.add(ReviewComment.builder()
+                .content("Phần Đạo đức nghề nghiệp (Professional Ethics) được lồng ghép rất hay. Duyệt phần này.")
+                .status(CommentStatus.RESOLVED)
+                .contextType(CommentContextType.SYLLABUS_GENERAL)
+                .contextId(null)
+                .syllabus(syllabus)
+                .user(reviewer)
+                .build());
+
+        reviewCommentRepository.saveAll(comments);
+        System.out.println("Seeded " + comments.size() + " review comments.");
+    }
+
+    // ==========================================
+    // PHẦN BỔ SUNG: REPORT, WORKFLOW & AUDIT
+    // ==========================================
+
+    private void initReports() {
+        if (reportRepository.count() > 0) return;
+
+        User student = userRepository.findByUsername("student").orElse(null);
+        if (student == null) return;
+
+        List<Report> reports = new ArrayList<>();
+
+        // Report 1: Lỗi kỹ thuật (Chưa xử lý)
+        reports.add(Report.builder()
+                .title("Lỗi không tải được file PDF đề cương môn Java")
+                .description("Em vào mục môn học JPD113 nhưng bấm nút tải về thì báo lỗi 404. Nhờ admin kiểm tra giúp.")
+                .status(Report.ReportStatus.PENDING)
+                .reporter(student)
+                .build());
+
+        // Report 2: Góp ý (Đã xem)
+        reports.add(Report.builder()
+                .title("Góp ý về giao diện Dark Mode")
+                .description("Giao diện tối đôi khi bị lỗi màu chữ ở phần Comment, chữ đen trên nền xám khó đọc.")
+                .status(Report.ReportStatus.REVIEWED)
+                .reporter(student)
+                .build());
+
+        // Report 3: Đã giải quyết
+        reports.add(Report.builder()
+                .title("Không đăng nhập được bằng email sinh viên")
+                .description("Em đã đổi mật khẩu nhưng không login được.")
+                .status(Report.ReportStatus.RESOLVED)
+                .reporter(student)
+                .createdAt(LocalDateTime.now().minusDays(10)) // Report cũ
+                .build());
+
+        reportRepository.saveAll(reports);
+        log.info("   + Created {} Reports.", reports.size());
+    }
+
+    private void initWorkflowSteps() {
+        if (workflowStepRepository.count() > 0) return;
+
+        // Tạo các bước quy trình chuẩn
+        workflowStepRepository.save(WorkflowStep.builder().stepName("DRAFT").stepOrder(1).build());
+        workflowStepRepository.save(WorkflowStep.builder().stepName("REVIEW_REQUESTED").stepOrder(2).build());
+        workflowStepRepository.save(WorkflowStep.builder().stepName("HEAD_APPROVED").stepOrder(3).build());
+        workflowStepRepository.save(WorkflowStep.builder().stepName("PUBLISHED").stepOrder(4).build());
+        
+        log.info("   + Created Workflow Steps.");
+    }
+
+    private void initWorkflowHistory() {
+        // Lấy Syllabus đã Published để giả lập lịch sử đầy đủ
+        Syllabus syllabus = syllabusRepository.findAll().stream()
+                .filter(s -> s.getCurrentStatus() == Syllabus.SyllabusStatus.PUBLISHED)
+                .findFirst().orElse(null);
+
+        if (syllabus == null) return;
+
+        User lecturer = syllabus.getLecturer();
+        User head = syllabus.getCourse().getDepartment().getHeadOfDepartment();
+        User admin = userRepository.findByUsername("admin").orElse(null);
+        
+        // Lấy các Step
+        WorkflowStep stepDraft = workflowStepRepository.findAll().stream().filter(s -> s.getStepOrder() == 1).findFirst().orElse(null);
+        WorkflowStep stepReview = workflowStepRepository.findAll().stream().filter(s -> s.getStepOrder() == 2).findFirst().orElse(null);
+        WorkflowStep stepApprove = workflowStepRepository.findAll().stream().filter(s -> s.getStepOrder() == 3).findFirst().orElse(null);
+        WorkflowStep stepPublish = workflowStepRepository.findAll().stream().filter(s -> s.getStepOrder() == 4).findFirst().orElse(null);
+
+        List<SyllabusWorkflowHistory> histories = new ArrayList<>();
+
+        // 1. Giảng viên tạo và Submit
+        histories.add(SyllabusWorkflowHistory.builder()
+                .syllabus(syllabus)
+                .workflowStep(stepDraft)
+                .actionBy(lecturer)
+                .action(SyllabusWorkflowHistory.WorkflowAction.SUBMIT)
+                .comment("Đã hoàn thành soạn thảo, xin trưởng bộ môn duyệt.")
+                .actionTime(LocalDateTime.now().minusDays(5))
+                .build());
+
+        // 2. Trưởng bộ môn Duyệt
+        if (head != null) {
+            histories.add(SyllabusWorkflowHistory.builder()
+                    .syllabus(syllabus)
+                    .workflowStep(stepReview)
+                    .actionBy(head)
+                    .action(SyllabusWorkflowHistory.WorkflowAction.APPROVE)
+                    .comment("Nội dung tốt, đồng ý thông qua.")
+                    .actionTime(LocalDateTime.now().minusDays(3))
+                    .build());
+        }
+
+        // 3. Admin Public
+        if (admin != null) {
+            histories.add(SyllabusWorkflowHistory.builder()
+                    .syllabus(syllabus)
+                    .workflowStep(stepPublish)
+                    .actionBy(admin)
+                    .action(SyllabusWorkflowHistory.WorkflowAction.PUBLISH)
+                    .comment("Đã xuất bản lên hệ thống cho sinh viên đăng ký.")
+                    .actionTime(LocalDateTime.now().minusDays(1))
+                    .build());
+        }
+
+        workflowHistoryRepository.saveAll(histories);
+        log.info("   + Created Workflow History for Syllabus: {}", syllabus.getCourse().getCourseCode());
+    }
+
+    private void initAuditLogs() {
+        // Lấy ngẫu nhiên một syllabus
+        Syllabus syllabus = syllabusRepository.findAll().stream().findFirst().orElse(null);
+        if (syllabus == null) return;
+
+        List<SyllabusAuditLog> logs = new ArrayList<>();
+
+        // Log 1: Tạo mới
+        logs.add(SyllabusAuditLog.builder()
+                .syllabus(syllabus)
+                .actionType(SyllabusAuditLog.AuditAction.CREATE_SYLLABUS.name())
+                .performedBy(syllabus.getLecturer().getUsername())
+                .performedByRole("LECTURER")
+                .oldStatus("NULL")
+                .newStatus("DRAFT")
+                .comments("Initial creation")
+                .ipAddress("192.168.1.10")
+                .userAgent("Mozilla/5.0 (Windows NT 10.0)")
+                .build());
+
+        // Log 2: Cập nhật nội dung
+        logs.add(SyllabusAuditLog.builder()
+                .syllabus(syllabus)
+                .actionType(SyllabusAuditLog.AuditAction.UPDATE_SYLLABUS.name())
+                .performedBy(syllabus.getLecturer().getUsername())
+                .performedByRole("LECTURER")
+                .oldStatus("DRAFT")
+                .newStatus("DRAFT")
+                .changedFields("{\"field\": \"assessment\", \"old\": \"20%\", \"new\": \"30%\"}") // Giả lập JSON
+                .ipAddress("192.168.1.10")
+                .build());
+
+        // Log 3: Upload PDF
+        logs.add(SyllabusAuditLog.builder()
+                .syllabus(syllabus)
+                .actionType(SyllabusAuditLog.AuditAction.UPLOAD_PDF.name())
+                .performedBy(syllabus.getLecturer().getUsername())
+                .performedByRole("LECTURER")
+                .additionalData("file_name: syllabus_v1.pdf, size: 2MB")
+                .build());
+
+        auditLogRepository.saveAll(logs);
+        log.info("   + Created Audit Logs.");
     }
 }
