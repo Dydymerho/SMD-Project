@@ -249,50 +249,25 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
 // Get CLOs for a syllabus
 export const getSyllabusClos = async (syllabusId: number) => {
   try {
-    // Try multiple endpoints to get CLOs
-    const endpoints = [
-      `/syllabuses/${syllabusId}/clos`,
-      `/clos?syllabusId=${syllabusId}`,
-      `/syllabuses/${syllabusId}/course-learning-outcomes`,
-      `/syllabuses/${syllabusId}/outcomes`,
-      `/course-outcomes?syllabusId=${syllabusId}`
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const response = await axiosClient.get(endpoint);
-        let data = response.data || {};
-        
-        // Handle different response formats
-        let closArray: any[] = [];
-        
-        if (Array.isArray(data)) {
-          closArray = data;
-        } else if (Array.isArray(data.data)) {
-          closArray = data.data;
-        } else if (Array.isArray(data.clos)) {
-          closArray = data.clos;
-        }
-        
-        // Filter by syllabusId if needed (in case endpoint returns all CLOs)
-        closArray = closArray.filter((clo: any) => {
-          const cloSyllabusId = clo.syllabusId || clo.syllabusID || clo.syllabusId || null;
-          return !cloSyllabusId || cloSyllabusId === syllabusId;
-        });
-        
-        if (closArray.length > 0) {
-          console.log(`CLOs loaded from ${endpoint}:`, closArray);
-          return closArray;
-        }
-      } catch (e) {
-        // Try next endpoint
-        console.log(`Endpoint ${endpoint} failed, trying next...`);
-        continue;
-      }
+    // Use the correct CLO endpoint from backend: /api/clos/syllabus/{syllabusId}
+    const endpoint = `/clos/syllabus/${syllabusId}`;
+    
+    const response = await axiosClient.get(endpoint);
+    let data = response.data || {};
+    
+    // Handle different response formats
+    let closArray: any[] = [];
+    
+    if (Array.isArray(data)) {
+      closArray = data;
+    } else if (Array.isArray(data.data)) {
+      closArray = data.data;
+    } else if (Array.isArray(data.clos)) {
+      closArray = data.clos;
     }
     
-    console.log('No CLOs endpoint found, returning empty array');
-    return [];
+    console.log(`CLOs loaded from ${endpoint}:`, closArray);
+    return closArray;
   } catch (error) {
     console.error('Error fetching syllabus CLOs:', error);
     return [];
