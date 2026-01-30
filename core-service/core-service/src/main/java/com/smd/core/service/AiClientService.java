@@ -64,13 +64,20 @@ public class AiClientService {
                 throw new RuntimeException("AI Service không trả về Task ID");
             }
 
+            // --- ĐOẠN LOGIC MỚI: Xử lý Syllabus tùy chọn ---
+            Syllabus syllabusEntity = null;
+            if (syllabusId != null) {
+                syllabusEntity = syllabusRepository.findById(syllabusId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id " + syllabusId));
+            }
+
             // 4. Lưu Task vào DB (Trạng thái PENDING)
             // Lưu ý: Mình tạm lưu Celery Task ID vào resultSummary để dùng tra cứu sau này
             AITask task = AITask.builder()
                     .taskType(AITask.TaskType.IMPROVE_CONTENT)
                     .status(AITask.TaskStatus.PENDING)
                     .resultSummary(response.getBody().getTask_id())
-                    .syllabus(syllabusRepository.findById(syllabusId).orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id " + syllabusId))) // <--- QUAN TRỌNG: Dòng này sửa lỗi not-null
+                    .syllabus(syllabusEntity) // Truyền null nếu không có ID, truyền entity nếu có
                     .build();
             
             // Nếu muốn link với Syllabus thì set syllabus ở đây (cần findById trước)
