@@ -638,4 +638,21 @@ export const summarizeDocument = async (file: File): Promise<string> => {
   return response.data.summary || response.data;
 };
 
+export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await axiosClient.post('/ai/upload-ocr-async', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getAITaskStatus = async (taskId: string): Promise<any> => {
+  const response = await axiosClient.get(`/ai/task-status/${taskId}`);
+  return response.data;
+};
+
 export default axiosClient;
