@@ -747,7 +747,7 @@ const LecturerDashboard: React.FC = () => {
                           <div className="action-buttons">
                             <button 
                               className="icon-btn" 
-                              onClick={() => navigate(`/syllabus/review/${syllabus.id}`)} 
+                              onClick={() => navigate(`/collaborative-review/${syllabus.id}`)} 
                               title="Xem tất cả Review"
                             >
                               <Eye size={18} />
