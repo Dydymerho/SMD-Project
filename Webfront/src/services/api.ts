@@ -1,5 +1,5 @@
 import axiosClient from '../api/axiosClient';
-
+import aiAxiosClient from '../api/aiAxiosClient';
 export interface Syllabus {
   syllabusId: number;
   course: {
@@ -275,7 +275,7 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const lockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
-  const response = await axiosClient.put(`/users/${userId}`, { 
+  const response = await axiosClient.put(`/users/${userId}`, {
     status: 'SUSPENDED',
     fullName: userFullName || 'Unknown',
     email: userEmail || 'unknown@example.com'
@@ -284,7 +284,7 @@ export const lockUser = async (userId: string, userFullName?: string, userEmail?
 };
 
 export const unlockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
-  const response = await axiosClient.put(`/users/${userId}`, { 
+  const response = await axiosClient.put(`/users/${userId}`, {
     status: 'ACTIVE',
     fullName: userFullName || 'Unknown',
     email: userEmail || 'unknown@example.com'
@@ -601,10 +601,10 @@ export const getPrincipalDashboardStats = async () => {
     ]);
 
     // Count active syllabuses (APPROVED or PUBLISHED)
-    const activeSyllabuses = Array.isArray(allSyllabuses) 
-      ? allSyllabuses.filter((s: Syllabus) => 
-          s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
-        ).length 
+    const activeSyllabuses = Array.isArray(allSyllabuses)
+      ? allSyllabuses.filter((s: Syllabus) =>
+        s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
+      ).length
       : 0;
 
     return {
@@ -629,20 +629,20 @@ export const summarizeDocument = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axiosClient.post('/ai/summarize', formData, {
+  const response = await aiAxiosClient.post('/summarize', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  
+
   return response.data.summary || response.data;
 };
 
 export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> => {
   const formData = new FormData();
   formData.append('file', file);
-  
-  const response = await axiosClient.post('/ai/upload-ocr-async', formData, {
+
+  const response = await aiAxiosClient.post('/upload-ocr-async', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -651,8 +651,8 @@ export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> 
 };
 
 export const getAITaskStatus = async (taskId: string): Promise<any> => {
-  const response = await axiosClient.get(`/ai/task-status/${taskId}`);
+  const response = await aiAxiosClient.get(`/task-status/${taskId}`);
   return response.data;
 };
 
-export default axiosClient;
+export default aiAxiosClient;
