@@ -1,6 +1,8 @@
 package com.smd.core.controller;
 
 import com.smd.core.dto.CourseSimpleDto;
+import com.smd.core.dto.CourseSubscriptionResponse;
+import com.smd.core.dto.CourseUnsubscriptionResponse;
 import com.smd.core.service.CourseSubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,20 +24,20 @@ public class CourseSubscriptionController {
 
     @PostMapping("/{courseId}/follow")
     @Operation(summary = "Follow a course", description = "Subscribe to receive notifications for course updates")
-    public ResponseEntity<Void> followCourse(
+    public ResponseEntity<CourseSubscriptionResponse> followCourse(
             @PathVariable Long courseId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        subscriptionService.followCourse(userDetails.getUsername(), courseId);
-        return ResponseEntity.ok().build();
+        CourseSubscriptionResponse response = subscriptionService.followCourse(userDetails.getUsername(), courseId);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{courseId}/follow")
     @Operation(summary = "Unfollow a course", description = "Unsubscribe from course updates")
-    public ResponseEntity<Void> unfollowCourse(
+    public ResponseEntity<CourseUnsubscriptionResponse> unfollowCourse(
             @PathVariable Long courseId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        subscriptionService.unfollowCourse(userDetails.getUsername(), courseId);
-        return ResponseEntity.noContent().build();
+        CourseUnsubscriptionResponse response = subscriptionService.unfollowCourse(userDetails.getUsername(), courseId);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/following")
