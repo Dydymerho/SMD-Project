@@ -51,7 +51,7 @@ export default function LoginScreen() {
       let errorMessage = 'Đã có lỗi xảy ra khi đăng nhập';
 
       if (error.response) {
-        errorMessage = error.response.data?.message || 'Sai tài khoản hoặc mật khẩu';
+        errorMessage = 'Sai tài khoản hoặc mật khẩu';
       } else if (error.request) {
         errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
       } else {
