@@ -1,4 +1,5 @@
 import axiosClient from '../api/axiosClient';
+import aiAxiosClient from '../api/aiAxiosClient';
 
 export interface Syllabus {
   syllabusId: number;
@@ -629,7 +630,7 @@ export const summarizeDocument = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axiosClient.post('/ai/summarize', formData, {
+  const response = await aiAxiosClient.post('/summarize-async', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -642,7 +643,7 @@ export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> 
   const formData = new FormData();
   formData.append('file', file);
   
-  const response = await axiosClient.post('/ai/upload-ocr-async', formData, {
+  const response = await aiAxiosClient.post('/upload-ocr-async', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -651,7 +652,7 @@ export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> 
 };
 
 export const getAITaskStatus = async (taskId: string): Promise<any> => {
-  const response = await axiosClient.get(`/ai/task-status/${taskId}`);
+  const response = await aiAxiosClient.get(`/task-status/${taskId}`);
   return response.data;
 };
 
