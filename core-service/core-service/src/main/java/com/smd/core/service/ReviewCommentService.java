@@ -172,7 +172,7 @@ public class ReviewCommentService {
         Syllabus syllabus = comment.getSyllabus();
         boolean isOwner = syllabus.getLecturer().getUserId().equals(currentUser.getUserId());
         boolean isHoD = currentUser.getUserRoles().stream()
-                .anyMatch(ur -> ur.getRole().getRoleName().equals("HOD"));
+                .anyMatch(ur -> ur.getRole().getRoleName().equals("HEAD_OF_DEPARTMENT"));
         boolean isAdmin = currentUser.getUserRoles().stream()
                 .anyMatch(ur -> ur.getRole().getRoleName().equals("ADMIN"));
         

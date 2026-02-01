@@ -636,6 +636,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .contextId(null) // Không gắn vào phần tử con cụ thể
                 .syllabus(syllabus)
                 .user(reviewer)
+                .resolvedBy(reviewer) // head_it đã resolve
+                .resolvedAt(LocalDateTime.now().minusDays(2))
+                .resolutionNote("Giảng viên đã điều chỉnh lại thời lượng: tăng thực hành từ 30% lên 45% tổng thời gian. Đã phê duyệt.")
                 .build());
 
         // Comment 2: Nhận xét về Chuẩn đầu ra môn học (CLO) - Trạng thái đang chờ xử lý
@@ -666,6 +669,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .contextId(null)
                 .syllabus(syllabus)
                 .user(reviewer)
+                .resolvedBy(reviewer) // head_it đã resolve
+                .resolvedAt(LocalDateTime.now().minusDays(1))
+                .resolutionNote("Giảng viên đã thay link mới: 'Introduction to Java Programming, 12th Edition (2024)' - link Google Drive đã được kiểm tra. OK.")
                 .build());
 
         // Comment 5: Nhận xét về Đánh giá (Assessment) - Đang chờ
@@ -686,6 +692,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .contextId(null)
                 .syllabus(syllabus)
                 .user(reviewer)
+                .resolvedBy(reviewer) // head_it đã resolve
+                .resolvedAt(LocalDateTime.now().minusDays(3))
+                .resolutionNote("Không cần chỉnh sửa. Approved.")
                 .build());
 
         reviewCommentRepository.saveAll(comments);
