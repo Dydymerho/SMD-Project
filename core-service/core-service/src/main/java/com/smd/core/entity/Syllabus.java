@@ -64,6 +64,9 @@ public class Syllabus {
     @Column(name = "version_notes", length = 1000)
     private String versionNotes;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "pdf_file_path", length = 500)
     private String pdfFilePath;
 

@@ -29,6 +29,7 @@ public class SyllabusResponse {
     private Boolean isLatestVersion;
     private Long previousVersionId;
     private String versionNotes;
+    private String description;
     private String pdfFileName;
     private LocalDateTime pdfUploadedAt;
     private Long programId;
@@ -60,6 +61,7 @@ public class SyllabusResponse {
                 .isLatestVersion(syllabus.getIsLatestVersion())
                 .previousVersionId(syllabus.getPreviousVersionId())
                 .versionNotes(syllabus.getVersionNotes())
+                .description(syllabus.getDescription())
                 .pdfFileName(syllabus.getPdfFileName())
                 .pdfUploadedAt(syllabus.getPdfUploadedAt())
                 .programId(syllabus.getProgram() != null ? syllabus.getProgram().getProgramId() : null)
