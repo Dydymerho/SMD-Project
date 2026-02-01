@@ -17,7 +17,7 @@ public class UserImportError {
     private String username;
     private String fullName;
     private String email;
-    private String roleCode;
-    private String departmentCode;
+    private String role;
+    private String department;
     private String errorMessage;
 }

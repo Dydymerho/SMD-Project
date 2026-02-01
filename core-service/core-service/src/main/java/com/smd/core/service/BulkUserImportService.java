@@ -52,7 +52,7 @@ public class BulkUserImportService {
 
     /**
      * Process bulk user import from Excel file
-     * Expected columns: Username, Full Name, Email, Role Code, Department Code
+     * Expected columns: Username, Full Name, Email, Role, Department
      */
     @Transactional
     public BulkUserImportResponse importUsers(MultipartFile file) throws IOException {
@@ -70,8 +70,8 @@ public class BulkUserImportService {
                         .username(row.getUsername())
                         .fullName(row.getFullName())
                         .email(row.getEmail())
-                        .roleCode(row.getRoleCode())
-                        .departmentCode(row.getDepartmentCode())
+                        .role(row.getRoleCode())
+                        .department(row.getDepartmentCode())
                         .errorMessage(e.getMessage())
                         .build());
             }
@@ -144,10 +144,10 @@ public class BulkUserImportService {
             throw new IllegalArgumentException("Email is required");
         }
         if (isEmpty(row.getRoleCode())) {
-            throw new IllegalArgumentException("Role code is required");
+            throw new IllegalArgumentException("Role is required");
         }
         if (isEmpty(row.getDepartmentCode())) {
-            throw new IllegalArgumentException("Department code is required");
+            throw new IllegalArgumentException("Department is required");
         }
 
         // Validate email format
@@ -168,14 +168,14 @@ public class BulkUserImportService {
         // Validate role exists
         Optional<Role> roleOpt = roleRepository.findByRoleName(row.getRoleCode());
         if (roleOpt.isEmpty()) {
-            throw new IllegalArgumentException("Invalid role code: " + row.getRoleCode());
+            throw new IllegalArgumentException("Invalid role: " + row.getRoleCode());
         }
         Role role = roleOpt.get();
 
         // Validate department exists
         Optional<Department> deptOpt = departmentRepository.findByDeptName(row.getDepartmentCode());
         if (deptOpt.isEmpty()) {
-            throw new IllegalArgumentException("Invalid department code: " + row.getDepartmentCode());
+            throw new IllegalArgumentException("Invalid department: " + row.getDepartmentCode());
         }
         Department department = deptOpt.get();
 
@@ -284,7 +284,7 @@ public class BulkUserImportService {
 
             // Create header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"Username", "Full Name", "Email", "Role Code", "Department Code"};
+            String[] headers = {"Username", "Full Name", "Email", "Role", "Department"};
 
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -340,14 +340,14 @@ public class BulkUserImportService {
                 "1. Username - User's login username, must be unique (Required)",
                 "2. Full Name - User's full name (Required)",
                 "3. Email - User's email address, must be unique (Required)",
-                "4. Role Code - User's role, must match existing roles (Required)",
-                "5. Department Code - Department name, must match existing departments (Required)",
+                "4. Role - User's role name, must match existing roles (Required)",
+                "5. Department - Department name, must match existing departments (Required)",
                 "",
                 "Default Password:",
                 "- All users will be created with default password: Password123",
                 "- Users should change their password on first login",
                 "",
-                "Valid Role Codes:",
+                "Valid Roles:",
                 "- ADMIN: System administrator",
                 "- LECTURER: Faculty member/teacher",
                 "- HEAD_OF_DEPARTMENT: Department head",
@@ -359,8 +359,8 @@ public class BulkUserImportService {
                 "- All fields are required, do not leave any cells empty",
                 "- Username must be unique across the system",
                 "- Email addresses must be unique across the system",
-                "- Department Code must match exactly with department names in database",
-                "- Role Code must match exactly (case-sensitive)",
+                "- Department must match exactly with department names in database",
+                "- Role must match exactly (case-sensitive)",
                 "- Delete sample data rows before adding your real data",
                 "- Keep the header row (Row 1) intact",
                 "- Save file as .xlsx format",

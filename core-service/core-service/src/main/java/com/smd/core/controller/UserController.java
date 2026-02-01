@@ -90,7 +90,7 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
     @Operation(
         summary = "Bulk import users from Excel file", 
-        description = "Import multiple users from an Excel file (.xlsx). Expected columns: Username, Full Name, Email, Role Code, Department Code. Default password for all users: Password123"
+        description = "Import multiple users from an Excel file (.xlsx). Expected columns: Username, Full Name, Email, Role, Department. Default password for all users: Password123"
     )
     public ResponseEntity<BulkUserImportResponse> bulkImportUsers(
             @RequestParam("file") MultipartFile file) throws IOException {
