@@ -1,5 +1,9 @@
 import axiosClient from '../api/axiosClient';
 import aiAxiosClient from '../api/aiAxiosClient';
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5c83cdc871837abc5a15d0605507d7f077c08054
 export interface Syllabus {
   syllabusId: number;
   course: {
@@ -629,7 +633,11 @@ export const summarizeDocument = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
 
+<<<<<<< HEAD
   const response = await aiAxiosClient.post('/summarize', formData, {
+=======
+  const response = await aiAxiosClient.post('/summarize-async', formData, {
+>>>>>>> 5c83cdc871837abc5a15d0605507d7f077c08054
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -641,7 +649,11 @@ export const summarizeDocument = async (file: File): Promise<string> => {
 export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> => {
   const formData = new FormData();
   formData.append('file', file);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 5c83cdc871837abc5a15d0605507d7f077c08054
   const response = await aiAxiosClient.post('/upload-ocr-async', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
