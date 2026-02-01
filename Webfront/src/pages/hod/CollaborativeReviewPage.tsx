@@ -5,7 +5,7 @@ import {
   Users, Home, MessageSquare, CheckCircle, Clock, Search, Bell, User, Loader, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview, fetchSyllabusById } from '../../services/workflowService';
+import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview, fetchSyllabusById, fetchAllSyllabuses } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -49,6 +49,7 @@ const CollaborativeReviewPage: React.FC = () => {
     participants: [] as string[]
   });
   const [reviews, setReviews] = useState<CollaborativeReview[]>([]);
+  const [allSyllabuses, setAllSyllabuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('active');
@@ -71,6 +72,14 @@ const CollaborativeReviewPage: React.FC = () => {
     try {
       const pending = await getPendingSyllabusesForHoD();
       const list = Array.isArray(pending.data) ? pending.data : [];
+
+      // Also load all syllabuses for the create modal dropdown
+      try {
+        const allSyllabusesData = await fetchAllSyllabuses();
+        setAllSyllabuses(Array.isArray(allSyllabusesData.data) ? allSyllabusesData.data : []);
+      } catch (err) {
+        console.log('Could not fetch all syllabuses:', err);
+      }
 
       const mapped = await Promise.all(list.map(async (item: any) => {
         const syllabusId = item.syllabusId || item.id;
@@ -598,9 +607,9 @@ const CollaborativeReviewPage: React.FC = () => {
                   }}
                 >
                   <option value="">-- Chọn giáo trình --</option>
-                  {reviews.map((review) => (
-                    <option key={review.id} value={review.id}>
-                      {review.courseCode} - {review.courseName}
+                  {allSyllabuses.map((syllabus: any) => (
+                    <option key={syllabus.syllabusId} value={syllabus.syllabusId}>
+                      {syllabus.courseCode} - {syllabus.courseName}
                     </option>
                   ))}
                 </select>

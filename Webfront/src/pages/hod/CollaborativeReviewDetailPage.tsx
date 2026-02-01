@@ -29,6 +29,7 @@ interface CollaborativeReviewDetail {
   courseCode: string;
   courseName: string;
   lecturer: string;
+  lecturerEmail?: string;
   status: string;
   createdDate: string;
   deadline: string;
@@ -82,12 +83,22 @@ const CollaborativeReviewDetailPage: React.FC = () => {
       // Get all comments for collaborative review
       const commentsData = await fetchAllComments(parseInt(id));
 
+      // Get lecturer name and email from response (already extracted from Lecturer entity)
+      const lecturerName = syllabusData?.lecturerName || 'Chưa rõ';
+      const lecturerEmail = syllabusData?.lecturerEmail || '';
+
+      // Get course info (already extracted from Course entity)
+      const syllabusTitle = syllabusData?.courseName || 'Chưa rõ';
+      const courseCode = syllabusData?.courseCode || 'N/A';
+      const courseName = syllabusData?.courseName || 'Chưa rõ';
+
       setReview({
         syllabusId: syllabusData.syllabusId,
-        syllabusTitle: syllabusData.course?.courseName || 'Chưa rõ',
-        courseCode: syllabusData.course?.courseCode || 'N/A',
-        courseName: syllabusData.course?.courseName || 'Chưa rõ',
-        lecturer: syllabusData.createdBy?.fullName || 'Chưa rõ',
+        syllabusTitle: syllabusTitle,
+        courseCode: courseCode,
+        courseName: courseName,
+        lecturer: lecturerName,
+        lecturerEmail: lecturerEmail,
         status: syllabusData.currentStatus || 'PENDING_REVIEW',
         createdDate: syllabusData.createdAt || new Date().toISOString(),
         deadline: syllabusData.updatedAt || new Date().toISOString(),
@@ -344,6 +355,11 @@ KẾT LUẬN:
                 <p style={{ margin: '0 0 4px 0', color: '#666' }}>
                   <strong>Giảng viên:</strong> {review.lecturer}
                 </p>
+                {review.lecturerEmail && (
+                  <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px' }}>
+                    {review.lecturerEmail}
+                  </p>
+                )}
                 <p style={{ margin: '0 0 4px 0', color: '#666' }}>
                   <strong>Hạn cuối:</strong> {formatDate(review.deadline)}
                 </p>
