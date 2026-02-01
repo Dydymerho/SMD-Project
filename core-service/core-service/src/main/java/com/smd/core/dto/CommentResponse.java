@@ -22,6 +22,17 @@ public class CommentResponse {
     private String userEmail;
     private String content;
     private LocalDateTime createdAt;
+    private LocalDateTime editedAt;
+    private String status; // PENDING, RESOLVED, ARCHIVED
+    private String contextType; // CLO, MODULE, ASSESSMENT, GENERAL
+    private Long contextId;
+    private String contextSection;
+    private Long parentCommentId;
+    private Integer replyCount;
+    private LocalDateTime resolvedAt;
+    private Long resolvedById;
+    private String resolvedByName;
+    private String resolutionNote;
 
     public static CommentResponse fromEntity(ReviewComment comment) {
         return CommentResponse.builder()
@@ -33,6 +44,17 @@ public class CommentResponse {
                 .userEmail(comment.getUser().getEmail())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
+                .editedAt(comment.getEditedAt())
+                .status(comment.getStatus())
+                .contextType(comment.getContextType())
+                .contextId(comment.getContextId())
+                .contextSection(comment.getContextSection())
+                .parentCommentId(comment.getParentCommentId())
+                .replyCount(comment.getReplyCount())
+                .resolvedAt(comment.getResolvedAt())
+                .resolvedById(comment.getResolvedBy() != null ? comment.getResolvedBy().getUserId() : null)
+                .resolvedByName(comment.getResolvedBy() != null ? comment.getResolvedBy().getFullName() : null)
+                .resolutionNote(comment.getResolutionNote())
                 .build();
     }
 }

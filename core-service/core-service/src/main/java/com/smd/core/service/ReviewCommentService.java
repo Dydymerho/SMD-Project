@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,6 +52,11 @@ public class ReviewCommentService {
                 .syllabus(syllabus)
                 .user(user)
                 .content(request.getContent())
+                .contextType(request.getContextType())
+                .contextId(request.getContextId())
+                .contextSection(request.getContextSection())
+                .parentCommentId(request.getParentCommentId())
+                .status(request.getStatus() != null ? request.getStatus() : "PENDING")
                 .build();
         
         ReviewComment savedComment = reviewCommentRepository.save(comment);
@@ -148,5 +154,60 @@ public class ReviewCommentService {
                 .stream()
                 .map(CommentResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Resolve a comment
+     */
+    @Transactional
+    public CommentResponse resolveComment(Long commentId, String resolutionNote) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        
+        ReviewComment comment = reviewCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
+        
+        comment.setStatus("RESOLVED");
+        comment.setResolvedAt(LocalDateTime.now());
+        comment.setResolvedBy(currentUser);
+        comment.setResolutionNote(resolutionNote);
+        
+        ReviewComment saved = reviewCommentRepository.save(comment);
+        log.info("Comment {} resolved by {}", commentId, username);
+        
+        return CommentResponse.fromEntity(saved);
+    }
+
+    /**
+     * Add a reply to a comment
+     */
+    @Transactional
+    public CommentResponse replyToComment(Long parentCommentId, CommentRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        
+        ReviewComment parentComment = reviewCommentRepository.findById(parentCommentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found with id: " + parentCommentId));
+        
+        // Create reply
+        ReviewComment reply = ReviewComment.builder()
+                .syllabus(parentComment.getSyllabus())
+                .user(user)
+                .content(request.getContent())
+                .parentCommentId(parentCommentId)
+                .status("PENDING")
+                .build();
+        
+        ReviewComment savedReply = reviewCommentRepository.save(reply);
+        
+        // Update parent comment's reply count
+        parentComment.setReplyCount((parentComment.getReplyCount() != null ? parentComment.getReplyCount() : 0) + 1);
+        reviewCommentRepository.save(parentComment);
+        
+        log.info("Reply {} created for comment {}", savedReply.getCommentId(), parentCommentId);
+        
+        return CommentResponse.fromEntity(savedReply);
     }
 }
