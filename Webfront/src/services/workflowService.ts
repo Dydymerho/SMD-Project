@@ -434,14 +434,16 @@ export const getUsersByRole = async (role: string) => {
 // Get collaborative reviews for Lecturer
 export const getCollaborativeReviewsForLecturer = async () => {
   try {
-    // Fetch all syllabuses and filter those in collaborative review status
+    // Fetch all syllabuses
     const response = await axiosClient.get('/syllabuses');
     const syllabuses = Array.isArray(response.data) ? response.data : response.data?.data || [];
     
-    // Filter syllabuses that are in collaborative review (status includes 'review' or have comments)
+    // Filter syllabuses that are available for collaborative review:
+    // Only show syllabuses in PENDING_REVIEW or PENDING_APPROVAL status
+    // These are the ones that HoD has opened for collaborative review
     const collaborativeReviews = syllabuses.filter((s: any) => {
-      const status = (s.currentStatus || '').toLowerCase();
-      return status.includes('review') || status.includes('collab') || status.includes('feedback');
+      const status = s.currentStatus || '';
+      return status === 'PENDING_REVIEW' || status === 'PENDING_APPROVAL';
     });
     
     return { data: collaborativeReviews };

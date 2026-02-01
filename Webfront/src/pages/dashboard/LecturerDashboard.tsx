@@ -20,6 +20,7 @@ import {
   createSyllabusVersion,
   deleteSyllabus,
 } from '../../services/api';
+import { getCollaborativeReviewsForLecturer, getReviewCommentCount } from '../../services/workflowService';
 
 interface Syllabus {
   syllabusId: number;
@@ -168,6 +169,38 @@ const LecturerDashboard: React.FC = () => {
           comments: 0,
       }));
       setSyllabuses(converted);
+      
+      // Load collaborative reviews for lecturer
+      try {
+        const collaborativeData = await getCollaborativeReviewsForLecturer();
+        console.log('Collaborative data:', collaborativeData);
+        const collaborativeList = Array.isArray(collaborativeData.data) ? collaborativeData.data : [];
+        console.log('Collaborative list:', collaborativeList);
+        
+        // Map collaborative syllabi with comment counts
+        const collaborativeConverted = await Promise.all(
+          collaborativeList.map(async (s: APISyllabus) => {
+            const commentCount = await getReviewCommentCount(s.syllabusId);
+            return {
+              syllabusId: s.syllabusId,
+              courseId: s.courseId,
+              id: s.courseCode,
+              name: s.courseName,
+              submittedDate: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('vi-VN') : 'N/A',
+              version: s.versionNo ? `v${s.versionNo}` : 'v1.0',
+              instructor: s.lecturerName,
+              collaborators: 1,
+              comments: commentCount,
+            };
+          })
+        );
+        
+        console.log('Collaborative converted:', collaborativeConverted);
+        setCollaborativeSyllabi(collaborativeConverted);
+      } catch (err) {
+        console.log('Could not fetch collaborative reviews:', err);
+        setCollaborativeSyllabi([]);
+      }
     } catch (error) {
       setSyllabuses([]);
     } finally {
@@ -747,21 +780,21 @@ const LecturerDashboard: React.FC = () => {
                           <div className="action-buttons">
                             <button 
                               className="icon-btn" 
-                              onClick={() => navigate(`/collaborative-review/${syllabus.id}`)} 
+                              onClick={() => navigate(`/collaborative-review/${syllabus.syllabusId}`)} 
                               title="Xem tất cả Review"
                             >
                               <Eye size={18} />
                             </button>
                             <button 
                               className="icon-btn primary" 
-                              onClick={() => handleAddComment(syllabus.id)} 
+                              onClick={() => handleAddComment(String(syllabus.syllabusId))} 
                               title="Thêm góp ý"
                             >
                               <MessageSquare size={18} />
                             </button>
                             <button 
                               className="icon-btn warning" 
-                              onClick={() => handleReportError(syllabus.id)} 
+                              onClick={() => handleReportError(String(syllabus.syllabusId))} 
                               title="Báo lỗi"
                             >
                               <AlertCircle size={18} />
