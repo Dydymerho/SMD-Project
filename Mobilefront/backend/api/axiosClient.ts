@@ -7,7 +7,7 @@ const activeBaseURL = DeviceInfo.isEmulator()
   : 'http://172.30.3.122:9090/api';
 const axiosClient = axios.create({
 
-  baseURL: activeBaseURL,
+  baseURL: "http://10.0.2.2:9090/api",
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -44,8 +44,6 @@ axiosClient.interceptors.response.use(
     // Unauthorized → clear auth and let user re-login
     if (status === 401) {
       await AsyncStorage.removeItem('AUTH_TOKEN');
-      // Note: Không gọi logout() từ AuthContext ở đây để tránh circular dependency
-      // RootNavigator sẽ tự động kiểm tra và redirect về login
     }
 
     return Promise.reject(error);

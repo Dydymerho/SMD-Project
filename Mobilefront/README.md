@@ -95,3 +95,29 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+
+# Hướng dẫn chạy Mobile App với Docker (Windows)
+
+Dự án sử dụng Docker để chạy Metro Bundler (Server JS), giúp môi trường phát triển đồng nhất và tránh lỗi phiên bản Node.js.
+
+## Yêu cầu chuẩn bị
+1. **Docker Desktop** đã cài đặt và đang chạy.
+2. **Android Studio** và máy ảo (Emulator) đã được tạo.
+3. **Node.js** (đã cài trên máy thật để chạy lệnh cài app).
+
+---
+
+## Bước 1: Cấu hình IP Backend
+Trước khi chạy, hãy đảm bảo file `backend/api/axiosClient.ts` trỏ đúng địa chỉ Server.
+- Nếu dùng Emulator: `baseURL: 'http://10.0.2.2:9090/api'`
+- Nếu dùng Điện thoại thật: `baseURL: 'http://<IP_LAN_CUA_BAN>:9090/api'`
+
+## Bước 2: Khởi động Máy ảo (Emulator)
+**QUAN TRỌNG:** Hãy bật Emulator từ Android Studio trước khi chạy lệnh. Đợi nó lên màn hình chính hẳn.
+
+## Bước 3: Khởi động Metro Bundler (Docker)
+Mở Terminal tại thư mục dự án và chạy:
+```bash
+# Lệnh này sẽ build image và chạy server Metro
+docker-compose up --build
