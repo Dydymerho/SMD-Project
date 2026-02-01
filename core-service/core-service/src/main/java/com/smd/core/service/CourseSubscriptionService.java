@@ -1,6 +1,8 @@
 package com.smd.core.service;
 
 import com.smd.core.dto.CourseSimpleDto;
+import com.smd.core.dto.CourseSubscriptionResponse;
+import com.smd.core.dto.CourseUnsubscriptionResponse;
 import com.smd.core.entity.Course;
 import com.smd.core.entity.CourseSubscription;
 import com.smd.core.entity.User;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,17 +23,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CourseSubscriptionService {
 
-    private final CourseSubscriptionRepository subscriptionRepository;
-    private final CourseRepository courseRepository;
-    private final UserRepository userRepository;
+private final CourseSubscriptionRepository subscriptionRepository;
+private final CourseRepository courseRepository;
+private final UserRepository userRepository;
 
-    @Transactional
-    public void followCourse(String username, Long courseId) {
+@Transactional
+public CourseSubscriptionResponse followCourse(String username, Long courseId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (subscriptionRepository.existsByUser_UserIdAndCourse_CourseId(user.getUserId(), courseId)) {
-            throw new DuplicateResourceException("You are already following this course");
+                throw new DuplicateResourceException("You are already following this course");
         }
 
         Course course = courseRepository.findById(courseId)
@@ -41,11 +44,24 @@ public class CourseSubscriptionService {
                 .course(course)
                 .build();
 
-        subscriptionRepository.save(subscription);
-    }
+        CourseSubscription savedSubscription = subscriptionRepository.save(subscription);
 
-    @Transactional
-    public void unfollowCourse(String username, Long courseId) {
+        return CourseSubscriptionResponse.builder()
+                .subscriptionId(savedSubscription.getId())
+                .message("Successfully followed course: " + course.getCourseName())
+                .course(CourseSimpleDto.builder()
+                        .courseId(course.getCourseId())
+                        .courseCode(course.getCourseCode())
+                        .courseName(course.getCourseName())
+                        .credits(course.getCredits())
+                        .courseType(course.getCourseType().name())
+                        .build())
+                        .subscribedAt(savedSubscription.getSubscribedAt())
+                        .build();
+}
+
+@Transactional
+public CourseUnsubscriptionResponse unfollowCourse(String username, Long courseId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -53,24 +69,39 @@ public class CourseSubscriptionService {
                 .findByUser_UserIdAndCourse_CourseId(user.getUserId(), courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
 
-        subscriptionRepository.delete(subscription);
-    }
+        Course course = subscription.getCourse();
+        LocalDateTime unsubscribedAt = LocalDateTime.now();
 
-    @Transactional(readOnly = true)
-    public List<CourseSimpleDto> getFollowedCourses(String username) {
+        subscriptionRepository.delete(subscription);
+
+        return CourseUnsubscriptionResponse.builder()
+                .message("Successfully unfollowed course: " + course.getCourseName())
+                .course(CourseSimpleDto.builder()
+                        .courseId(course.getCourseId())
+                        .courseCode(course.getCourseCode())
+                        .courseName(course.getCourseName())
+                        .credits(course.getCredits())
+                        .courseType(course.getCourseType().name())
+                        .build())
+                .unsubscribedAt(unsubscribedAt)
+                .build();
+}
+
+@Transactional(readOnly = true)
+public List<CourseSimpleDto> getFollowedCourses(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // Reuse CourseSimpleDto exist in your project
         return subscriptionRepository.findByUser_UserId(user.getUserId()).stream()
                 .map(sub -> {
-                    Course c = sub.getCourse();
-                    return CourseSimpleDto.builder() // Giả sử bạn có builder này
-                            .courseId(c.getCourseId())
-                            .courseCode(c.getCourseCode())
-                            .courseName(c.getCourseName())
-                            .build();
+                Course c = sub.getCourse();
+                return CourseSimpleDto.builder() // Giả sử bạn có builder này
+                        .courseId(c.getCourseId())
+                        .courseCode(c.getCourseCode())
+                        .courseName(c.getCourseName())
+                        .build();
                 })
                 .collect(Collectors.toList());
-    }
+}
 }

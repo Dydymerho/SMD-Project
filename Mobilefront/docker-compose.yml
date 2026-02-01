@@ -1,15 +1,28 @@
 version: '3.8'
 
 services:
-  mobile-app:
+  metro-bundler:
     build: .
-    container_name: smd_mobile_app
+    container_name: smd_mobile_metro
     ports:
-      - "8081:8081" # Map port Metro Bundler ra ngoài
+      - "8081:8081"
+
     volumes:
-      - .:/app # Đồng bộ code từ máy thật vào container (Hot Reload)
-      - /app/node_modules # Giữ node_modules của container, không cho máy thật ghi đè
+      - .:/app
+
+      - /app/node_modules
+
+      - /app/android
+      - /app/ios
+
     environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+
       - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
-    stdin_open: true # Giữ terminal mở để tương tác
+
+    stdin_open: true
     tty: true
+
+    # Lệnh chạy
+    command: npm start

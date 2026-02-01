@@ -1,5 +1,6 @@
 package com.smd.core.dto;
 
+import com.smd.core.entity.CommentContextType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,15 +16,8 @@ public class CommentRequest {
     @NotBlank(message = "Comment content is required")
     private String content;
     
-    private String type; // REVIEW, FEEDBACK, BUG_REPORT, SUGGESTION, etc.
-    
-    private String contextType; // CLO, MODULE, ASSESSMENT, GENERAL
-    
-    private Long contextId; // ID of the CLO, Module, Assessment, etc.
-    
-    private String contextSection; // Section reference
-    
-    private Long parentCommentId; // For replies to existing comments
-    
-    private String status; // PENDING, RESOLVED, ARCHIVED
+    // Optional: Context information for targeted comments
+    private CommentContextType contextType;
+    private Long contextId;
+    private String contextSection; // e.g., "CLO 1.2", "Week 3"
 }

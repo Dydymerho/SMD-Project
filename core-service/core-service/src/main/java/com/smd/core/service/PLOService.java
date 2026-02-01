@@ -1,7 +1,10 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.PLOResponse;
+import com.smd.core.entity.CLOPLOMapping;
 import com.smd.core.entity.PLO;
 import com.smd.core.exception.ResourceNotFoundException;
+import com.smd.core.repository.CLOPLOMappingRepository;
 import com.smd.core.repository.PLORepository;
 import com.smd.core.repository.ProgramRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PLOService {
     private final PLORepository ploRepository;
     private final ProgramRepository programRepository;
+    private final CLOPLOMappingRepository mappingRepository;
 
     @Transactional(readOnly = true)
     public List<PLO> getAllPLOs() {
@@ -25,6 +30,33 @@ public class PLOService {
     public PLO getPLOById(Long id) {
         return ploRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PLO not found with id: " + id));
+    }
+    
+    @Transactional(readOnly = true)
+    public PLOResponse getPLOWithCoverage(Long id) {
+        PLO plo = getPLOById(id);
+        List<CLOPLOMapping> mappings = mappingRepository.findByPlo_PloId(id);
+        
+        Long totalMappedCLOs = mappingRepository.countByPloId(id);
+        
+        List<PLOResponse.CLOMappingSummary> cloMappings = mappings.stream()
+            .map(m -> PLOResponse.CLOMappingSummary.builder()
+                .cloId(m.getClo().getCloId())
+                .cloCode(m.getClo().getCloCode())
+                .syllabusId(m.getClo().getSyllabus().getSyllabusId())
+                .courseCode(m.getClo().getSyllabus().getCourse().getCourseCode())
+                .mappingLevel(m.getMappingLevel().name())
+                .build())
+            .collect(Collectors.toList());
+        
+        return PLOResponse.builder()
+            .ploId(plo.getPloId())
+            .programId(plo.getProgram().getProgramId())
+            .ploCode(plo.getPloCode())
+            .ploDescription(plo.getPloDescription())
+            .totalMappedCLOs(totalMappedCLOs.intValue())
+            .cloMappings(cloMappings)
+            .build();
     }
 
     @Transactional(readOnly = true)

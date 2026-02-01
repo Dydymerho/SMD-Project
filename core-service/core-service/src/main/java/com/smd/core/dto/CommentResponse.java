@@ -1,5 +1,7 @@
 package com.smd.core.dto;
 
+import com.smd.core.entity.CommentContextType;
+import com.smd.core.entity.CommentStatus;
 import com.smd.core.entity.ReviewComment;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,20 +24,29 @@ public class CommentResponse {
     private String userEmail;
     private String content;
     private LocalDateTime createdAt;
+    
+    // Edit tracking
     private LocalDateTime editedAt;
-    private String status; // PENDING, RESOLVED, ARCHIVED
-    private String contextType; // CLO, MODULE, ASSESSMENT, GENERAL
-    private Long contextId;
-    private String contextSection;
+    private boolean isEdited;
+    
+    // Thread/Reply support
     private Long parentCommentId;
-    private Integer replyCount;
-    private LocalDateTime resolvedAt;
+    private int replyCount;
+    
+    // Status management
+    private CommentStatus status;
     private Long resolvedById;
     private String resolvedByName;
+    private LocalDateTime resolvedAt;
     private String resolutionNote;
+    
+    // Context information
+    private CommentContextType contextType;
+    private Long contextId;
+    private String contextSection;
 
     public static CommentResponse fromEntity(ReviewComment comment) {
-        return CommentResponse.builder()
+        CommentResponse.CommentResponseBuilder builder = CommentResponse.builder()
                 .commentId(comment.getCommentId())
                 .syllabusId(comment.getSyllabus().getSyllabusId())
                 .syllabusTitle(comment.getSyllabus().getCourse().getCourseName())
@@ -45,16 +56,26 @@ public class CommentResponse {
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .editedAt(comment.getEditedAt())
+                .isEdited(comment.isEdited())
+                .replyCount(comment.getReplyCount())
                 .status(comment.getStatus())
+                .resolvedAt(comment.getResolvedAt())
+                .resolutionNote(comment.getResolutionNote())
                 .contextType(comment.getContextType())
                 .contextId(comment.getContextId())
-                .contextSection(comment.getContextSection())
-                .parentCommentId(comment.getParentCommentId())
-                .replyCount(comment.getReplyCount())
-                .resolvedAt(comment.getResolvedAt())
-                .resolvedById(comment.getResolvedBy() != null ? comment.getResolvedBy().getUserId() : null)
-                .resolvedByName(comment.getResolvedBy() != null ? comment.getResolvedBy().getFullName() : null)
-                .resolutionNote(comment.getResolutionNote())
-                .build();
+                .contextSection(comment.getContextSection());
+        
+        // Handle parent comment
+        if (comment.getParentComment() != null) {
+            builder.parentCommentId(comment.getParentComment().getCommentId());
+        }
+        
+        // Handle resolver
+        if (comment.getResolvedBy() != null) {
+            builder.resolvedById(comment.getResolvedBy().getUserId())
+                   .resolvedByName(comment.getResolvedBy().getFullName());
+        }
+        
+        return builder.build();
     }
 }

@@ -31,6 +31,12 @@ public class PLOController {
         PLO plo = ploService.getPLOById(id);
         return ResponseEntity.ok(convertToDto(plo));
     }
+    
+    @GetMapping("/{id}/with-coverage")
+    public ResponseEntity<PLOResponse> getPLOWithCoverage(@PathVariable Long id) {
+        PLOResponse response = ploService.getPLOWithCoverage(id);
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/program/{programId}")
     public ResponseEntity<List<PLOResponse>> getPLOsByProgramId(@PathVariable Long programId) {

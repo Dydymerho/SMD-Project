@@ -168,6 +168,7 @@ public class SyllabusService {
                 .program(source.getProgram())
                 .previousVersionId(sourceSyllabusId)
                 .versionNotes(versionNotes)
+                .description(source.getDescription())
                 .isLatestVersion(true)
                 .build();
         
@@ -351,6 +352,9 @@ public class SyllabusService {
         if (syllabusDetails.getCurrentStatus() != null) {
             existing.setCurrentStatus(syllabusDetails.getCurrentStatus());
         }
+        if (syllabusDetails.getDescription() != null) {
+            existing.setDescription(syllabusDetails.getDescription());
+        }
         
         // Save to PostgreSQL
         Syllabus updated = syllabusRepo.save(existing);
@@ -398,6 +402,7 @@ public class SyllabusService {
                         .id(syllabus.getSyllabusId())
                         .subjectCode(syllabus.getCourse().getCourseCode())
                         .subjectName(syllabus.getCourse().getCourseName())
+                        .description(syllabus.getDescription())
                         .fullText(buildFullText(syllabus))
                         .build();
                 elasticRepo.save(doc);
@@ -467,6 +472,11 @@ public class SyllabusService {
         // Lecturer
         if (s.getLecturer() != null) {
             text.append(s.getLecturer().getFullName()).append(" ");
+        }
+        
+        // Description
+        if (s.getDescription() != null) {
+            text.append(s.getDescription()).append(" ");
         }
         
         return text.toString().trim();
