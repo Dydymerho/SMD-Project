@@ -349,24 +349,31 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (lecIT1 == null) return;
 
         // 1. DRAFT Syllabi
-        Syllabus s1 = createSyllabusWithDetails("JPD113", "2024-2025", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.DRAFT);
-        createSyllabusWithDetails("PRO192", "2025-2026", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.DRAFT);
+        Syllabus s1 = createSyllabusWithDetails("JPD113", "2024-2025", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.DRAFT, 
+            "Môn học Java Programming cung cấp kiến thức nền tảng về lập trình hướng đối tượng với Java. Sinh viên sẽ học các khái niệm cơ bản như class, object, inheritance, polymorphism, và exception handling. Khóa học tập trung vào việc phát triển kỹ năng lập trình thực tế thông qua các bài tập và dự án nhóm.");
+        createSyllabusWithDetails("PRO192", "2025-2026", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.DRAFT,
+            "Môn Object-Oriented Programming giúp sinh viên nắm vững các nguyên lý lập trình hướng đối tượng. Nội dung bao gồm: thiết kế class diagram, UML, design patterns cơ bản, và best practices trong OOP. Môn học yêu cầu sinh viên hoàn thành 3 assignment lớn và 1 final project.");
         
         // 2. PENDING_REVIEW (Chờ trưởng bộ môn duyệt)
-        createSyllabusWithDetails("DBI202", "2024-2025", 1, lecIT2, seProgram, Syllabus.SyllabusStatus.PENDING_REVIEW);
+        createSyllabusWithDetails("DBI202", "2024-2025", 1, lecIT2, seProgram, Syllabus.SyllabusStatus.PENDING_REVIEW,
+            "Database Systems là môn học thiết yếu trong chương trình đào tạo Kỹ thuật Phần mềm. Sinh viên sẽ được học về thiết kế cơ sở dữ liệu quan hệ, SQL, normalization, transaction processing, và indexing. Phần thực hành tập trung vào MySQL và PostgreSQL với các case study thực tế từ doanh nghiệp.");
         
         // 3. APPROVED (Đã được duyệt, chờ xuất bản)
-        createSyllabusWithDetails("MKT101", "2024-2025", 1, lecBiz, mktProgram, Syllabus.SyllabusStatus.APPROVED);
+        createSyllabusWithDetails("MKT101", "2024-2025", 1, lecBiz, mktProgram, Syllabus.SyllabusStatus.APPROVED,
+            "Marketing Fundamentals giới thiệu các khái niệm cơ bản về marketing trong kỷ nguyên số. Nội dung gồm: phân tích thị trường, hành vi người tiêu dùng, chiến lược marketing mix (4P), và digital marketing trends. Sinh viên sẽ thực hiện các case study về các công ty hàng đầu Việt Nam và quốc tế.");
         
         // 4. PUBLISHED (Đã công khai)
-        Syllabus sWeb = createSyllabusWithDetails("WED201c", "2024-2025", 2, lecIT1, seProgram, Syllabus.SyllabusStatus.PUBLISHED);
-        createSyllabusWithDetails("DES101", "2024-2025", 1, lecDesign, designProgram, Syllabus.SyllabusStatus.PUBLISHED);
+        Syllabus sWeb = createSyllabusWithDetails("WED201c", "2024-2025", 2, lecIT1, seProgram, Syllabus.SyllabusStatus.PUBLISHED,
+            "Web Design & Development trang bị cho sinh viên kỹ năng thiết kế và phát triển website hiện đại. Chương trình bao gồm HTML5, CSS3, JavaScript, responsive design, và các framework như React hoặc Vue.js. Sinh viên sẽ hoàn thành một dự án web application hoàn chỉnh trong nhóm 3-4 người, áp dụng Agile methodology.");
+        createSyllabusWithDetails("DES101", "2024-2025", 1, lecDesign, designProgram, Syllabus.SyllabusStatus.PUBLISHED,
+            "Color Theory là môn học nền tảng về lý thuyết màu sắc trong thiết kế. Sinh viên sẽ tìm hiểu về color wheel, color harmony, psychology of colors, và cách áp dụng màu sắc hiệu quả trong các dự án thiết kế đồ họa. Khóa học kết hợp lý thuyết và thực hành trên Adobe Photoshop, Illustrator.");
         
         // 5. ARCHIVED (Syllabus cũ)
-        createSyllabusWithDetails("WED201c", "2023-2024", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.ARCHIVED);
+        createSyllabusWithDetails("WED201c", "2023-2024", 1, lecIT1, seProgram, Syllabus.SyllabusStatus.ARCHIVED,
+            "[Phiên bản cũ] Web Design & Development - phiên bản này tập trung vào HTML, CSS, và jQuery. Đã được thay thế bởi phiên bản mới với nội dung cập nhật về React và modern JavaScript frameworks.");
     }
 
-    private Syllabus createSyllabusWithDetails(String courseCode, String year, int ver, User lecturer, Program program, Syllabus.SyllabusStatus status) {
+    private Syllabus createSyllabusWithDetails(String courseCode, String year, int ver, User lecturer, Program program, Syllabus.SyllabusStatus status, String description) {
         Course course = courseRepository.findByCourseCode(courseCode).orElse(null);
         if (course == null || lecturer == null) return null;
 
@@ -380,6 +387,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .course(course).lecturer(lecturer).program(program)
                 .academicYear(year).versionNo(ver)
                 .currentStatus(status)
+                .description(description)
                 .isLatestVersion(isLatest)
                 .createdAt(LocalDateTime.now().minusDays(new Random().nextInt(30)))
                 .updatedAt(LocalDateTime.now())
