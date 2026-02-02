@@ -9,7 +9,6 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 40,
     },
-
     /* ===== HEADER ===== */
     headerContainer: {
         marginBottom: 24,
@@ -32,7 +31,6 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 10,
     },
-
     /* ===== TERM CARD ===== */
     card: {
         backgroundColor: "#FFFFFF",
