@@ -41,8 +41,6 @@ axiosClient.interceptors.response.use(
     // Unauthorized → clear auth and let user re-login
     if (status === 401) {
       await AsyncStorage.removeItem('AUTH_TOKEN');
-      // Note: Không gọi logout() từ AuthContext ở đây để tránh circular dependency
-      // RootNavigator sẽ tự động kiểm tra và redirect về login
     }
 
     return Promise.reject(error);

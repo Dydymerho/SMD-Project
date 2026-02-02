@@ -105,6 +105,15 @@ function App() {
               }
             />
 
+            <Route
+              path="/collaborative-review/:id"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <CollaborativeReviewDetailPage />
+                </PrivateRoute>
+              }
+            />
+
             {/* HoD Routes */}
             <Route
               path="/hod/dashboard"

@@ -415,7 +415,7 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const lockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
-  const response = await axiosClient.put(`/users/${userId}`, { 
+  const response = await axiosClient.put(`/users/${userId}`, {
     status: 'SUSPENDED',
     fullName: userFullName || 'Unknown',
     email: userEmail || 'unknown@example.com'
@@ -424,7 +424,7 @@ export const lockUser = async (userId: string, userFullName?: string, userEmail?
 };
 
 export const unlockUser = async (userId: string, userFullName?: string, userEmail?: string) => {
-  const response = await axiosClient.put(`/users/${userId}`, { 
+  const response = await axiosClient.put(`/users/${userId}`, {
     status: 'ACTIVE',
     fullName: userFullName || 'Unknown',
     email: userEmail || 'unknown@example.com'
@@ -740,10 +740,10 @@ export const getPrincipalDashboardStats = async () => {
     ]);
 
     // Count active syllabuses (APPROVED or PUBLISHED)
-    const activeSyllabuses = Array.isArray(allSyllabuses) 
-      ? allSyllabuses.filter((s: Syllabus) => 
-          s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
-        ).length 
+    const activeSyllabuses = Array.isArray(allSyllabuses)
+      ? allSyllabuses.filter((s: Syllabus) =>
+        s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
+      ).length
       : 0;
 
     return {
@@ -773,7 +773,7 @@ export const summarizeDocument = async (file: File): Promise<string> => {
       'Content-Type': 'multipart/form-data',
     },
   });
-  
+
   return response.data.summary || response.data;
 };
 
@@ -794,4 +794,4 @@ export const getAITaskStatus = async (taskId: string): Promise<any> => {
   return response.data;
 };
 
-export default axiosClient;
+export default aiAxiosClient;

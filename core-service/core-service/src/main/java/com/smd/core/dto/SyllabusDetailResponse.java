@@ -31,6 +31,7 @@ public class SyllabusDetailResponse {
         private Integer credit;
         private String academicYear;
     private String type;  // Type of syllabus (e.g., "Chính quy", "Liên thông")
+    private String description;  // Description of the syllabus
     private List<String> target;  // Learning objectives/targets
         
     // Related Data
@@ -125,6 +126,7 @@ public class SyllabusDetailResponse {
                 .credit(syllabus.getCourse().getCredits())
                 .academicYear(syllabus.getAcademicYear())
                 .type(syllabus.getCourse().getCourseType() != null ? syllabus.getCourse().getCourseType().name(): null)  // Using status as type for now
+                .description(syllabus.getDescription())
                 .target(new ArrayList<>())  // Empty list for now, can be populated if target field exists
                 .sessionPlans(sessionPlanResponses)
                 .assessments(assessmentResponses)

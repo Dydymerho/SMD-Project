@@ -103,6 +103,9 @@ export const fetchSyllabusById = async (id: number) => {
   }
 };
 
+// Alias for backward compatibility
+export const getSyllabusById = fetchSyllabusById;
+
 export const getSyllabusDetailForReview = async (syllabusId: number) => {
   try {
     // use detail endpoint to retrieve full syllabus structure (CLOs, modules, assessments, etc.)
@@ -113,105 +116,52 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
     console.log('All keys in API response:', Object.keys(data));
     console.log('data.currentStatus:', data.currentStatus);
     console.log('data.status:', data.status);
-    console.log('data.sessionPlans:', data.sessionPlans);
-    console.log('data.assessments:', data.assessments);
-    console.log('data.aiSummary:', data.aiSummary);
-
-    // Fetch CLOs from separate endpoint if not in main response
-    let closData: any[] = [];
-
-    try {
-      closData = await getSyllabusClos(syllabusId);
-      console.log('CLOs from separate API:', closData);
-    } catch (e) {
-      console.error('Error fetching CLOs:', e);
-    }
+    console.log('data.state:', data.state);
+    console.log('data.workflowStatus:', data.workflowStatus);
+    console.log('data.syllabusStatus:', data.syllabusStatus);
+    console.log('data.reviewStatus:', data.reviewStatus);
 
     const course = data.course || {};
 
     // Normalize CLOs (backend may use various field names)
     const clos = (() => {
-      let closArray: any[] = [];
-      
-      // First try from separate API data
-      if (closData && closData.length > 0) closArray = closData;
-      // Then try from main response
-      else if (Array.isArray(data.clos)) closArray = data.clos;
-      else if (Array.isArray(data.cclos)) closArray = data.cclos;
-      else if (Array.isArray(data.courseOutcomes)) closArray = data.courseOutcomes;
-      else if (Array.isArray(data.courseLearningOutcomes)) closArray = data.courseLearningOutcomes;
-      else if (Array.isArray(data.learningOutcomes)) closArray = data.learningOutcomes;
-      else if (Array.isArray(data.outcomes)) closArray = data.outcomes;
-      else if (Array.isArray(data.objectives)) closArray = data.objectives;
-      else if (Array.isArray(data.goals)) closArray = data.goals;
+      if (Array.isArray(data.clos)) return data.clos;
+      if (Array.isArray(data.cclos)) return data.cclos;
+      if (Array.isArray(data.courseOutcomes)) return data.courseOutcomes;
+      if (Array.isArray(data.courseLearningOutcomes)) return data.courseLearningOutcomes;
+      if (Array.isArray(data.learningOutcomes)) return data.learningOutcomes;
+      if (Array.isArray(data.outcomes)) return data.outcomes;
+      if (Array.isArray(data.objectives)) return data.objectives;
+      if (Array.isArray(data.goals)) return data.goals;
       // Try from nested structures
-      else if (data.courseInfo?.clos && Array.isArray(data.courseInfo.clos)) closArray = data.courseInfo.clos;
-      else if (data.syllabus?.clos && Array.isArray(data.syllabus.clos)) closArray = data.syllabus.clos;
-      else if (course?.clos && Array.isArray(course.clos)) closArray = course.clos;
-      
-      // Normalize to strings
-      return closArray.map((clo: any) => {
-        if (typeof clo === 'string') return clo;
-        if (typeof clo === 'object') return clo.description || clo.name || clo.text || JSON.stringify(clo);
-        return String(clo);
-      });
+      if (data.courseInfo?.clos && Array.isArray(data.courseInfo.clos)) return data.courseInfo.clos;
+      if (data.syllabus?.clos && Array.isArray(data.syllabus.clos)) return data.syllabus.clos;
+      if (course?.clos && Array.isArray(course.clos)) return course.clos;
+      return [];
     })();
-    
-    console.log('Normalized CLOs:', clos);
 
-    // Normalize modules/contents (prefer sessionPlans)
+    // Normalize modules/contents
     const modules = (() => {
-      let modulesArray: any[] = [];
-      
-      // Prefer sessionPlans from response
-      if (Array.isArray(data.sessionPlans)) modulesArray = data.sessionPlans;
-      else if (Array.isArray(data.modules)) modulesArray = data.modules;
-      else if (Array.isArray(data.courseOutline)) modulesArray = data.courseOutline;
-      else if (Array.isArray(data.weeklyPlans)) modulesArray = data.weeklyPlans;
-      else if (Array.isArray(data.sessions)) modulesArray = data.sessions;
-      else if (Array.isArray(data.contents)) modulesArray = data.contents;
-      
-      return modulesArray.map((m: any, idx: number) => ({
-        moduleNo: m.sessionId || m.weekNo || m.moduleNo || m.week || m.order || idx + 1,
-        moduleName: m.topic || m.title || m.moduleName || m.name || `Session ${idx + 1}`,
-        // Handle topics - could be array, string, or nested object
-        topics: Array.isArray(m.topics) 
-          ? m.topics.map((t: any) => typeof t === 'string' ? t : (t.name || t.title || JSON.stringify(t)))
-          : (typeof m.topic === 'string' ? [m.topic] : (m.contents || m.details || m.items || m.topics || [])),
-        hours: m.hours || m.duration || m.totalHours || 0,
-      }));
+      if (Array.isArray(data.modules)) return data.modules;
+      if (Array.isArray(data.courseOutline)) return data.courseOutline;
+      if (Array.isArray(data.weeklyPlans)) return data.weeklyPlans;
+      if (Array.isArray(data.sessions)) return data.sessions;
+      if (Array.isArray(data.contents)) return data.contents;
+      return [];
     })();
-    
-    console.log('Normalized modules/sessions:', modules);
 
     // Normalize assessments
     const assessments = (() => {
-      let assessmentArray: any[] = [];
-      
-      if (Array.isArray(data.assessments)) assessmentArray = data.assessments;
-      else if (Array.isArray(data.assessmentMethods)) assessmentArray = data.assessmentMethods;
-      else if (Array.isArray(data.evaluation)) assessmentArray = data.evaluation;
-      
-      return assessmentArray.map((a: any, idx: number) => {
-        const criteria = a.criteria || a.criteriaDescription || a.rubric || '';
-        const baseDesc = a.description || a.detail || a.content || '';
-        const mergedDesc = criteria
-          ? `${baseDesc ? baseDesc + ' | ' : ''} ${criteria}`
-          : baseDesc;
-        return {
-          type: a.type || a.method || a.name || `Hình thức ${idx + 1}`,
-          percentage: a.percentage || a.weight || a.weightPercent || 0,
-          description: mergedDesc || 'Chưa có mô tả'
-        };
-      });
+      if (Array.isArray(data.assessments)) return data.assessments;
+      if (Array.isArray(data.assessmentMethods)) return data.assessmentMethods;
+      if (Array.isArray(data.evaluation)) return data.evaluation;
+      return [];
     })();
-    
-    console.log('Normalized assessments:', assessments);
 
     // Normalize changes/history
     const changes = Array.isArray(data.changes) ? data.changes : data.changeLog || [];
 
-    const result = {
+    return {
       id: String(data.syllabusId || data.id),
       courseCode: course.courseCode || data.courseCode || 'N/A',
       courseName: course.courseName || data.courseName || 'Giáo trình không tên',
@@ -223,54 +173,33 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
       version: data.version || 1,
       submissionDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
       academicYear: data.academicYear || 'Chưa xác định',
-      description: data.description || data.overview || data.content || data.summary || 'Chưa có mô tả',
-      aiSummary: data.aiSummary || data.aiSumary || null,
+      description: data.description || data.content || data.summary || 'Chưa có mô tả',
       currentStatus: data.currentStatus || data.status || 'DRAFT',
       rejectionReason: data.rejectionReason || data.rejectionNote || undefined,
       clos,
-      modules,
-      assessments,
+      modules: modules.map((m: any, idx: number) => ({
+        moduleNo: m.moduleNo || m.module || m.week || m.order || idx + 1,
+        moduleName: m.moduleName || m.title || m.topic || m.name || `Module ${idx + 1}`,
+        topics: Array.isArray(m.topics) ? m.topics : (m.topic ? [m.topic] : (m.contents || m.details || [])),
+        hours: m.hours || m.duration || m.totalHours || 0,
+      })),
+      assessments: assessments.map((a: any, idx: number) => {
+        const criteria = a.criteria || a.criteriaDescription || a.rubric || '';
+        const baseDesc = a.description || a.detail || '';
+        const mergedDesc = criteria
+          ? `${baseDesc ? baseDesc + ' | ' : ''} ${criteria}`
+          : baseDesc;
+        return {
+          type: a.type || a.method || a.name || `Hình thức ${idx + 1}`,
+          percentage: a.percentage || a.weight || a.weightPercent || 0,
+          description: mergedDesc
+        };
+      }),
       changes
     };
-
-    console.log('Final result to return:', result);
-    console.log('clos count:', clos.length);
-    console.log('modules count:', modules.length);
-    console.log('assessments count:', assessments.length);
-    console.log('aiSummary:', result.aiSummary);
-    
-    return result;
   } catch (error) {
     console.error('Error fetching syllabus detail for review:', error);
     throw error;
-  }
-};
-
-// Get CLOs for a syllabus
-export const getSyllabusClos = async (syllabusId: number) => {
-  try {
-    // Use the correct CLO endpoint from backend: /api/clos/syllabus/{syllabusId}
-    const endpoint = `/clos/syllabus/${syllabusId}`;
-    
-    const response = await axiosClient.get(endpoint);
-    let data = response.data || {};
-    
-    // Handle different response formats
-    let closArray: any[] = [];
-    
-    if (Array.isArray(data)) {
-      closArray = data;
-    } else if (Array.isArray(data.data)) {
-      closArray = data.data;
-    } else if (Array.isArray(data.clos)) {
-      closArray = data.clos;
-    }
-    
-    console.log(`CLOs loaded from ${endpoint}:`, closArray);
-    return closArray;
-  } catch (error) {
-    console.error('Error fetching syllabus CLOs:', error);
-    return [];
   }
 };
 
@@ -450,5 +379,76 @@ export const createCollaborativeReview = async (syllabusId: number, description:
   } catch (error) {
     console.error('Error creating collaborative review:', error);
     throw error;
+  }
+};
+
+// Get all comments for a syllabus (for collaborative review)
+export const getAllComments = async (syllabusId: number) => {
+  try {
+    const response = await axiosClient.get(`/syllabuses/${syllabusId}/comments/all`);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching all comments:', error);
+    return [];
+  }
+};
+
+// Add comment to syllabus
+export const addComment = async (syllabusId: number, content: string) => {
+  try {
+    const response = await axiosClient.post(`/syllabuses/${syllabusId}/comments`, {
+      content,
+      type: 'REVIEW'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw error;
+  }
+};
+
+// Delete comment
+export const deleteComment = async (syllabusId: number, commentId: number) => {
+  try {
+    await axiosClient.delete(`/syllabuses/${syllabusId}/comments/${commentId}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    throw error;
+  }
+};
+
+// Get users by role (for selecting participants)
+export const getUsersByRole = async (role: string) => {
+  try {
+    const response = await axiosClient.get(`/users`, {
+      params: { role }
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching users by role:', error);
+    return [];
+  }
+};
+
+// Get collaborative reviews for Lecturer
+export const getCollaborativeReviewsForLecturer = async () => {
+  try {
+    // Fetch all syllabuses
+    const response = await axiosClient.get('/syllabuses');
+    const syllabuses = Array.isArray(response.data) ? response.data : response.data?.data || [];
+    
+    // Filter syllabuses that are available for collaborative review:
+    // Only show syllabuses in PENDING_REVIEW or PENDING_APPROVAL status
+    // These are the ones that HoD has opened for collaborative review
+    const collaborativeReviews = syllabuses.filter((s: any) => {
+      const status = s.currentStatus || '';
+      return status === 'PENDING_REVIEW' || status === 'PENDING_APPROVAL';
+    });
+    
+    return { data: collaborativeReviews };
+  } catch (error) {
+    console.error('Error fetching collaborative reviews for lecturer:', error);
+    return { data: [] };
   }
 };

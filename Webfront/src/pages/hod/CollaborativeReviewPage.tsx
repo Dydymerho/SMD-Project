@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../../api/axiosClient';
 import { 
   Users, Home, MessageSquare, CheckCircle, Clock, Search, Bell, User, Loader, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview } from '../../services/workflowService';
+import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview, fetchSyllabusById, fetchAllSyllabuses } from '../../services/workflowService';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+
+interface CommentAuthor {
+  username?: string;
+  fullName?: string;
+  email?: string;
+}
+
+interface Comment {
+  id?: string;
+  author?: CommentAuthor;
+  content?: string;
+  createdAt?: string;
+}
 
 interface CollaborativeReview {
   id: string;
@@ -18,6 +32,8 @@ interface CollaborativeReview {
   participantCount: number;
   feedbackCount: number;
   lecturer: string;
+  lecturerEmail?: string;
+  recentComments?: Comment[];
   isFinalized?: boolean;
 }
 
@@ -33,6 +49,7 @@ const CollaborativeReviewPage: React.FC = () => {
     participants: [] as string[]
   });
   const [reviews, setReviews] = useState<CollaborativeReview[]>([]);
+  const [allSyllabuses, setAllSyllabuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('active');
@@ -56,9 +73,49 @@ const CollaborativeReviewPage: React.FC = () => {
       const pending = await getPendingSyllabusesForHoD();
       const list = Array.isArray(pending.data) ? pending.data : [];
 
+      // Also load all syllabuses for the create modal dropdown
+      try {
+        const allSyllabusesData = await fetchAllSyllabuses();
+        setAllSyllabuses(Array.isArray(allSyllabusesData.data) ? allSyllabusesData.data : []);
+      } catch (err) {
+        console.log('Could not fetch all syllabuses:', err);
+      }
+
       const mapped = await Promise.all(list.map(async (item: any) => {
         const syllabusId = item.syllabusId || item.id;
         const feedbackCount = syllabusId ? await getReviewCommentCount(syllabusId) : 0;
+        
+        // Fetch syllabus detail to get lecturer info
+        let lecturerName = item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ';
+        let lecturerEmail = item.lecturer?.email || item.createdBy?.email || '';
+        
+        try {
+          if (syllabusId) {
+            const syllabusDetail = await fetchSyllabusById(syllabusId);
+            if (syllabusDetail?.lecturer?.name) {
+              lecturerName = syllabusDetail.lecturer.name;
+            }
+            if (syllabusDetail?.lecturer?.email) {
+              lecturerEmail = syllabusDetail.lecturer.email;
+            }
+          }
+        } catch (err) {
+          console.log('Could not fetch syllabus details:', err);
+        }
+
+        // Fetch recent comments to show comment authors
+        let recentComments: Comment[] = [];
+        try {
+          if (syllabusId) {
+            const commentsResponse = await axiosClient.get(
+              `/syllabuses/${syllabusId}/comments/recent`
+            );
+            recentComments = Array.isArray(commentsResponse.data) ? commentsResponse.data.slice(0, 3) : [];
+          }
+        } catch (err) {
+          console.log('Could not fetch recent comments:', err);
+        }
+
         return {
           id: (syllabusId || '').toString(),
           courseCode: item.courseCode || item.course?.courseCode || 'N/A',
@@ -67,7 +124,9 @@ const CollaborativeReviewPage: React.FC = () => {
           status: mapStatus(item.currentStatus),
           participantCount: item.participantCount || 0,
           feedbackCount,
-          lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
+          lecturer: lecturerName,
+          lecturerEmail,
+          recentComments,
           isFinalized: mapStatus(item.currentStatus) === 'completed'
         } as CollaborativeReview;
       }));
@@ -307,10 +366,48 @@ const CollaborativeReviewPage: React.FC = () => {
                 <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>
                   {review.courseCode} - {review.courseName}
                 </h3>
-                <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>
-                  Giảng viên: {review.lecturer}
+                <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>
+                  📚 Giảng viên: <strong>{review.lecturer}</strong>
                 </p>
+                {review.lecturerEmail && (
+                  <p style={{ margin: '2px 0 0 0', color: '#999', fontSize: '12px' }}>
+                    {review.lecturerEmail}
+                  </p>
+                )}
               </div>
+
+              {/* Recent Comments Authors */}
+              {review.recentComments && review.recentComments.length > 0 && (
+                <div style={{
+                  background: '#f9f9f9',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  borderLeft: '3px solid #2196f3'
+                }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600, color: '#666' }}>
+                    👥 Những người đã góp ý:
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {review.recentComments.map((comment, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: '#e3f2fd',
+                          color: '#1976d2',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 500
+                        }}
+                        title={comment.author?.email || 'N/A'}
+                      >
+                        {comment.author?.fullName || comment.author?.username || 'Ẩn danh'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div style={{
@@ -510,9 +607,9 @@ const CollaborativeReviewPage: React.FC = () => {
                   }}
                 >
                   <option value="">-- Chọn giáo trình --</option>
-                  {reviews.map((review) => (
-                    <option key={review.id} value={review.id}>
-                      {review.courseCode} - {review.courseName}
+                  {allSyllabuses.map((syllabus: any) => (
+                    <option key={syllabus.syllabusId} value={syllabus.syllabusId}>
+                      {syllabus.courseCode} - {syllabus.courseName}
                     </option>
                   ))}
                 </select>

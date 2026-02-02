@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
+import {
   Home, FolderOpen, MessageSquare, Search, GitCompare, Bell, User,
-  Plus, ArrowLeft, Save, Send
+  Plus, ArrowLeft, Save
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
 import Toast, { useToast } from '../components/Toast';
 import { getSyllabusDetailForReview } from '../services/workflowService';
 import './CreateSyllabusPage.css';
 import './dashboard/DashboardPage.css';
-import { getSyllabusById, updateSyllabus } from '../services/api';
+import { updateSyllabus } from '../services/api';
 
 interface CLOItem {
   id: string;
@@ -49,7 +49,7 @@ const EditSyllabusPage: React.FC = () => {
   const { toasts, removeToast, success, error, info } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   // Basic Info
   const [courseCode, setCourseCode] = useState('');
   const [courseName, setCourseName] = useState('');
@@ -58,7 +58,7 @@ const EditSyllabusPage: React.FC = () => {
   const [semester, setSemester] = useState('');
   const [courseObjectives, setCourseObjectives] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
-  
+
   // CLO/PLO
   const [clos, setClos] = useState<CLOItem[]>([
     { id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }
@@ -66,26 +66,26 @@ const EditSyllabusPage: React.FC = () => {
   const [ploMappings, setPloMappings] = useState<{ [cloId: string]: PLOMapping[] }>({
     '1': [{ ploCode: 'PLO1', weight: 0 }]
   });
-  
+
   // Assessment
   const [assessments, setAssessments] = useState<Assessment[]>([
     { name: '', weight: 0, criteria: '' }
   ]);
-  
+
   // Session Plan
   const [sessionPlans, setSessionPlans] = useState<SessionPlan[]>([
     { weekNo: 1, topic: '', teachingMethod: '' }
   ]);
-  
+
   // Materials
   const [materials, setMaterials] = useState<Material[]>([
     { title: '', author: '', type: 'TEXTBOOK' }
   ]);
-  
+
   // PDF Upload
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState('');
-  
+
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,7 +100,7 @@ const EditSyllabusPage: React.FC = () => {
   const loadSyllabusData = async (syllabusId: string) => {
     try {
       const data = await getSyllabusDetailForReview(parseInt(syllabusId));
-      
+
       if (data) {
         // Set basic info
         setCourseCode(data.courseCode || '');
@@ -109,19 +109,19 @@ const EditSyllabusPage: React.FC = () => {
         setAcademicYear(data.academicYear || '');
         setCourseObjectives(''); // Not available in API response
         setCourseDescription(data.description || '');
-        
+
         // Set CLOs - normalize from multiple possible sources
         const loadedClos = data.clos && Array.isArray(data.clos) && data.clos.length > 0
           ? data.clos.map((clo: any, index: number) => ({
-              id: clo.id?.toString() || (index + 1).toString(),
-              code: clo.code || clo.cloCode || `CLO${index + 1}`,
-              description: clo.description || clo.cloDescription || '',
-              bloomLevel: clo.bloomLevel || 'Remember'
-            }))
+            id: clo.id?.toString() || (index + 1).toString(),
+            code: clo.code || clo.cloCode || `CLO${index + 1}`,
+            description: clo.description || clo.cloDescription || '',
+            bloomLevel: clo.bloomLevel || 'Remember'
+          }))
           : [{ id: '1', code: 'CLO1', description: '', bloomLevel: 'Remember' }];
-        
+
         setClos(loadedClos);
-        
+
         // Initialize PLO mappings if they exist
         const mappings: { [cloId: string]: PLOMapping[] } = {};
         loadedClos.forEach((clo: any) => {
@@ -131,7 +131,7 @@ const EditSyllabusPage: React.FC = () => {
         });
         setPloMappings(mappings);
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error loading syllabus:', error);
@@ -145,11 +145,11 @@ const EditSyllabusPage: React.FC = () => {
   // CLO Functions
   const addCLO = () => {
     const newId = (clos.length + 1).toString();
-    setClos([...clos, { 
-      id: newId, 
-      code: `CLO${clos.length + 1}`, 
-      description: '', 
-      bloomLevel: 'Remember' 
+    setClos([...clos, {
+      id: newId,
+      code: `CLO${clos.length + 1}`,
+      description: '',
+      bloomLevel: 'Remember'
     }]);
     setPloMappings({
       ...ploMappings,
@@ -165,7 +165,7 @@ const EditSyllabusPage: React.FC = () => {
   };
 
   const updateCLO = (id: string, field: keyof CLOItem, value: string) => {
-    setClos(clos.map(clo => 
+    setClos(clos.map(clo =>
       clo.id === id ? { ...clo, [field]: value } : clo
     ));
   };
@@ -188,7 +188,7 @@ const EditSyllabusPage: React.FC = () => {
   const updatePLOMapping = (cloId: string, index: number, field: keyof PLOMapping, value: string | number) => {
     setPloMappings({
       ...ploMappings,
-      [cloId]: ploMappings[cloId].map((plo, i) => 
+      [cloId]: ploMappings[cloId].map((plo, i) =>
         i === index ? { ...plo, [field]: value } : plo
       )
     });
@@ -204,17 +204,17 @@ const EditSyllabusPage: React.FC = () => {
   };
 
   const updateAssessment = (index: number, field: keyof Assessment, value: string | number) => {
-    setAssessments(assessments.map((assessment, i) => 
+    setAssessments(assessments.map((assessment, i) =>
       i === index ? { ...assessment, [field]: value } : assessment
     ));
   };
 
   // Session Plan Functions
   const addSessionPlan = () => {
-    setSessionPlans([...sessionPlans, { 
-      weekNo: sessionPlans.length + 1, 
-      topic: '', 
-      teachingMethod: '' 
+    setSessionPlans([...sessionPlans, {
+      weekNo: sessionPlans.length + 1,
+      topic: '',
+      teachingMethod: ''
     }]);
   };
 
@@ -223,7 +223,7 @@ const EditSyllabusPage: React.FC = () => {
   };
 
   const updateSessionPlan = (index: number, field: keyof SessionPlan, value: string | number) => {
-    setSessionPlans(sessionPlans.map((plan, i) => 
+    setSessionPlans(sessionPlans.map((plan, i) =>
       i === index ? { ...plan, [field]: value } : plan
     ));
   };
@@ -238,7 +238,7 @@ const EditSyllabusPage: React.FC = () => {
   };
 
   const updateMaterial = (index: number, field: keyof Material, value: string) => {
-    setMaterials(materials.map((material, i) => 
+    setMaterials(materials.map((material, i) =>
       i === index ? { ...material, [field]: value } : material
     ));
   };
@@ -259,7 +259,7 @@ const EditSyllabusPage: React.FC = () => {
   // Form Submission
   const handleUpdate = async () => {
     setIsSubmitting(true);
-    
+
     try {
       // Validate
       if (!courseCode || !courseName || !credits || !academicYear) {
@@ -311,12 +311,12 @@ const EditSyllabusPage: React.FC = () => {
 
       success('✅ Cập nhật đề cương thành công!');
       navigate('/dashboard');
-      
+
     } catch (error: any) {
       console.error('Error updating syllabus:', error);
       console.error('Error response data:', error.response?.data);
       console.error('Error response status:', error.response?.status);
-      
+
       const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật đề cương';
       error(`❌ ${errorMessage}`);
     } finally {
@@ -330,7 +330,7 @@ const EditSyllabusPage: React.FC = () => {
         return (
           <div className="form-section">
             <h2>Thông tin cơ bản</h2>
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label>Mã môn học *</label>
@@ -341,7 +341,7 @@ const EditSyllabusPage: React.FC = () => {
                   placeholder="VD: CS101"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Tên môn học *</label>
                 <input
@@ -365,7 +365,7 @@ const EditSyllabusPage: React.FC = () => {
                   max="6"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Năm học *</label>
                 <input
@@ -375,7 +375,7 @@ const EditSyllabusPage: React.FC = () => {
                   placeholder="2024-2025"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Học kỳ</label>
                 <select value={semester} onChange={(e) => setSemester(e.target.value)}>
@@ -413,13 +413,13 @@ const EditSyllabusPage: React.FC = () => {
         return (
           <div className="form-section">
             <h2>CLO (Course Learning Outcomes) và PLO Mapping</h2>
-            
+
             {clos.map((clo, index) => (
               <div key={clo.id} className="clo-block">
                 <div className="clo-header">
                   <h3>CLO {index + 1}</h3>
                   {clos.length > 1 && (
-                    <button 
+                    <button
                       type="button"
                       onClick={() => removeCLO(clo.id)}
                       className="btn-remove"
@@ -439,7 +439,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="CLO1"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Bloom's Taxonomy Level</label>
                     <select
@@ -520,7 +520,7 @@ const EditSyllabusPage: React.FC = () => {
         return (
           <div className="form-section">
             <h2>Phương pháp đánh giá</h2>
-            
+
             {assessments.map((assessment, index) => (
               <div key={index} className="assessment-block">
                 <div className="form-row">
@@ -533,7 +533,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="VD: Bài kiểm tra giữa kỳ"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Trọng số (%)</label>
                     <input
@@ -545,7 +545,7 @@ const EditSyllabusPage: React.FC = () => {
                       max="100"
                     />
                   </div>
-                  
+
                   {assessments.length > 1 && (
                     <button
                       type="button"
@@ -590,7 +590,7 @@ const EditSyllabusPage: React.FC = () => {
         return (
           <div className="form-section">
             <h2>Kế hoạch giảng dạy</h2>
-            
+
             {sessionPlans.map((plan, index) => (
               <div key={index} className="session-block">
                 <div className="form-row">
@@ -603,7 +603,7 @@ const EditSyllabusPage: React.FC = () => {
                       min="1"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 2 }}>
                     <label>Chủ đề</label>
                     <input
@@ -613,7 +613,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="VD: Giới thiệu về lập trình"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 1.5 }}>
                     <label>Phương pháp giảng dạy</label>
                     <input
@@ -623,7 +623,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="VD: Lý thuyết + Thực hành"
                     />
                   </div>
-                  
+
                   {sessionPlans.length > 1 && (
                     <button
                       type="button"
@@ -648,7 +648,7 @@ const EditSyllabusPage: React.FC = () => {
         return (
           <div className="form-section">
             <h2>Tài liệu tham khảo</h2>
-            
+
             {materials.map((material, index) => (
               <div key={index} className="material-block">
                 <div className="form-row">
@@ -661,7 +661,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="VD: Introduction to Programming"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 1.5 }}>
                     <label>Tác giả</label>
                     <input
@@ -671,7 +671,7 @@ const EditSyllabusPage: React.FC = () => {
                       placeholder="VD: John Doe"
                     />
                   </div>
-                  
+
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Loại tài liệu</label>
                     <select
@@ -686,7 +686,7 @@ const EditSyllabusPage: React.FC = () => {
                       <option value="OTHER">Khác</option>
                     </select>
                   </div>
-                  
+
                   {materials.length > 1 && (
                     <button
                       type="button"
@@ -766,49 +766,49 @@ const EditSyllabusPage: React.FC = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
           >
             <span className="icon"><Home size={20} /></span>
             Tổng quan
           </a>
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
           >
             <span className="icon"><FolderOpen size={20} /></span>
             Giáo trình của tôi
           </a>
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/syllabus/create'); }}
           >
             <span className="icon"><Plus size={20} /></span>
             Tạo giáo trình mới
           </a>
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
           >
             <span className="icon"><MessageSquare size={20} /></span>
             Cộng tác Review
           </a>
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
           >
             <span className="icon"><Search size={20} /></span>
             Tra cứu & Theo dõi
           </a>
-          <a 
-            href="#" 
-            className="nav-item" 
+          <a
+            href="#"
+            className="nav-item"
             onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
           >
             <span className="icon"><GitCompare size={20} /></span>
@@ -852,10 +852,10 @@ const EditSyllabusPage: React.FC = () => {
         {/* Form Content */}
         <div className="content-section" style={{ margin: '20px 40px' }}>
           <div style={{ marginBottom: '20px' }}>
-            <button onClick={() => navigate('/dashboard')} className="btn-back" style={{ 
-              background: 'white', 
-              border: '1px solid #ddd', 
-              padding: '10px 20px', 
+            <button onClick={() => navigate('/dashboard')} className="btn-back" style={{
+              background: 'white',
+              border: '1px solid #ddd',
+              padding: '10px 20px',
               borderRadius: '8px',
               cursor: 'pointer',
               display: 'inline-flex',
@@ -900,7 +900,7 @@ const EditSyllabusPage: React.FC = () => {
                   ← Quay lại
                 </button>
               )}
-              
+
               {currentStep < 5 ? (
                 <button
                   type="button"
@@ -924,7 +924,7 @@ const EditSyllabusPage: React.FC = () => {
           </form>
         </div>
       </main>
-      
+
       {/* Toast Notifications */}
       <Toast toasts={toasts} onRemove={removeToast} />
     </div>
