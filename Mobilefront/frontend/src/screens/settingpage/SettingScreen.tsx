@@ -212,12 +212,6 @@ export default function SettingScreen() {
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem
-              icon={<Shield size={20} color="#10B981" />} // Emerald
-              iconBgColor="#ECFDF5"
-              label="Chính sách bảo mật"
-              onPress={() => Alert.alert("Info", "Chuyển đến trang web...")}
-            />
-            <SettingItem
               icon={<FileText size={20} color="#8B5CF6" />} // Violet
               iconBgColor="#F5F3FF"
               label="Điều khoản sử dụng"
