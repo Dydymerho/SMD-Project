@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, Home, Search } from 'lucide-react';
+import { ChevronLeft, Home, Search, BookOpen } from 'lucide-react';
 import './DashboardLayout.css';
 
 interface DashboardLayoutProps {
@@ -24,7 +24,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     <div className="dashboard-layout-wrapper">
       <aside className="dashboard-sidebar">
         <div className="sidebar-header">
-          <div className="logo">📚</div>
+          <div className="logo"><BookOpen size={32} color="#008f81" /></div>
           <h2>SMD System</h2>
           <p>Hệ thống quản lý & tra cứu</p>
         </div>

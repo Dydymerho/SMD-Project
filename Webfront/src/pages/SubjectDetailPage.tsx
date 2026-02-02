@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, CheckCircle, AlertTriangle, FileText, Send, Bell, User, Zap, Home
+  ArrowLeft, CheckCircle, AlertTriangle, FileText, Send, Bell, User, Zap, Home, Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
@@ -115,7 +115,7 @@ const SubjectDetailPage: React.FC = () => {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f5f5f5' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+          <Loader2 size={48} color="#008f81" className="animate-spin" style={{ marginBottom: '16px' }} />
           <p style={{ color: '#666' }}>Đang tải thông tin giáo trình...</p>
         </div>
       </div>

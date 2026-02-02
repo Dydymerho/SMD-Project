@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Loader2, Star, X, Heart, MessageSquare, Download } from 'lucide-react';
+import { Search, User, Loader2, Star, X, Heart, MessageSquare, Download, Bell, Sparkles, Hash, BookOpen, Building2 } from 'lucide-react';
 import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport, getCourseRelationsByCourseId, getCLOsBySyllabusId, getCLOPLOMappingsBySyllabusId, CourseRelationResponse, CLOResponse, CLOPLOMappingResponse, downloadSyllabusPDF, getSyllabusPDFInfo, getNotifications, getFollowedCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -448,7 +448,7 @@ const StudentDashboard: React.FC = () => {
         <div className="header-right">
           <div className="notification-wrapper">
             <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
-              🔔
+              <Bell size={20} />
               <span className="badge">
                 {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
               </span>
@@ -479,7 +479,7 @@ const StudentDashboard: React.FC = () => {
         {activeTab === 'home' ? (
           <div className="home-content">
             <div className="content-title">
-              <h1>Chào mừng trở lại, {user?.name ? user.name.split(' ').slice(-1)[0] : 'Bạn'}! 👋</h1>
+              <h1>Chào mừng trở lại, {user?.name ? user.name.split(' ').slice(-1)[0] : 'Bạn'}!</h1>
               <p>Khám phá các giáo trình được đề xuất dành riêng cho bạn</p>
             </div>
 
@@ -686,7 +686,7 @@ const StudentDashboard: React.FC = () => {
                           {detailData.aiSumary && (
                             <div className="ai-summary-box">
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                <span style={{ fontSize: '18px' }}>✨</span>
+                                <Sparkles size={18} color="#9c27b0" />
                                 <h4 style={{ margin: 0, color: '#9c27b0' }}>Tóm tắt AI</h4>
                               </div>
                               <p style={{ margin: 0, color: '#666', lineHeight: '1.6' }}>{detailData.aiSumary}</p>
@@ -892,13 +892,13 @@ const StudentDashboard: React.FC = () => {
                                           flexWrap: 'wrap'
                                         }}>
                                           {relation.targetCourseId && (
-                                            <span>📌 ID: {relation.targetCourseId}</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Hash size={12} /> ID: {relation.targetCourseId}</span>
                                           )}
                                           {relation.credits !== undefined && (
-                                            <span>📚 {relation.credits} tín chỉ</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> {relation.credits} tín chỉ</span>
                                           )}
                                           {relation.deptName && (
-                                            <span>🏢 {relation.deptName}</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Building2 size={12} /> {relation.deptName}</span>
                                           )}
                                         </div>
                                       </div>
