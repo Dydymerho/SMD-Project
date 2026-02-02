@@ -125,11 +125,11 @@ public class SyllabusController {
     
     @PostMapping(value = "/{id}/upload-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Upload PDF for syllabus",
-        description = "Upload a PDF file for a specific syllabus. Only the lecturer who owns the syllabus can upload. Maximum file size: 10MB"
+        summary = "Upload document for syllabus",
+        description = "Upload a PDF or Word document for a specific syllabus. Only the lecturer who owns the syllabus can upload. Maximum file size: 10MB. Supported formats: .pdf, .doc, .docx"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF uploaded successfully",
+        @ApiResponse(responseCode = "200", description = "Document uploaded successfully",
             content = @Content(schema = @Schema(implementation = SyllabusUploadResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid file format or empty file"),
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -141,7 +141,7 @@ public class SyllabusController {
             @PathVariable Long id,
             
             @Parameter(
-                description = "PDF file to upload (max 10MB)",
+                description = "PDF or Word document to upload (max 10MB, formats: .pdf, .doc, .docx)",
                 required = true,
                 content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
             )
@@ -157,24 +157,29 @@ public class SyllabusController {
 
     @GetMapping("/{id}/download-pdf")
     @Operation(
-        summary = "Download PDF of syllabus",
-        description = "Download the PDF file associated with a syllabus"
+        summary = "Download document of syllabus",
+        description = "Download the PDF or Word document associated with a syllabus"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF downloaded successfully",
-            content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
-        @ApiResponse(responseCode = "404", description = "Syllabus or PDF not found")
+        @ApiResponse(responseCode = "200", description = "Document downloaded successfully",
+            content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE)),
+        @ApiResponse(responseCode = "404", description = "Syllabus or document not found")
     })
     public ResponseEntity<byte[]> downloadPdf(
             @Parameter(description = "Syllabus ID", required = true)
             @PathVariable Long id) {
         
-        byte[] pdfContent = syllabusService.downloadPdf(id);
+        byte[] fileContent = syllabusService.downloadPdf(id);
+        
+        // Get syllabus to determine file name and content type
+        Syllabus syllabus = syllabusService.getSyllabusById(id);
+        String fileName = syllabus.getPdfFileName() != null ? syllabus.getPdfFileName() : "syllabus_" + id;
+        String contentType = syllabusService.getContentTypeForFile(fileName);
         
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"syllabus_" + id + ".pdf\"")
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(pdfContent);
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+            .contentType(MediaType.parseMediaType(contentType))
+            .body(fileContent);
     }
 
     @DeleteMapping("/{id}/delete-pdf")

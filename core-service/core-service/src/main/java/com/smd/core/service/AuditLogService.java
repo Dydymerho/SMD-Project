@@ -9,6 +9,8 @@ import com.smd.core.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -235,5 +237,57 @@ public class AuditLogService {
             log.warn("Failed to get user agent", e);
         }
         return "UNKNOWN";
+    }
+    
+    // ==================== ADMIN ENDPOINTS ====================
+    
+    /**
+     * Get all audit logs with pagination (Admin only)
+     */
+    public Page<SyllabusAuditLog> getAllAuditLogs(Pageable pageable) {
+        return auditLogRepository.findAll(pageable);
+    }
+    
+    /**
+     * Get audit logs by academic year
+     */
+    public List<SyllabusAuditLog> getAuditLogsByAcademicYear(String academicYear) {
+        return auditLogRepository.findByAcademicYear(academicYear);
+    }
+    
+    /**
+     * Get audit log statistics
+     */
+    public Map<String, Object> getAuditLogStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Total count
+        long totalLogs = auditLogRepository.count();
+        stats.put("totalLogs", totalLogs);
+        
+        // Count by action type
+        List<Object[]> actionTypeCounts = auditLogRepository.countByActionType();
+        Map<String, Long> actionTypeMap = new HashMap<>();
+        for (Object[] row : actionTypeCounts) {
+            actionTypeMap.put((String) row[0], (Long) row[1]);
+        }
+        stats.put("countByActionType", actionTypeMap);
+        
+        // Recent activity (last 24 hours)
+        LocalDateTime last24Hours = LocalDateTime.now().minusHours(24);
+        List<SyllabusAuditLog> recentLogs = auditLogRepository.findRecentLogs(last24Hours);
+        stats.put("logsLast24Hours", recentLogs.size());
+        
+        // Last 7 days
+        LocalDateTime last7Days = LocalDateTime.now().minusDays(7);
+        List<SyllabusAuditLog> weekLogs = auditLogRepository.findRecentLogs(last7Days);
+        stats.put("logsLast7Days", weekLogs.size());
+        
+        // Last 30 days
+        LocalDateTime last30Days = LocalDateTime.now().minusDays(30);
+        List<SyllabusAuditLog> monthLogs = auditLogRepository.findRecentLogs(last30Days);
+        stats.put("logsLast30Days", monthLogs.size());
+        
+        return stats;
     }
 }

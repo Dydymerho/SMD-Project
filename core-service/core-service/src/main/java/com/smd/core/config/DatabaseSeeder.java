@@ -31,6 +31,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final ProgramRepository programRepository;
     private final CourseRepository courseRepository;
     private final PLORepository ploRepository;
+    private final CourseRelationRepository courseRelationRepository;
 
     // 3. Syllabus Core Repositories
     private final SyllabusRepository syllabusRepository;
@@ -247,15 +248,34 @@ public class DatabaseSeeder implements CommandLineRunner {
         Department bizDept = getDepartment("Khoa Quan Tri Kinh Doanh");
         Department designDept = getDepartment("Khoa Thiet Ke Do Hoa");
 
-        // IT Courses
+        // IT Courses - Creating a comprehensive CS curriculum tree
         if (itDept != null) {
+            // Year 1 - Foundation Courses
+            createCourse("MAT101", "Discrete Mathematics", 3, itDept);
             createCourse("PRF192", "Programming Fundamentals", 3, itDept);
+            createCourse("COM101", "Introduction to Computer Science", 3, itDept);
+            
+            // Year 2 - Core Courses
             createCourse("PRO192", "Object-Oriented Programming", 3, itDept);
-            createCourse("JPD113", "Java Programming", 3, itDept);
-            createCourse("DBI202", "Database Systems", 3, itDept);
-            createCourse("WED201c", "Web Design & Development", 3, itDept);
             createCourse("CSD201", "Data Structures & Algorithms", 3, itDept);
+            createCourse("DBI202", "Database Systems", 3, itDept);
+            createCourse("OSG202", "Operating Systems", 3, itDept);
+            createCourse("NWC203", "Computer Networks", 3, itDept);
+            
+            // Year 3 - Advanced Courses
+            createCourse("JPD113", "Java Programming", 3, itDept);
+            createCourse("WED201c", "Web Design & Development", 3, itDept);
             createCourse("SWR302", "Software Requirements", 3, itDept);
+            createCourse("SWT301", "Software Testing", 3, itDept);
+            createCourse("SWD392", "Software Design & Architecture", 4, itDept);
+            createCourse("ALG301", "Advanced Algorithms", 3, itDept);
+            
+            // Year 4 - Specialization Courses
+            createCourse("AI401", "Artificial Intelligence", 4, itDept);
+            createCourse("ML402", "Machine Learning", 4, itDept);
+            createCourse("SEC403", "Information Security", 3, itDept);
+            createCourse("MBD404", "Mobile Development", 3, itDept);
+            createCourse("CAP490", "Capstone Project", 4, itDept);
         }
 
         // Business Courses
@@ -270,6 +290,8 @@ public class DatabaseSeeder implements CommandLineRunner {
             createCourse("DES101", "Color Theory", 3, designDept);
             createCourse("PHO102", "Photography Basics", 2, designDept);
         }
+        
+        log.info("✓ Created {} courses", courseRepository.count());
     }
 
     /**
@@ -300,37 +322,153 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
 
+    /**
+     * Initialize comprehensive course relationships to create a course dependency tree
+     * This creates a realistic CS curriculum with prerequisites, corequisites, and equivalents
+     */
     private void initCourseRelations() {
+        log.info("Initializing Course Relationships...");
+        
+        // ==========================================
+        // YEAR 1 FOUNDATIONS → YEAR 2 CORE
+        // ==========================================
+        
+        // Mathematics is prerequisite for many courses
+        createRelation("MAT101", "CSD201", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("MAT101", "ALG301", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Programming Fundamentals is the foundation
         createRelation("PRF192", "PRO192", CourseRelation.RelationType.PREREQUISITE);
-        createRelation("PRO192", "CSD201", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("PRF192", "CSD201", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("PRF192", "DBI202", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Introduction to CS helps with Operating Systems
+        createRelation("COM101", "OSG202", CourseRelation.RelationType.PREREQUISITE);
+        
+        // ==========================================
+        // YEAR 2 CORE → YEAR 3 ADVANCED
+        // ==========================================
+        
+        // OOP is needed for advanced programming
+        createRelation("PRO192", "JPD113", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("PRO192", "WED201c", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("PRO192", "SWD392", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("PRO192", "MBD404", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Data Structures is crucial for advanced courses
+        createRelation("CSD201", "ALG301", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("CSD201", "SWD392", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("CSD201", "AI401", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Database Systems needed for software projects
         createRelation("DBI202", "SWR302", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("DBI202", "WED201c", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Operating Systems knowledge helps with Security
+        createRelation("OSG202", "SEC403", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Networks knowledge for Security
+        createRelation("NWC203", "SEC403", CourseRelation.RelationType.PREREQUISITE);
+        
+        // ==========================================
+        // YEAR 3 ADVANCED → YEAR 4 SPECIALIZATION
+        // ==========================================
+        
+        // Java Programming for advanced development
+        createRelation("JPD113", "MBD404", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Software Requirements for Testing
+        createRelation("SWR302", "SWT301", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Software Design for Capstone
+        createRelation("SWD392", "CAP490", CourseRelation.RelationType.PREREQUISITE);
+        
+        // Advanced Algorithms for AI
+        createRelation("ALG301", "AI401", CourseRelation.RelationType.PREREQUISITE);
+        createRelation("ALG301", "ML402", CourseRelation.RelationType.PREREQUISITE);
+        
+        // AI prerequisite for Machine Learning
+        createRelation("AI401", "ML402", CourseRelation.RelationType.PREREQUISITE);
+        
+        // ==========================================
+        // COREQUISITES (Study Together)
+        // ==========================================
+        
+        // Data Structures and Algorithms should be learned together with OOP
+        createRelation("CSD201", "PRO192", CourseRelation.RelationType.COREQUISITE);
+        
+        // Database and Web Development work well together
+        createRelation("WED201c", "DBI202", CourseRelation.RelationType.COREQUISITE);
+        
+        // Operating Systems and Networks complement each other
+        createRelation("OSG202", "NWC203", CourseRelation.RelationType.COREQUISITE);
+        
+        // Software Requirements and Testing go hand in hand
+        createRelation("SWT301", "SWR302", CourseRelation.RelationType.COREQUISITE);
+        
+        // ==========================================
+        // EQUIVALENTS (Alternative Courses)
+        // ==========================================
+        
+        // Java and Web Development can substitute for advanced OOP
+        createRelation("JPD113", "WED201c", CourseRelation.RelationType.EQUIVALENT);
+        
+        log.info("✓ Created course relationship tree with {} relationships", 
+                 courseRelationRepository.count());
+        log.info("  - Prerequisites: Foundation → Core → Advanced → Specialization");
+        log.info("  - Corequisites: Complementary courses to study together");
+        log.info("  - Equivalents: Alternative course options");
     }
     
-    private void createRelation(String preCode, String targetCode, CourseRelation.RelationType type) {
-        Optional<Course> preOpt = courseRepository.findByCourseCode(preCode);
-        Optional<Course> targetOpt = courseRepository.findByCourseCode(targetCode);
+    /**
+     * Helper method to create course relationships with validation
+     */
+    private void createRelation(String courseCode, String relatedCourseCode, CourseRelation.RelationType type) {
+        Optional<Course> courseOpt = courseRepository.findByCourseCode(courseCode);
+        Optional<Course> relatedCourseOpt = courseRepository.findByCourseCode(relatedCourseCode);
         
-        if (preOpt.isPresent() && targetOpt.isPresent()) {
-            Course target = targetOpt.get();
-            Course pre = preOpt.get();
-            
-            // Check existing simple logic
-            if (target.getPrerequisiteRelations() != null && !target.getPrerequisiteRelations().isEmpty()) return;
-
-            CourseRelation relation = CourseRelation.builder()
-                    .course(target)
-                    .relatedCourse(pre)
-                    .relationType(type)
-                    .build();
-            
-            // Note: In a real app, you might maintain a list, but here we just save/update
-            // Hibernate might need the collection initialized, but for seeding simplify:
-            List<CourseRelation> list = new ArrayList<>();
-            list.add(relation);
-            target.setPrerequisiteRelations(list);
-            courseRepository.save(target);
-            log.info("   + Created Relation: {} -> {}", preCode, targetCode);
+        if (courseOpt.isEmpty()) {
+            log.warn("   ⚠ Course not found: {}", courseCode);
+            return;
         }
+        
+        if (relatedCourseOpt.isEmpty()) {
+            log.warn("   ⚠ Related course not found: {}", relatedCourseCode);
+            return;
+        }
+        
+        Course course = courseOpt.get();
+        Course relatedCourse = relatedCourseOpt.get();
+        
+        // Check if relationship already exists
+        boolean exists = courseRelationRepository.existsRelationship(
+            course.getCourseId(), 
+            relatedCourse.getCourseId(), 
+            type
+        );
+        
+        if (exists) {
+            log.debug("   → Relationship already exists: {} -[{}]-> {}", 
+                     courseCode, type, relatedCourseCode);
+            return;
+        }
+        
+        // Create new relationship
+        CourseRelation relation = CourseRelation.builder()
+                .course(course)
+                .relatedCourse(relatedCourse)
+                .relationType(type)
+                .build();
+        
+        courseRelationRepository.save(relation);
+        
+        String arrow = switch(type) {
+            case PREREQUISITE -> "→";
+            case COREQUISITE -> "↔";
+            case EQUIVALENT -> "≡";
+        };
+        
+        log.info("   + {} {} {} ({})", courseCode, arrow, relatedCourseCode, type);
     }
 
     // ==========================================
