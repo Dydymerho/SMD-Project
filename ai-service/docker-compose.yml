@@ -1,44 +1,24 @@
 services:
-<<<<<<< HEAD
   ai-service:
-    build: .  
-=======
-  # 1. Backend API
-  ai-service:
-    image: dinhtrng/smd-ai:latest
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
+    build: .
     ports:
       - "8000:8000"
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
-<<<<<<< HEAD
-      - OLLAMA_MODEL=llama3                   
-=======
-      - OLLAMA_MODEL=llama3 # <--- Đã đổi lại thành llama3
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
+      - OLLAMA_MODEL=llama3
     depends_on:
       - redis
       - ollama
 
-<<<<<<< HEAD
   # 2. Worker (Chế độ Build từ Code)
   worker:
-    build: .  
-=======
-  # 2. Worker
-  worker:
-    image: dinhtrng/smd-ai:latest
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
+    build: .
     command: celery -A app.worker.celery_app worker --loglevel=info -P solo
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
-<<<<<<< HEAD
-      - OLLAMA_MODEL=llama3                   
-=======
-      - OLLAMA_MODEL=llama3 # <--- Đã đổi lại thành llama3
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
+      - OLLAMA_MODEL=llama3
     depends_on:
       - redis
       - ollama
@@ -47,15 +27,9 @@ services:
   redis:
     image: redis:alpine
     ports:
-<<<<<<< HEAD
       - "6379:6379"
 
   # 4. Ollama (Chạy nội bộ trong Docker)
-=======
-      - "6380:6379"
-
-  # 4. Ollama
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
   ollama:
     image: ollama/ollama:latest
     container_name: ollama_container
@@ -72,8 +46,4 @@ services:
               capabilities: [gpu]
 
 volumes:
-<<<<<<< HEAD
   ollama_data:
-=======
-  ollama_data:
->>>>>>> fad558f7d6a43faa08104df2cc4796409afa18ed
