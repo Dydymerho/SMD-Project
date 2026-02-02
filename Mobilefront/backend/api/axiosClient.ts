@@ -1,12 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from "react-native-device-info"
-/* ================= CONFIG ================= */
-const activeBaseURL = DeviceInfo.isEmulator()
-  ? 'http://10.0.2.2:9090/api'
-  : 'http://172.30.3.122:9090/api';
+/* ================= CONFIG ================= */;
 const axiosClient = axios.create({
-
   baseURL: "http://10.0.2.2:9090/api",
   timeout: 10000,
   headers: {

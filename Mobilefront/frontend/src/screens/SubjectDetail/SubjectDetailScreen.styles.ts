@@ -3,7 +3,6 @@ import { StyleSheet } from "react-native"
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
     backgroundColor: "#FFFFFF",
   },
   contentContainer: {
@@ -15,7 +14,7 @@ const styles = StyleSheet.create({
 
   /* ===== HEADER ===== */
   header: {
-    backgroundColor: "#ffffff", // tím đậm
+    backgroundColor: "#ffffff",
     marginHorizontal: -16,
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -27,7 +26,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.5,
   },
-
   title: {
     color: "#FFFFFF",
     fontSize: 18,
@@ -85,7 +83,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
-
   outcomeBadge: {
     backgroundColor: "#E6F0FF",
     paddingHorizontal: 10,
@@ -93,13 +90,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
   },
-
   outcomeBadgeText: {
     color: "#2D5BFF",
     fontWeight: "700",
     fontSize: 12,
   },
-
   outcomeText: {
     flex: 1,
     color: "#333",
@@ -134,11 +129,12 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'justify',
   },
+
   /* ===== BULLET ===== */
   bullet: {
     fontSize: 14,
     color: "#475569",
-    lineHeight: 10,
+    lineHeight: 20, // Tăng lineHeight cho dễ đọc
     marginBottom: 8,
     fontWeight: "400",
   },
@@ -170,89 +166,27 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "400",
   },
-  missions: {
-    fontSize: 12,
-    color: "#0F172A",
-  },
-  /* ===== TREE & MAPPING ===== */
-  treeTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginTop: 16,
-    marginBottom: 8,
-    textTransform: "uppercase",
-  },
-  linkText: {
-    fontSize: 16,
-    color: "#3B82F6",
-    fontWeight: "500",
-    marginBottom: 8,
-    paddingVertical: 4,
-  },
-  mapping: {
-    fontSize: 16,
-    color: "#475569",
-    marginBottom: 8,
-    lineHeight: 20,
-    fontWeight: "400",
-  },
-  cloCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
 
-  cloTitle: {
-    fontWeight: "700",
-    fontSize: 15,
-    marginBottom: 8,
-  },
-
-  ploRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-
-  ploBadge: {
-    backgroundColor: "#E6F0FF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-
-  ploText: {
-    color: "#2D5BFF",
-    fontWeight: "600",
-    fontSize: 12,
-  },
-
-  /* ===== REPORT BUTTON ===== */
+  /* ===== REPORT BUTTON & MODAL ===== */
   reportBtn: {
-    paddingHorizontal: 30,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     backgroundColor: '#FFF0F0',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#FFD1D1',
-    marginLeft: 0,
-    alignItems: 'center',
-    marginTop: 4
+    alignSelf: 'flex-start', // Để nút không bị giãn full width
+    marginTop: 6
   },
   reportText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#DC2626",
     textAlign: "center",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)', // Nền tối mờ
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20
@@ -286,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     height: 100,
-    textAlignVertical: 'top', // Để text nằm trên cùng (Android)
+    textAlignVertical: 'top',
     fontSize: 16,
     color: '#333',
     marginBottom: 20
@@ -306,7 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   buttonConfirm: {
-    backgroundColor: '#EF4444', // Màu đỏ báo cáo
+    backgroundColor: '#EF4444',
   },
   textCancel: {
     color: '#64748B',
@@ -316,6 +250,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600'
   },
+
+  /* ===== FOLLOW BUTTON ===== */
   followBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,6 +279,91 @@ const styles = StyleSheet.create({
   },
   followTextActive: {
     color: '#4F1CFF',
+  },
+
+  /* ===== DIAGRAM MAP (SƠ ĐỒ ÁNH XẠ) - MỚI THÊM ===== */
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    borderRadius: 8,
+    borderStyle: 'dashed'
+  },
+  toggleBtnText: {
+    color: '#3b82f6',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8
+  },
+  diagramContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    minHeight: 200,
+    position: 'relative' // Quan trọng để SVG absolute hoạt động
+  },
+  svgLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: -1, // Vẽ chìm xuống dưới
+  },
+  column: {
+    width: '45%', // Chia cột, chừa 10% ở giữa
+    alignItems: 'center'
+  },
+  colTitle: {
+    fontWeight: '800',
+    marginBottom: 15,
+    color: '#333',
+    textAlign: 'center',
+    fontSize: 14,
+    textTransform: 'uppercase'
+  },
+  node: {
+    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 25, // Khoảng cách dọc giữa các node
+    borderRadius: 8,
+    borderWidth: 1,
+    // Hiệu ứng đổ bóng nhẹ
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1.5,
+  },
+  ploNode: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#eff6ff', // Xanh nhạt
+  },
+  cloNode: {
+    borderColor: '#22c55e',
+    backgroundColor: '#f0fdf4', // Xanh lá nhạt
+  },
+  nodeTitle: {
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 2
+  },
+  nodeDesc: {
+    fontSize: 10,
+    color: '#64748b',
+    textAlign: 'center',
   }
 })
 

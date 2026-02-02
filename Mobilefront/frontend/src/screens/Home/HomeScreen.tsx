@@ -273,7 +273,7 @@ export default function HomeScreen() {
                                 author={subject.lecturerName ?? ""}
                                 academicYear={subject.academicYear ?? ""}
                                 credits={subject.credit ?? 0}
-                                description={subject.aiSumary ?? ""}
+                                description={subject.description ?? ""}
                                 department={subject.deptName ?? ""}
                                 onPress={() =>
                                     navigation.navigate("SubjectDetail", {

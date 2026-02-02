@@ -9,4 +9,5 @@ export * from './ProfileApi';
 export * from './SesssionPlanApi'; // Lưu ý: Tên file gốc của bạn đang thừa chữ 's'
 export * from './ReportApi';
 export * from './CourseInteractionApi'; // <--- Thêm dòng này
+export * from './PloCloMapping'
 export { default as axiosClient } from './axiosClient';

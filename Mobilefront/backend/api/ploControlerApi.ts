@@ -7,4 +7,7 @@ export const PloControlerApi = {
     getPlo(): Promise<ApiResponse<PloControler[]>> {
         return axiosClient.get("/plos");
     },
+    getAllMapping(): Promise<any> {
+        return axiosClient.get("/clo-plo-mappings");
+    }
 };
