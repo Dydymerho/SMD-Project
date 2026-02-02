@@ -43,7 +43,6 @@ public class AuditLogResponse {
     public static AuditLogResponse fromEntity(SyllabusAuditLog entity) {
         AuditLogResponseBuilder builder = AuditLogResponse.builder()
                 .id(entity.getId())
-                .syllabusId(entity.getSyllabus().getSyllabusId())
                 .actionType(entity.getActionType())
                 .performedBy(entity.getPerformedBy())
                 .performedByRole(entity.getPerformedByRole())
@@ -56,14 +55,17 @@ public class AuditLogResponse {
                 .timestamp(entity.getTimestamp())
                 .additionalData(entity.getAdditionalData());
         
-        // Add course context if available
-        if (entity.getSyllabus().getCourse() != null) {
-            builder.courseCode(entity.getSyllabus().getCourse().getCourseCode())
-                   .courseName(entity.getSyllabus().getCourse().getCourseName());
+        // Add syllabus and course context if available
+        if (entity.getSyllabus() != null) {
+            builder.syllabusId(entity.getSyllabus().getSyllabusId())
+                   .academicYear(entity.getSyllabus().getAcademicYear())
+                   .versionNo(entity.getSyllabus().getVersionNo());
+            
+            if (entity.getSyllabus().getCourse() != null) {
+                builder.courseCode(entity.getSyllabus().getCourse().getCourseCode())
+                       .courseName(entity.getSyllabus().getCourse().getCourseName());
+            }
         }
-        
-        builder.academicYear(entity.getSyllabus().getAcademicYear())
-               .versionNo(entity.getSyllabus().getVersionNo());
         
         return builder.build();
     }
