@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare, Download } from 'lucide-react';
+import { Search, User, Loader2, Star, X, Heart, MessageSquare, Download } from 'lucide-react';
 import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport, getCourseRelationsByCourseId, getCLOsBySyllabusId, getCLOPLOMappingsBySyllabusId, CourseRelationResponse, CLOResponse, CLOPLOMappingResponse, downloadSyllabusPDF, getSyllabusPDFInfo, getNotifications, getFollowedCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
+import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 
 interface Course {
@@ -441,7 +442,182 @@ const StudentDashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="smd-container">
+    <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      <div className="smd-main">
+        <header className="smd-header">
+        <div className="header-right">
+          <div className="notification-wrapper">
+            <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+              🔔
+              <span className="badge">
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </span>
+            </div>
+            <NotificationMenu 
+              isOpen={isNotificationOpen} 
+              onClose={() => setIsNotificationOpen(false)}
+              onUnreadCountChange={(count) => setUnreadNotificationCount(count)}
+            />
+          </div>
+          <div className="user-profile" onClick={goToProfile} style={{ cursor: 'pointer' }}>
+            <div className="user-info">
+              <p className="user-name">
+                {user?.name ? user.name : 'Đang tải...'}
+              </p>
+              <p className="user-role">
+                {user?.role ? user.role : 'Sinh viên'}
+              </p>
+            </div>
+            <div className="user-avatar">
+              <User size={20} />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="smd-content">
+        {activeTab === 'home' ? (
+          <div className="home-content">
+            <div className="content-title">
+              <h1>Chào mừng trở lại, {user?.name ? user.name.split(' ').slice(-1)[0] : 'Bạn'}! 👋</h1>
+              <p>Khám phá các giáo trình được đề xuất dành riêng cho bạn</p>
+            </div>
+
+            <div className="recommendation-section">
+              <div className="section-header">
+                <Star size={20} color="#f1c40f" fill="#f1c40f" />
+                <h2>Khóa học được đề xuất</h2>
+              </div>
+              <div className="course-grid">
+                {allCourses.map((course) => (
+                  <div key={course.courseId} className="course-card">
+                    <div className="course-card-header">
+                      <span className="course-code">{course.courseCode}</span>
+                      <h3 className="course-title">{course.courseName}</h3>
+                    </div>
+                    <div className="course-card-body">
+                      <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
+                      <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
+                    </div>
+                    <button 
+                      className="view-detail-btn" 
+                      onClick={() => {
+                        const tempSyllabus: Syllabus = {
+                          syllabusId: course.courseId,
+                          course: course,
+                          program: { programName: '' },
+                          lecturer: { fullName: 'Chưa xác định' },
+                          versionNotes: '',
+                          academicYear: new Date().getFullYear().toString() + '-' + (new Date().getFullYear() + 1).toString(),
+                          versionNo: 1,
+                          currentStatus: 'PUBLISHED'
+                        };
+                        setSelectedSyllabus(tempSyllabus);
+                        setDetailModalOpen(true);
+                        setActiveViewTool('info');
+                      }}
+                    >
+                      Xem ngay
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="quick-stats">
+            </div>
+          </div>
+        ) : (
+          <div className="search-content">
+            <div className="content-title">
+              <h1>Tra cứu giáo trình</h1>
+              <p>Tìm kiếm và xem giáo trình các môn học</p>
+            </div>
+
+            <form className="search-filter-bar" onSubmit={handleSearch}>
+              <div className="search-input-wrapper">
+                <Search size={20} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm theo tên hoặc mã môn học..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="filter-select">
+                <select value={selectedMajor} onChange={(e) => setSelectedMajor(e.target.value)} disabled={loadingDepartments}>
+                  <option value="">Tất cả chuyên ngành</option>
+                  {departments.map(dept => (
+                    <option key={dept.departmentId} value={dept.departmentId}>{dept.deptName}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <button type="submit" className="search-submit-btn" disabled={loading}>
+                {loading ? <Loader2 className="animate-spin" size={18} /> : 'Tìm kiếm'}
+              </button>
+            </form>
+
+            <div className="results-status">
+              {loading && <p className="status-text">Đang tải dữ liệu môn học...</p>}
+              {!loading && searched && syllabi.length === 0 && (
+                <p className="status-text no-results">❌ Không tìm thấy giáo trình phù hợp với "<strong>{searchQuery}</strong>"</p>
+              )}
+              {!searched && !loading && (
+                <p className="status-text">Nhập tên môn học để bắt đầu tra cứu</p>
+              )}
+            </div>
+
+            <div className="course-grid">
+              {syllabi.length > 0 ? syllabi.map((s) => (
+                <div key={s.syllabusId} className="course-card">
+                  <div className="course-card-header">
+                    <div className="course-code-name">
+                      <span className="course-code">{s.course?.courseCode}</span>
+                    </div>
+                    <h3 className="course-title" title={s.course?.courseName}>{s.course?.courseName}</h3>
+                  </div>
+                  <div className="course-card-body">
+                    <p><strong>Giảng viên:</strong> {s.lecturer?.fullName}</p>
+                    <p><strong>Bộ môn:</strong> {s.course?.department?.deptName || 'N/A'}</p>
+                    <p><strong>Trạng thái:</strong> <span className={`status-badge status-${s.currentStatus?.toLowerCase()}`}>{s.currentStatus}</span></p>
+                  </div>
+                  <div className="course-card-actions">
+                    <button 
+                      className="view-detail-btn"
+                      onClick={() => handleOpenDetail(s)}
+                    >
+                      Xem
+                    </button>
+                    <button 
+                      className={`action-btn subscribe-btn ${s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'active' : ''}`}
+                      onClick={() => handleSubscribe(s.syllabusId)}
+                      title="Follow để nhận thông báo"
+                    >
+                      <Heart size={16} fill={s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'currentColor' : 'none'} />
+                    </button>
+                    <button 
+                      className="action-btn feedback-btn"
+                      onClick={() => {
+                        setSelectedSyllabus(s);
+                        setFeedbackModal(true);
+                      }}
+                      title="Gửi báo cáo lỗi"
+                    >
+                      <MessageSquare size={16} />
+                    </button>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
+                  <p>Không tìm thấy giáo trình nào</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* DETAIL MODAL */}
       {detailModalOpen && selectedSyllabus && (
         <div className="modal-overlay" onClick={() => setDetailModalOpen(false)}>
@@ -922,214 +1098,8 @@ const StudentDashboard: React.FC = () => {
           </div>
         </div>
       )}
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <div className="logo">📚</div>
-          <h2>SMD System</h2>
-          <p>Hệ thống quản lý & tra cứu</p>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <div 
-            className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('home')}
-          >
-            <span className="icon"><Home size={20} /></span>
-            <span>Trang chủ</span>
-          </div>
-          <div 
-            className={`nav-item ${activeTab === 'search' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('search')}
-          >
-            <span className="icon"><Search size={20} /></span>
-            <span>Tra cứu giáo trình</span>
-          </div>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button onClick={logout} className="logout-btn">
-            <ChevronLeft size={16} />
-            <span>Đăng xuất</span>
-          </button>
-        </div>
-      </aside>
-
-      <main className="smd-main">
-        <header className="smd-header">
-          <div className="header-right">
-            <div className="notification-wrapper">
-              <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
-                🔔
-                <span className="badge">
-                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                </span>
-              </div>
-              <NotificationMenu 
-                isOpen={isNotificationOpen} 
-                onClose={() => setIsNotificationOpen(false)}
-                onUnreadCountChange={(count) => setUnreadNotificationCount(count)}
-              />
-            </div>
-            <div className="user-profile" onClick={goToProfile} style={{ cursor: 'pointer' }}>
-              <div className="user-info">
-                <p className="user-name">
-                  {user?.name ? user.name : 'Đang tải...'}
-                </p>
-                <p className="user-role">
-                  {user?.role ? user.role : 'Sinh viên'}
-                </p>
-              </div>
-              <div className="user-avatar">
-                <User size={20} />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <section className="smd-content">
-          {activeTab === 'home' ? (
-            <div className="home-content">
-              <div className="content-title">
-                <h1>Chào mừng trở lại, {user?.name ? user.name.split(' ').slice(-1)[0] : 'Bạn'}! 👋</h1>
-                <p>Khám phá các giáo trình được đề xuất dành riêng cho bạn</p>
-              </div>
-
-              <div className="recommendation-section">
-                <div className="section-header">
-                  <Star size={20} color="#f1c40f" fill="#f1c40f" />
-                  <h2>Khóa học được đề xuất</h2>
-                </div>
-                <div className="course-grid">
-                  {allCourses.map((course) => (
-                    <div key={course.courseId} className="course-card">
-                      <div className="course-card-header">
-                        <span className="course-code">{course.courseCode}</span>
-                        <h3 className="course-title">{course.courseName}</h3>
-                      </div>
-                      <div className="course-card-body">
-                        <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
-                        <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
-                      </div>
-                      <button 
-                        className="view-detail-btn" 
-                        onClick={() => {
-                          const tempSyllabus: Syllabus = {
-                            syllabusId: course.courseId,
-                            course: course,
-                            program: { programName: '' },
-                            lecturer: { fullName: 'Chưa xác định' },
-                            versionNotes: '',
-                            academicYear: new Date().getFullYear().toString() + '-' + (new Date().getFullYear() + 1).toString(),
-                            versionNo: 1,
-                            currentStatus: 'PUBLISHED'
-                          };
-                          setSelectedSyllabus(tempSyllabus);
-                          setDetailModalOpen(true);
-                          setActiveViewTool('info');
-                        }}
-                      >
-                        Xem ngay
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="quick-stats">
-              </div>
-            </div>
-          ) : (
-            <div className="search-content">
-              <div className="content-title">
-                <h1>Tra cứu giáo trình</h1>
-                <p>Tìm kiếm và xem giáo trình các môn học</p>
-              </div>
-
-              <form className="search-filter-bar" onSubmit={handleSearch}>
-                <div className="search-input-wrapper">
-                  <Search size={20} className="search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder="Tìm kiếm theo tên hoặc mã môn học..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <div className="filter-select">
-                  <select value={selectedMajor} onChange={(e) => setSelectedMajor(e.target.value)} disabled={loadingDepartments}>
-                    <option value="">Tất cả chuyên ngành</option>
-                    {departments.map(dept => (
-                      <option key={dept.departmentId} value={dept.departmentId}>{dept.deptName}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <button type="submit" className="search-submit-btn" disabled={loading}>
-                  {loading ? <Loader2 className="animate-spin" size={18} /> : 'Tìm kiếm'}
-                </button>
-              </form>
-
-              <div className="results-status">
-                {loading && <p className="status-text">Đang tải dữ liệu môn học...</p>}
-                {!loading && searched && syllabi.length === 0 && (
-                  <p className="status-text no-results">❌ Không tìm thấy giáo trình phù hợp với "<strong>{searchQuery}</strong>"</p>
-                )}
-                {!searched && !loading && (
-                  <p className="status-text">Nhập tên môn học để bắt đầu tra cứu</p>
-                )}
-              </div>
-
-              <div className="course-grid">
-                {syllabi.length > 0 ? syllabi.map((s) => (
-                  <div key={s.syllabusId} className="course-card">
-                    <div className="course-card-header">
-                      <div className="course-code-name">
-                        <span className="course-code">{s.course?.courseCode}</span>
-                      </div>
-                      <h3 className="course-title" title={s.course?.courseName}>{s.course?.courseName}</h3>
-                    </div>
-                    <div className="course-card-body">
-                      <p><strong>Giảng viên:</strong> {s.lecturer?.fullName}</p>
-                      <p><strong>Bộ môn:</strong> {s.course?.department?.deptName || 'N/A'}</p>
-                      <p><strong>Trạng thái:</strong> <span className={`status-badge status-${s.currentStatus?.toLowerCase()}`}>{s.currentStatus}</span></p>
-                    </div>
-                    <div className="course-card-actions">
-                      <button 
-                        className="view-detail-btn"
-                        onClick={() => handleOpenDetail(s)}
-                      >
-                        Xem
-                      </button>
-                      <button 
-                        className={`action-btn subscribe-btn ${s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'active' : ''}`}
-                        onClick={() => handleSubscribe(s.syllabusId)}
-                        title="Follow để nhận thông báo"
-                      >
-                        <Heart size={16} fill={s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'currentColor' : 'none'} />
-                      </button>
-                      <button 
-                        className="action-btn feedback-btn"
-                        onClick={() => {
-                          setSelectedSyllabus(s);
-                          setFeedbackModal(true);
-                        }}
-                        title="Gửi báo cáo lỗi"
-                      >
-                        <MessageSquare size={16} />
-                      </button>
-                    </div>
-                  </div>
-                )) : (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    <p>Không tìm thấy giáo trình nào</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
