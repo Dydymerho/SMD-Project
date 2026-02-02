@@ -1,9 +1,9 @@
-import { StyleSheet, Platform } from "react-native"
+import { StyleSheet, Platform } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F1F5F9", // Nền xám nhạt hiện đại (Slate-100)
+    backgroundColor: '#F1F5F9', // Nền xám nhạt hiện đại (Slate-100)
   },
   contentContainer: {
     paddingBottom: 80,
@@ -18,31 +18,31 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     elevation: 8,
-    shadowColor: "#20331b",
+    shadowColor: '#20331b',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     marginBottom: 20,
   },
   code: {
-    color: "#86efac", // Xanh lá sáng nhẹ (Green-300) tạo điểm nhấn trên nền tối
+    color: '#86efac', // Xanh lá sáng nhẹ (Green-300) tạo điểm nhấn trên nền tối
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     letterSpacing: 1,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   title: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: '800',
     lineHeight: 30,
     marginBottom: 4,
   },
   subtitle: {
-    color: "#E2E8F0", // Slate-200
+    color: '#E2E8F0', // Slate-200
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 
   /* ===== FOLLOW BUTTON ===== */
@@ -76,29 +76,52 @@ const styles = StyleSheet.create({
     color: '#15803d', // Màu xanh đậm của header
   },
 
+  /* ===== DOWNLOAD BUTTON ===== */
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    backgroundColor: '#2563EB',
+    borderWidth: 1,
+    borderColor: '#1E40AF',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  downloadButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+
   /* ===== COMMON CARD (SECTION) ===== */
   section: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginBottom: 20,
     borderRadius: 24, // Bo góc lớn hiện đại
     padding: 20,
     // Shadow mềm mại
     elevation: 2,
-    shadowColor: "#64748B",
+    shadowColor: '#64748B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "800",
-    color: "#334155", // Slate-700
+    fontWeight: '800',
+    color: '#334155', // Slate-700
     marginBottom: 16,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
     borderLeftWidth: 4,
-    borderLeftColor: "#3b82f6", // Line xanh điểm nhấn bên cạnh tiêu đề
+    borderLeftColor: '#3b82f6', // Line xanh điểm nhấn bên cạnh tiêu đề
     paddingLeft: 12,
   },
 
@@ -112,23 +135,23 @@ const styles = StyleSheet.create({
 
   /* ===== INFO ROW ===== */
   infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
+    borderBottomColor: '#F8FAFC',
   },
   infoLabel: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#94A3B8", // Slate-400
+    fontWeight: '600',
+    color: '#94A3B8', // Slate-400
   },
   infoValue: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#1E293B", // Slate-800
-    textAlign: "right",
+    fontWeight: '700',
+    color: '#1E293B', // Slate-800
+    textAlign: 'right',
     flex: 1,
     marginLeft: 20,
   },
@@ -149,14 +172,14 @@ const styles = StyleSheet.create({
     color: '#0284C7', // Sky-600
     fontWeight: '700',
     fontSize: 14,
-    marginLeft: 8
+    marginLeft: 8,
   },
   diagramContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 20,
     minHeight: 200,
-    position: 'relative'
+    position: 'relative',
   },
   svgLayer: {
     position: 'absolute',
@@ -168,7 +191,7 @@ const styles = StyleSheet.create({
   },
   column: {
     width: '45%',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   colTitle: {
     fontSize: 12,
@@ -207,7 +230,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1e293b',
     textAlign: 'center',
-    marginBottom: 4
+    marginBottom: 4,
   },
   nodeDesc: {
     fontSize: 11,
@@ -259,13 +282,13 @@ const styles = StyleSheet.create({
   },
   topic: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#334155",
+    fontWeight: '700',
+    color: '#334155',
     marginBottom: 4,
   },
   method: {
     fontSize: 12,
-    color: "#64748B",
+    color: '#64748B',
     fontStyle: 'italic',
   },
 
@@ -318,8 +341,8 @@ const styles = StyleSheet.create({
   },
   reportText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "#EF4444",
+    fontWeight: '700',
+    color: '#EF4444',
   },
 
   // Modal giữ nguyên style cũ vì nó là overlay
@@ -328,7 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.6)', // Darker overlay
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 20,
   },
   modalView: {
     width: '100%',
@@ -336,20 +359,20 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
-    elevation: 10
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 8,
     color: '#1E293B',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 14,
     color: '#64748B',
     marginBottom: 20,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   input: {
     backgroundColor: '#F1F5F9',
@@ -361,24 +384,24 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0'
+    borderColor: '#E2E8F0',
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 16
+    gap: 16,
   },
   button: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   buttonCancel: {
     backgroundColor: '#F1F5F9',
   },
   buttonConfirm: {
     backgroundColor: '#EF4444',
-    shadowColor: "#EF4444",
+    shadowColor: '#EF4444',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -387,13 +410,13 @@ const styles = StyleSheet.create({
   textCancel: {
     color: '#64748B',
     fontWeight: '700',
-    fontSize: 15
+    fontSize: 15,
   },
   textConfirm: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 15
+    fontSize: 15,
   },
-})
+});
 
-export default styles
+export default styles;
