@@ -18,7 +18,7 @@ import { CourseInteractionApi } from "../../../../backend/api/CourseInteractionA
 import { CourseRelationApi } from "../../../../backend/api/CourseRelationshipApi";
 import { CourseNode } from "../../../../backend/types/CourseRelationShip";
 import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
-
+import { SyllabusApi } from "../../../../backend/api/SyllabusApi";
 /* --- TYPES --- */
 type RouteParams = {
     SubjectDetail: { code: string; name?: string; }
@@ -73,7 +73,7 @@ export default function SubjectDetailScreen() {
     const route = useRoute<RouteProp<RouteParams, "SubjectDetail">>();
     const navigation = useNavigation();
     const { code } = route.params;
-
+    const [isDownloading, setIsDownloading] = useState(false);
     // State Data
     const [data, setData] = useState<SubjectDetailData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -94,7 +94,27 @@ export default function SubjectDetailScreen() {
     const [customReason, setCustomReason] = useState("");
     const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
     const [isSendingReport, setIsSendingReport] = useState(false); // Loading khi gửi report
+    const handleDownloadSyllabus = async () => {
+        if (!data || isDownloading) return;
 
+        // Lấy ID (ưu tiên syllabusId nếu có)
+        const syllabusId = (data.info as any).syllabusId || data.info.id;
+
+        if (!syllabusId) {
+            Alert.alert("Thông báo", "Không tìm thấy thông tin giáo trình để tải.");
+            return;
+        }
+
+        try {
+            setIsDownloading(true);
+            const path = await SyllabusApi.downloadPdf(syllabusId);
+            Alert.alert("Thành công", `File đã được lưu tại thư mục Tải về:\n${path}`);
+        } catch (error: any) {
+            Alert.alert("Lỗi", error.message || "Tải file thất bại");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -245,12 +265,35 @@ export default function SubjectDetailScreen() {
                         <Icon name="book-education-outline" size={60} color="rgba(255,255,255,0.1)" />
                     </View>
 
-                    {/* HÀNG NÚT BẤM (CHỈ CÒN NÚT FOLLOW - ĐÃ XÓA DOWNLOAD) */}
-                    <View style={{ flexDirection: 'row', marginTop: 15 }}>
-                        <FollowButton isFollowed={isFollowed} isLoading={isUpdatingFollow} onPress={handleFollowToggle} style={{ flex: 1 }} />
+                    {/* HÀNG NÚT BẤM ĐÃ CẬP NHẬT */}
+                    <View style={{ flexDirection: 'row', marginTop: 15, gap: 10 }}>
+                        <FollowButton
+                            isFollowed={isFollowed}
+                            isLoading={isUpdatingFollow}
+                            onPress={handleFollowToggle}
+                            style={{ flex: 1 }}
+                        />
+
+                        <TouchableOpacity
+                            style={[
+                                styles.followBtn,
+                                { backgroundColor: '#F8FAFC', flex: 1 },
+                                isDownloading && { opacity: 0.7 }
+                            ]}
+                            onPress={handleDownloadSyllabus}
+                            disabled={isDownloading}
+                        >
+                            {isDownloading ? (
+                                <ActivityIndicator size="small" color="#475569" />
+                            ) : (
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Icon name="file-pdf-box" size={18} color="#EF4444" style={{ marginRight: 6 }} />
+                                    <Text style={[styles.followBtnText, { color: '#475569' }]}>Tải PDF</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
-
                 <Section title="Mô tả tóm tắt"><Text style={styles.missionText}>{info.description}</Text></Section>
                 <Section title="Thông tin chi tiết">
                     <InfoRow label="Giảng viên" value={info.lecturerName} icon="account-tie" />
