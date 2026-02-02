@@ -1,158 +1,158 @@
-import React from 'react';
-import { Image, View, Text, ScrollView, TouchableOpacity, StatusBar, FlatList, RefreshControl, ActivityIndicator } from "react-native"
+import React, { useState, useEffect } from 'react';
+import {
+    View, Text, ScrollView, TouchableOpacity,
+    ActivityIndicator, StatusBar, RefreshControl
+} from "react-native";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
+
 import styles from './styles';
-import { useState, useEffect } from 'react';
 import { Profile } from '../../../../backend/types/Profile';
 import { ProfileApi } from '../../../../backend/api/ProfileApi';
-const Section = ({
-    title,
-    children
-}: {
-    title?: string
-    children: React.ReactNode
-}) => (
-    <View style={styles.section}>
-        {title && <Text style={styles.sectionTitle}>{title}</Text>}
-        {children}
-    </View>
-)
 
-const InfoRow = ({
-    label,
-    value,
-    iconName
-}: {
-    label: string
-    value?: string
-    iconName: string
-}) => (
-    <View style={styles.infoRow}>
-        <View style={styles.iconBox}>
-            <Icon name={iconName} size={20} color="#3b82f6" />
+// Component hiển thị thông tin từng dòng
+const InfoRow = ({ label, value, iconName, lastItem }: { label: string, value?: string, iconName: string, lastItem?: boolean }) => (
+    <View style={[styles.infoRow, lastItem && { borderBottomWidth: 0 }]}>
+        <View style={styles.infoIconBox}>
+            <Icon name={iconName} size={22} color="#3b82f6" />
         </View>
-        <View>
+        <View style={styles.infoContent}>
             <Text style={styles.infoLabel}>{label}</Text>
-            <Text style={styles.infoValue}>{value || '—'}</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{value || '—'}</Text>
         </View>
     </View>
-)
-
-
-
-/* =====================
-        SCREEN
-===================== */
+);
 
 export default function ProfileScreen() {
-    const [error, setError] = useState<string | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    // const displayShowAllCourses = showCourseList ? syllabus : syllabus.slice(0, COURSE_LIMIT)
 
-    useEffect(() => {
-        fetchProfile();
-    }, []);
     const fetchProfile = async () => {
         try {
-            setError(null);
-            // ...
             const res: any = await ProfileApi.getMyProfile();
-
-            // --- SỬA ĐOẠN NÀY ---
-            // Gộp dữ liệu từ res (chứa country, timezone) và res.user (chứa email, fullName...)
             const mappedProfile: Profile = {
-                ...res.user,        // Lấy userId, fullName, email, username từ trong object 'user'
-                country: res.country,   // Lấy country từ bên ngoài
-                timezone: res.timezone, // Lấy timezone từ bên ngoài
-                // Map thêm các trường nếu tên không khớp, ví dụ:
-                // studentId: res.user.userId (nếu cần mapping id sang studentId)
+                ...(res.user || {}),
+                country: res.country || "Việt Nam",
+                timezone: res.timezone || "GMT+7",
             };
-
             setProfile(mappedProfile);
-
-        } catch (error: any) {
-            // ... xử lý lỗi
+        } catch (error) {
+            console.error(error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
-    const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchProfile();
-    };
-    if (loading) {
-        return <ActivityIndicator size="large" />;
-    }
 
-    if (!profile) {
-        return <Text>Không có dữ liệu hồ sơ</Text>;
-    }
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchProfile();
+    };
 
     const getAvatarLetter = () => {
-        if (profile?.fullName) {
-            return profile.fullName.charAt(0).toUpperCase();
-        }
-        return "U";
+        return profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : "U";
     };
+
+    if (loading && !refreshing) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3b82f6" />
+            </View>
+        );
+    }
+
+    if (!profile) return <View style={styles.loadingContainer}><Text>Không có dữ liệu</Text></View>;
 
     return (
         <View style={styles.container}>
+            {/* Thanh trạng thái trong suốt đè lên Gradient */}
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
+                bounces={false} // Tắt hiệu ứng nảy trên iOS để Header không bị tách rời
             >
-                <View style={styles.heroCard}>
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
+                {/* 1. HEADER GRADIENT - Đã giảm chiều cao */}
+                <LinearGradient
+                    colors={["#32502a", "#20331b"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.headerGradient}
+                >
+                    <Text style={styles.headerTitle}>HỒ SƠ CÁ NHÂN</Text>
+                </LinearGradient>
+
+                {/* 2. AVATAR & NAME CARD (Nổi lên trên Header) */}
+                <View style={styles.profileCard}>
+                    <View style={styles.avatarContainer}>
+                        <View style={styles.avatarImage}>
+                            <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.editBadge}>
+                            <Icon name="camera-plus" size={16} color="#3b82f6" />
+                        </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.userName}>{profile.fullName}</Text>
-                    <Text style={styles.userRole}>Sinh viên khóa 2024</Text>
+                    <Text style={styles.nameText}>{profile.fullName}</Text>
+                    <Text style={styles.roleText}>Sinh viên • K2024</Text>
                 </View>
 
-                {/* PROFILE INFO */}
-                <Section title="Thông tin hồ sơ">
-                    <InfoRow
-                        iconName="email-outline"
-                        label="Địa chỉ Email"
-                        value={profile.email}
-                    />
-                    <InfoRow
-                        iconName="earth"
-                        label="Quốc gia"
-                        value={profile.country}
-                    />
-                    <InfoRow
-                        iconName="clock-outline"
-                        label="Múi giờ"
-                        value={profile.timezone}
-                    />
-                </Section>
+                {/* 3. STATS ROW */}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>15</Text>
+                        <Text style={styles.statLabel}>Môn học</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>3.6</Text>
+                        <Text style={styles.statLabel}>GPA</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>85</Text>
+                        <Text style={styles.statLabel}>Tín chỉ</Text>
+                    </View>
+                </View>
 
-                {/* COURSES */}
-                {/* <Section title="Các khóa học">
-                    {displayShowAllCourses.map((subject, index) => (
-                        <Bullet
-                            key={index}
-                            code={subject.code}
-                            text={subject.name ?? subject.title}
+                {/* 4. INFO CONTENT */}
+                <View style={styles.contentContainer}>
+                    <Text style={styles.sectionTitle}>Thông tin chi tiết</Text>
+
+                    <View style={styles.infoCard}>
+                        <InfoRow
+                            iconName="email-outline"
+                            label="Email đăng nhập"
+                            value={profile.email}
                         />
-                    ))}
-                    {syllabus.length > COURSE_LIMIT && (
-                        <TouchableOpacity
-                            style={styles.viewAllBtn}
-                            onPress={() => setShowCourseList(prev => !prev)}
-                        >
-                            <Text style={styles.viewAllText}>
+                        <InfoRow
+                            iconName="account-circle-outline"
+                            label="Tên đăng nhập"
+                            value={profile.username}
+                        />
+                        <InfoRow
+                            iconName="earth"
+                            label="Quốc gia"
+                            value={profile.country}
+                        />
+                        <InfoRow
+                            iconName="clock-time-four-outline"
+                            label="Múi giờ"
+                            value={profile.timezone}
+                            lastItem
+                        />
+                    </View>
 
-                                {showCourseList ? 'Thu gọn' : 'Xem tất cả'}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </Section>  */}
+                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#94A3B8', fontSize: 12 }}>
+                        Phiên bản ứng dụng 1.0.2
+                    </Text>
+                </View>
             </ScrollView>
         </View>
     );

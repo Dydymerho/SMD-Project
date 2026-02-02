@@ -1,31 +1,33 @@
 'use client';
-import React from 'react';
-import LinearGradient from 'react-native-linear-gradient';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  TouchableWithoutFeedback,
+  Keyboard,
+  StatusBar
 } from 'react-native';
-import styles from './LoginStyle';
+import LinearGradient from 'react-native-linear-gradient';
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react-native';
+
+/* --- IMPORTS --- */
+import styles from './LoginStyle';
 import { authApi } from '../../../../backend/api/authApi';
 import { useAuth } from '../../../../backend/Contexts/AuthContext';
 
 export default function LoginScreen() {
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  // 2. Thêm state quản lý ẩn/hiện mật khẩu
-  const [isPasswordVisible, setIsPasswordVisible] = React.useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [isFocused, setIsFocused] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
   const { login } = useAuth();
 
   const handleLogin = async () => {
@@ -35,6 +37,7 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
+    Keyboard.dismiss(); // Ẩn bàn phím khi bắt đầu xử lý
 
     try {
       const res = await authApi.login(email, password);
@@ -42,57 +45,51 @@ export default function LoginScreen() {
 
       if (res.token) {
         await login(res.token);
-        console.log('Login successful');
       } else {
         throw new Error('Token không tồn tại trong response');
       }
     } catch (error: any) {
       console.log('Login error:', error);
       let errorMessage = 'Đã có lỗi xảy ra khi đăng nhập';
-
       if (error.response) {
         errorMessage = 'Sai tài khoản hoặc mật khẩu';
       } else if (error.request) {
-        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+        errorMessage = 'Lỗi kết nối server. Vui lòng kiểm tra mạng.';
       } else {
         errorMessage = error.message || errorMessage;
       }
-
       Alert.alert('Đăng nhập thất bại', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = () => {
-    if (isLoading) return;
-    handleLogin();
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#2563eb', '#38bdf8', '#f472b6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.inner}
-      >
-        <View style={styles.headerSection}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+        {/* 1. HEADER GRADIENT BACKGROUND */}
+        <LinearGradient
+          colors={['#0f172a', '#1e293b', '#334155']} // Màu xanh đen (Slate) chuyên nghiệp
+          // Hoặc dùng màu xanh rêu nếu muốn đồng bộ Home: ['#32502a', '#20331b']
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerContainer}
+        >
           <View style={styles.logoContainer}>
-            <View style={styles.logoSquare}>
-              <View style={styles.logoInner} />
-            </View>
             <Text style={styles.logoText}>SMD</Text>
           </View>
-          <Text style={styles.welcomeTitle}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Đăng nhập vào SMD.</Text>
-        </View>
+          <Text style={styles.welcomeText}>Chào mừng trở lại!</Text>
+        </LinearGradient>
 
-        <View style={styles.formSection}>
+        {/* 2. FORM CONTAINER (WHITE BOTTOM SHEET) */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.formContainer}
+        >
+          {/* EMAIL INPUT */}
+          <Text style={styles.inputLabel}>Email</Text>
           <View
             style={[
               styles.inputWrapper,
@@ -101,12 +98,12 @@ export default function LoginScreen() {
           >
             <Mail
               size={20}
-              color={isFocused === 'email' ? '#2563eb' : '#94a3b8'}
+              color={isFocused === 'email' ? '#3b82f6' : '#94a3b8'}
               style={styles.inputIcon}
             />
             <TextInput
               style={styles.input}
-              placeholder="Địa chỉ Email"
+              placeholder="nhap@email.com"
               placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
@@ -118,7 +115,8 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* 3. Cập nhật phần nhập mật khẩu */}
+          {/* PASSWORD INPUT */}
+          <Text style={styles.inputLabel}>Mật khẩu</Text>
           <View
             style={[
               styles.inputWrapper,
@@ -127,57 +125,59 @@ export default function LoginScreen() {
           >
             <Lock
               size={20}
-              color={isFocused === 'password' ? '#2563eb' : '#94a3b8'}
+              color={isFocused === 'password' ? '#3b82f6' : '#94a3b8'}
               style={styles.inputIcon}
             />
             <TextInput
               style={styles.input}
-              placeholder="Mật khẩu"
+              placeholder="••••••••"
               placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
               onFocus={() => setIsFocused('password')}
               onBlur={() => setIsFocused(null)}
-              // Thay đổi secureTextEntry dựa trên state
               secureTextEntry={!isPasswordVisible}
               editable={!isLoading}
-              onSubmitEditing={handleSubmit}
+              onSubmitEditing={handleLogin}
             />
-
-            {/* Thêm nút bấm Eye/EyeOff */}
             <TouchableOpacity
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Tăng vùng bấm cho dễ
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               {isPasswordVisible ? (
-                <EyeOff size={20} color="#94a3b8" />
+                <EyeOff size={20} color="#64748B" />
               ) : (
-                <Eye size={20} color="#94a3b8" />
+                <Eye size={20} color="#64748B" />
               )}
             </TouchableOpacity>
           </View>
 
+          {/* LOGIN BUTTON */}
           <TouchableOpacity
-            style={[
-              styles.loginButton,
-              isLoading && styles.loginButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            activeOpacity={0.8}
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.9}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Đăng nhập</Text>
-                <ArrowRight size={20} color="#fff" />
-              </>
-            )}
+            <LinearGradient
+              colors={['#3b82f6', '#2563eb']} // Gradient Xanh dương
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientBtn}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.loginButtonText}>Đăng nhập</Text>
+                  <ArrowRight size={20} color="#fff" strokeWidth={2.5} />
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        </KeyboardAvoidingView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
-

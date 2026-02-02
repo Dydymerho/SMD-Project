@@ -1,4 +1,4 @@
-import type React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,27 +6,30 @@ import {
   ScrollView,
   Alert,
   Switch,
-  RefreshControl
+  RefreshControl,
+  StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   Bell,
   Info,
   FileText,
   ChevronRight,
   LogOut,
+  Shield,
+  Moon
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import styles from './Setting.styles';
 import { useAuth } from '../../../../backend/Contexts/AuthContext';
 import type { SettingStackParamList } from './SettingStackNavigation';
 import { Profile } from "../../../../backend/types/Profile";
 import { ProfileApi } from "../../../../backend/api/ProfileApi";
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ Thêm import này
 
-// --- TYPE ---
+/* --- COMPONENT ITEM --- */
 type SettingItemProps = {
   icon: React.ReactNode;
   label: string;
@@ -37,9 +40,9 @@ type SettingItemProps = {
   isSwitch?: boolean;
   switchValue?: boolean;
   onSwitchChange?: (val: boolean) => void;
+  iconBgColor?: string; // Màu nền cho icon
 };
 
-// --- COMPONENT CON ---
 const SettingItem = ({
   icon,
   label,
@@ -50,45 +53,46 @@ const SettingItem = ({
   isSwitch = false,
   switchValue,
   onSwitchChange,
+  iconBgColor = "#F1F5F9"
 }: SettingItemProps) => (
   <TouchableOpacity
     style={[styles.settingItem, isLast && styles.settingItemLast]}
-    onPress={isSwitch ? undefined : onPress} // Nếu là switch thì không click được cả dòng
+    onPress={isSwitch ? undefined : onPress}
     activeOpacity={isSwitch ? 1 : 0.7}
+    disabled={isSwitch}
   >
-    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-      <View
-        style={[
-          styles.settingIconBox,
-          isDestructive && styles.destructiveIconBox,
-        ]}
-      >
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={[
+        styles.iconContainer,
+        isDestructive ? styles.destructiveIcon : { backgroundColor: iconBgColor }
+      ]}>
         {icon}
       </View>
-      <Text
-        style={[styles.settingLabel, isDestructive && styles.destructiveLabel]}
-      >
+      <Text style={[styles.itemLabel, isDestructive && styles.destructiveLabel]}>
         {label}
       </Text>
     </View>
-    {isSwitch ? (
-      <Switch
-        trackColor={{ false: '#767577', true: '#2563EB' }}
-        thumbColor={switchValue ? '#f4f3f4' : '#f4f3f4'}
-        ios_backgroundColor="#3e3e3e"
-        onValueChange={onSwitchChange}
-        value={switchValue}
-      />
-    ) : (
-      <>
-        {value && <Text style={styles.settingValue}>{value}</Text>}
-        <ChevronRight size={18} color={isDestructive ? '#EF4444' : '#94A3B8'} />
-      </>
-    )}
+
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      {isSwitch ? (
+        <Switch
+          trackColor={{ false: '#E2E8F0', true: '#3B82F6' }}
+          thumbColor={'#FFFFFF'}
+          ios_backgroundColor="#E2E8F0"
+          onValueChange={onSwitchChange}
+          value={switchValue}
+        />
+      ) : (
+        <>
+          {value && <Text style={styles.itemValue}>{value}</Text>}
+          <ChevronRight size={18} color={isDestructive ? '#EF4444' : '#CBD5E1'} />
+        </>
+      )}
+    </View>
   </TouchableOpacity>
 );
 
-// --- MAIN SCREEN ---
+/* --- MAIN SCREEN --- */
 export default function SettingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingStackParamList>>();
   const { logout } = useAuth();
@@ -97,38 +101,24 @@ export default function SettingScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isNotificationEnabled, setIsNotificationEnabled] = useState(true); // ✅ State thông báo
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(true);
 
-  const loadSettings = async () => {
-    try {
-      const value = await AsyncStorage.getItem('notification_enabled');
-      if (value !== null) {
-        setIsNotificationEnabled(JSON.parse(value));
-      }
-    } catch (e) {
-      console.error('Failed to load settings');
-    }
-  };
-
-  const fetchProfile = async () => {
-    try {
-      const res: any = await ProfileApi.getMyProfile();
-      if (res && res.user) {
-        setProfile({ ...res.user });
-      } else {
-        setProfile(res);
-      }
-    } catch (error) {
-      console.error("Lỗi lấy Profile:", error);
-    }
-  };
-
+  // Load settings & profile
   const loadAllData = async () => {
     try {
-      await Promise.all([
-        fetchProfile(),
-        loadSettings()
+      const [profileRes, notiSetting] = await Promise.all([
+        ProfileApi.getMyProfile(),
+        AsyncStorage.getItem('notification_enabled')
       ]);
+
+      if (profileRes) {
+        const p: any = profileRes;
+        setProfile(p.user ? { ...p.user } : p);
+      }
+
+      if (notiSetting !== null) {
+        setIsNotificationEnabled(JSON.parse(notiSetting));
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -137,119 +127,127 @@ export default function SettingScreen() {
     }
   };
 
-  useEffect(() => {
-    loadAllData();
-  }, []);
+  useEffect(() => { loadAllData(); }, []);
 
-  //Toggle Switch
-  const toggleNotification = async (value: boolean) => {
-    try {
-      setIsNotificationEnabled(value);
-      await AsyncStorage.setItem('notification_enabled', JSON.stringify(value));
-      // Tại đây có thể gọi thêm API cập nhật lên server nếu cần
-    } catch (e) {
-      console.error('Failed to save settings');
-    }
-  };
-
-  //Refresh 
   const onRefresh = () => {
     setRefreshing(true);
     loadAllData();
   };
 
-  const handleLogout = async () => {
+  const toggleNotification = async (value: boolean) => {
+    setIsNotificationEnabled(value);
+    await AsyncStorage.setItem('notification_enabled', JSON.stringify(value));
+  };
+
+  const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', [
       { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Đăng xuất',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-          } catch (error) {
-            console.error('Logout error:', error);
-            Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
-          }
-        },
-      },
+      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
     ]);
   };
 
-  // Helper lấy chữ cái đầu tên user
-  const getAvatarLetter = () => {
-    if (profile?.fullName) {
-      return profile.fullName.charAt(0).toUpperCase();
-    }
-    return "U";
-  };
+  const getAvatarLetter = () => profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : "U";
 
   return (
     <View style={styles.container}>
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />
-          }
-        >
-          {/* PROFILE SECTION */}
-          <View style={styles.profileSection}>
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile?.fullName || "Người dùng"}</Text>
-              <Text style={styles.profileEmail}>{profile?.email || "Đang tải..."}</Text>
-            </View>
-          </View>
+      <StatusBar barStyle="light-content" />
 
-          {/* SYSTEM SECTION */}
-          <View style={[styles.section, { marginTop: 24 }]}>
-            <Text style={styles.sectionTitle}>Hệ thống</Text>
+      {/* 1. HEADER GRADIENT */}
+      <LinearGradient colors={["#32502a", "#20331b"]} style={styles.headerGradient}>
+        <Text style={styles.headerTitle}>Cài đặt</Text>
+      </LinearGradient>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3B82F6" colors={['#3B82F6']} />
+        }
+      >
+        {/* 2. MINI PROFILE CARD */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{getAvatarLetter()}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName} numberOfLines={1}>{profile?.fullName || "Người dùng"}</Text>
+            <Text style={styles.profileEmail} numberOfLines={1}>{profile?.email || "Đang tải..."}</Text>
+          </View>
+        </View>
+
+        {/* 3. SETTINGS GROUPS */}
+
+        {/* Hệ thống */}
+        <View>
+          <Text style={styles.sectionTitle}>Hệ thống</Text>
+          <View style={styles.section}>
             <SettingItem
-              icon={<Bell size={20} color="#2563EB" />}
+              icon={<Bell size={20} color="#3B82F6" />}
+              iconBgColor="#EFF6FF" // Blue-50
               label="Thông báo"
-              isSwitch={true}
+              isSwitch
               switchValue={isNotificationEnabled}
               onSwitchChange={toggleNotification}
             />
-          </View>
-
-          {/* SUPPORT SECTION */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hỗ trợ</Text>
             <SettingItem
-              icon={<Info size={20} color="#2563EB" />}
+              icon={<Moon size={20} color="#6366F1" />}
+              iconBgColor="#EEF2FF" // Indigo-50
+              label="Chế độ tối (Dark Mode)"
+              isSwitch
+              switchValue={false} // Placeholder
+              onSwitchChange={() => Alert.alert("Thông báo", "Tính năng đang phát triển")}
+              isLast
+            />
+          </View>
+        </View>
+
+        {/* Hỗ trợ */}
+        <View>
+          <Text style={styles.sectionTitle}>Hỗ trợ & Pháp lý</Text>
+          <View style={styles.section}>
+            <SettingItem
+              icon={<Info size={20} color="#F59E0B" />} // Amber
+              iconBgColor="#FFFBEB"
               label="Giới thiệu"
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem
-              icon={<FileText size={20} color="#2563EB" />}
+              icon={<Shield size={20} color="#10B981" />} // Emerald
+              iconBgColor="#ECFDF5"
+              label="Chính sách bảo mật"
+              onPress={() => Alert.alert("Info", "Chuyển đến trang web...")}
+            />
+            <SettingItem
+              icon={<FileText size={20} color="#8B5CF6" />} // Violet
+              iconBgColor="#F5F3FF"
               label="Điều khoản sử dụng"
               onPress={() => navigation.navigate('Terms')}
+              isLast
             />
           </View>
+        </View>
 
-          {/* ACCOUNT SECTION */}
+        {/* Tài khoản */}
+        <View>
+          <Text style={styles.sectionTitle}>Tài khoản</Text>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tài khoản</Text>
             <SettingItem
               icon={<LogOut size={20} color="#EF4444" />}
               label="Đăng xuất"
-              isLast
               isDestructive
               onPress={handleLogout}
+              isLast
             />
           </View>
-          {/* APP INFO */}
-          <View style={styles.appInfo}>
-            <Text style={styles.appVersion}>Phiên bản 1.0.0</Text>
-            <Text style={styles.appCopyright}>© 2025 University App</Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+        </View>
+
+        {/* App Info Footer */}
+        <View style={styles.appInfo}>
+          <Text style={styles.appVersion}>Phiên bản 1.0.2</Text>
+          <Text style={styles.appCopyright}>© 2025 University App Platform</Text>
+        </View>
+
+      </ScrollView>
     </View>
   );
 }

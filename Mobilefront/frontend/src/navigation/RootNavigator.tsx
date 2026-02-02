@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, StatusBar } from 'react-native';
 import BottomTabNavigator from './BottomTabNavigator';
 import SubjectDetailScreen from '../screens/SubjectDetail/SubjectDetailScreen';
 import LoginScreen from '../screens/Login/LoginScreen';
@@ -9,7 +9,7 @@ import { useAuth } from '../../../backend/Contexts/AuthContext';
 export type RootStackParamList = {
     Login: undefined;
     Tabs: undefined;
-    SubjectDetail: { title: string };
+    SubjectDetail: { code: string; name: string; };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -17,34 +17,39 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function RootNavigator() {
     const { isLoggedIn, isLoading } = useAuth();
 
-    // Hiển thị loading khi đang kiểm tra auth status
     if (isLoading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#2563eb" />
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+                <ActivityIndicator size="large" color="#15803d" />
             </View>
         );
     }
 
     return (
-        <Stack.Navigator>
+        <Stack.Navigator
+            screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right', // Hiệu ứng trượt mượt mà
+                contentStyle: { backgroundColor: '#F8FAFC' },
+            }}
+        >
             {!isLoggedIn ? (
                 <Stack.Screen
                     name="Login"
                     component={LoginScreen}
-                    options={{ headerShown: false }}
+                    options={{ animation: 'fade' }}
                 />
             ) : (
                 <>
-                    {/* Bottom Tab */}
                     <Stack.Screen
                         name="Tabs"
                         component={BottomTabNavigator}
-                        options={{ headerShown: false }}
+                        options={{ animation: 'fade' }}
                     />
-
-                    {/* Subject Detail */}
-                    <Stack.Screen name="SubjectDetail" component={SubjectDetailScreen} />
+                    <Stack.Screen
+                        name="SubjectDetail"
+                        component={SubjectDetailScreen}
+                    />
                 </>
             )}
         </Stack.Navigator>

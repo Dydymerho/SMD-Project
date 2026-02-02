@@ -1,80 +1,89 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Dimensions, Platform } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: 'transparent',
     },
-    inner: {
-        flex: 1,
-        paddingHorizontal: 28,
+    /* HEADER SECTION (Gradient Background Area) */
+    headerContainer: {
+        height: height * 0.35, // Chiếm 35% màn hình
         justifyContent: 'center',
-    },
-    headerSection: {
-        marginBottom: 40,
+        alignItems: 'center',
+        paddingBottom: 40,
     },
     logoContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    logoSquare: {
-        width: 32,
-        height: 32,
-        backgroundColor: '#1e293b',
-        borderRadius: 6,
+        width: 90,
+        height: 90,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)', // Glass effect
+        borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    logoInner: {
-        width: 14,
-        height: 14,
-        backgroundColor: '#3b82f6',
-        borderRadius: 2,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+        elevation: 8,
     },
     logoText: {
-        fontSize: 18,
+        fontSize: 28,
         fontWeight: '900',
-        color: '#1e293b',
-        marginLeft: 10,
-        letterSpacing: 1,
+        color: '#FFFFFF',
+        letterSpacing: 2,
     },
-    welcomeTitle: {
-        fontSize: 32,
+    welcomeText: {
+        fontSize: 24,
         fontWeight: '800',
-        color: '#0f172a',
-        marginBottom: 10,
-        letterSpacing: -0.5,
+        color: '#FFFFFF',
+        marginBottom: 4,
     },
-    subtitle: {
-        fontSize: 16,
-        color: '#64748b',
-        lineHeight: 24,
+    subText: {
+        fontSize: 14,
+        color: '#E2E8F0', // Slate-200
+        fontWeight: '500',
     },
-    formSection: {
-        width: '100%',
+
+    /* FORM SECTION (White Bottom Sheet) */
+    formContainer: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        paddingHorizontal: 24,
+        paddingTop: 40,
+        marginTop: -30, // Đẩy lên đè vào header
+        // Shadow cho khối trắng
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#64748B', // Slate-500
+        marginBottom: 8,
+        marginLeft: 4,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        borderColor: '#e2e8f0',
+        backgroundColor: '#F8FAFC', // Slate-50
         borderRadius: 16,
         paddingHorizontal: 16,
-        marginBottom: 18,
-        height: 58,
-        // Shadow for iOS
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        // Elevation for Android
-        elevation: 2,
+        height: 56,
+        borderWidth: 1,
+        borderColor: '#E2E8F0', // Slate-200
+        marginBottom: 20,
     },
     inputFocused: {
-        borderColor: '#3b82f6',
-        backgroundColor: '#fff',
+        borderColor: '#3b82f6', // Blue-500
+        backgroundColor: '#EFF6FF', // Blue-50
     },
     inputIcon: {
         marginRight: 12,
@@ -82,43 +91,40 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 16,
-        color: '#1e293b',
-        fontWeight: '500',
+        color: '#1E293B',
+        height: '100%',
     },
-    forgotPassword: {
-        alignSelf: 'flex-end',
-        marginBottom: 28,
-    },
-    forgotPasswordText: {
-        color: '#3b82f6',
-        fontWeight: '600',
-        fontSize: 14,
-    },
+
+    /* BUTTONS */
     loginButton: {
-        backgroundColor: '#2563eb',
+        borderRadius: 16,
+        height: 56,
+        overflow: 'hidden',
+        marginTop: 8,
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    gradientBtn: {
+        width: '100%',
+        height: '100%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 18,
-        borderRadius: 18,
-        shadowColor: '#2563eb',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 15,
-        elevation: 8,
     },
     loginButtonDisabled: {
-        backgroundColor: '#93c5fd',
-        opacity: 0.8,
+        opacity: 0.7,
     },
     loginButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
-        marginRight: 10,
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+        marginRight: 8,
     },
-    disabledText: {
-        opacity: 0.5,
-    },
-})
-export default styles
+
+});
+
+export default styles;
