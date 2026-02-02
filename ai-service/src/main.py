@@ -8,10 +8,6 @@ from app.core.config import settings
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR))
 
-TEMP_DIR = BASE_DIR / "app" / "services" / "temp_uploads" 
-TEMP_DIR.mkdir(parents=True, exist_ok=True)
-
-
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="API Extract, Compare Syllabus, CLO, PLO",

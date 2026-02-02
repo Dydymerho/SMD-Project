@@ -3,8 +3,8 @@ import difflib
 
 try:
     print("Đang load BERT Model (all-MiniLM-L6-v2)...")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("✅ Load BERT Model thành công!")
+    model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+    print("Load BERT Model thành công!")
 except Exception as e:
     print(f"Lỗi load model: {e}")
     model = None
