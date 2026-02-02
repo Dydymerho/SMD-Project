@@ -12,9 +12,9 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 /* --- IMPORT CUSTOM --- */
 import styles from "./SubjectDetailScreen.styles";
 import { SubjectService } from "../../../../backend/Service/SubjectService";
+// 1. IMPORT API REPORT
 import { ReportApi } from "../../../../backend/api/ReportApi";
 import { CourseInteractionApi } from "../../../../backend/api/CourseInteractionApi";
-// Import API và Type mới
 import { CourseRelationApi } from "../../../../backend/api/CourseRelationshipApi";
 import { CourseNode } from "../../../../backend/types/CourseRelationShip";
 import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
@@ -23,17 +23,8 @@ import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
 type RouteParams = {
     SubjectDetail: { code: string; name?: string; }
 };
-type DiagramNode = {
-    id: string; // Dùng composite key để tránh trùng lặp
-    code: string;
-    desc?: string;
-    y?: number
-}
-type Link = {
-    from: string; // ID của node trái
-    to: string;   // ID của node phải
-    level: string; // Loại quan hệ
-}
+type DiagramNode = { id: string; code: string; desc?: string; y?: number };
+type Link = { from: string; to: string; level: string; };
 
 /* --- COMPONENTS CON --- */
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -53,20 +44,21 @@ const InfoRow = ({ label, value, icon }: { label: string; value?: string | numbe
     </View>
 );
 
-const FollowButton = ({ isFollowed, isLoading, onPress }: { isFollowed: boolean, isLoading: boolean, onPress: () => void }) => (
+const FollowButton = ({ isFollowed, isLoading, onPress, style }: any) => (
     <TouchableOpacity
         onPress={onPress}
         disabled={isLoading}
         style={[
             styles.followBtn,
             isFollowed ? styles.followBtnActive : styles.followBtnInactive,
-            isLoading && { opacity: 0.7 }
+            isLoading && { opacity: 0.7 },
+            style
         ]}
     >
         {isLoading ? (
             <ActivityIndicator size="small" color={isFollowed ? "#15803d" : "#FFF"} />
         ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name={isFollowed ? "check-circle" : "plus-circle"} size={16} color={isFollowed ? "#15803d" : "#FFF"} style={{ marginRight: 6 }} />
                 <Text style={[styles.followBtnText, isFollowed ? styles.followTextActive : styles.followTextInactive]}>
                     {isFollowed ? "Đã theo dõi" : "Theo dõi"}
@@ -90,7 +82,7 @@ export default function SubjectDetailScreen() {
     const [isFollowed, setIsFollowed] = useState(false);
     const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
 
-    // State Diagram (Relation Tree)
+    // State Diagram
     const [showDiagram, setShowDiagram] = useState(false);
     const [leftNodes, setLeftNodes] = useState<DiagramNode[]>([]);
     const [rightNodes, setRightNodes] = useState<DiagramNode[]>([]);
@@ -101,154 +93,139 @@ export default function SubjectDetailScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [customReason, setCustomReason] = useState("");
     const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+    const [isSendingReport, setIsSendingReport] = useState(false); // Loading khi gửi report
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-
-                // 1. Lấy thông tin chi tiết môn học
                 const subjectResult = await SubjectService.getFullDetail(code);
                 if (!subjectResult) {
                     Alert.alert("Thông báo", `Không tìm thấy dữ liệu: ${code}`);
-                    navigation.goBack();
-                    return;
+                    navigation.goBack(); return;
                 }
                 setData(subjectResult);
 
                 const courseId = subjectResult.info.id || (subjectResult.info as any).syllabusId;
 
-                // 2. Lấy Cây Quan Hệ (Recursive Tree)
+                // Get Tree Relation
                 let treeData: CourseNode | null = null;
                 if (courseId) {
                     try {
                         const res = await CourseRelationApi.getTree(courseId);
                         treeData = (res as any).data || res;
-                    } catch (err) {
-                        console.log("Lỗi lấy cây quan hệ:", err);
-                    }
+                    } catch (err) { console.log("Lỗi lấy cây quan hệ:", err); }
                 }
 
-                // 3. Xử lý dữ liệu Cây -> Danh sách phẳng (Edges)
                 if (treeData) {
-                    const newLeftNodes: DiagramNode[] = [];
-                    const newRightNodes: DiagramNode[] = [];
-                    const newLinks: Link[] = [];
+                    const newLeft: DiagramNode[] = [], newRight: DiagramNode[] = [], newLinks: Link[] = [];
+                    const seenLeft = new Set<string>(), seenRight = new Set<string>();
 
-                    const seenLeft = new Set<string>();
-                    const seenRight = new Set<string>();
-
-                    // Hàm đệ quy duyệt cây
                     const traverseTree = (parentNode: CourseNode) => {
-                        const processChildren = (children: CourseNode[] | null, type: string) => {
-                            if (!children || children.length === 0) return;
-
+                        const process = (children: CourseNode[] | null, type: string) => {
+                            if (!children) return;
                             children.forEach(child => {
-                                // Tạo Key duy nhất để vẽ (tránh trùng nếu môn xuất hiện nhiều lần)
-                                const parentKey = `${parentNode.courseCode}`;
-                                const childKey = `${child.courseCode}_${parentNode.courseCode}_${type}`; // Unique child per parent relation
-
-                                // Thêm Node Trái (Parent)
-                                if (!seenLeft.has(parentKey)) {
-                                    seenLeft.add(parentKey);
-                                    newLeftNodes.push({
-                                        id: parentKey,
-                                        code: parentNode.courseCode,
-                                        desc: parentNode.courseName
-                                    });
-                                }
-
-                                // Thêm Node Phải (Child)
-                                if (!seenRight.has(childKey)) {
-                                    seenRight.add(childKey);
-                                    newRightNodes.push({
-                                        id: childKey,
-                                        code: child.courseCode,
-                                        desc: child.courseName
-                                    });
-                                }
-
-                                // Tạo dây nối
-                                newLinks.push({
-                                    from: parentKey,
-                                    to: childKey,
-                                    level: type
-                                });
-
-                                // Tiếp tục đệ quy xuống con của child
+                                const pKey = `${parentNode.courseCode}`;
+                                const cKey = `${child.courseCode}_${parentNode.courseCode}_${type}`;
+                                if (!seenLeft.has(pKey)) { seenLeft.add(pKey); newLeft.push({ id: pKey, code: parentNode.courseCode, desc: parentNode.courseName }); }
+                                if (!seenRight.has(cKey)) { seenRight.add(cKey); newRight.push({ id: cKey, code: child.courseCode, desc: child.courseName }); }
+                                newLinks.push({ from: pKey, to: cKey, level: type });
                                 traverseTree(child);
                             });
                         };
-
-                        processChildren(parentNode.prerequisites, 'PREREQUISITE');
-                        processChildren(parentNode.corequisites, 'COREQUISITE');
-                        processChildren(parentNode.equivalents, 'EQUIVALENT');
+                        process(parentNode.prerequisites, 'PREREQUISITE');
+                        process(parentNode.corequisites, 'COREQUISITE');
+                        process(parentNode.equivalents, 'EQUIVALENT');
                     };
-
-                    // Bắt đầu duyệt từ Root
                     traverseTree(treeData);
-
-                    setLeftNodes(newLeftNodes);
-                    setRightNodes(newRightNodes);
-                    setMappings(newLinks);
+                    setLeftNodes(newLeft); setRightNodes(newRight); setMappings(newLinks);
                 }
 
-                // 4. Check Follow
                 if (courseId) {
                     try {
-                        const followedList = await CourseInteractionApi.getFollowedCourses();
-                        if (Array.isArray(followedList)) {
-                            const isFound = followedList.some((item: any) => item.courseId === courseId);
-                            setIsFollowed(isFound);
-                        }
+                        const fList = await CourseInteractionApi.getFollowedCourses();
+                        if (Array.isArray(fList) && fList.some((i: any) => i.courseId === courseId)) setIsFollowed(true);
                     } catch (e) { }
                 }
-
-            } catch (error) {
-                console.error(error);
-                Alert.alert("Lỗi", "Không thể tải dữ liệu.");
-            } finally {
-                setLoading(false);
-            }
+            } catch (error) { Alert.alert("Lỗi", "Không thể tải dữ liệu."); } finally { setLoading(false); }
         };
         fetchData();
     }, [code]);
 
     // --- HELPERS ---
-    const getColorByLevel = (level: string) => {
-        switch (level?.toUpperCase()) {
-            case 'PREREQUISITE': return '#ef4444'; // Đỏ
-            case 'COREQUISITE': return '#3b82f6'; // Xanh
-            case 'EQUIVALENT': return '#eab308'; // Vàng
+    const updatePosition = (key: string, y: number, height: number) => setPositions(prev => ({ ...prev, [key]: y + height / 2 }));
+    const getColorByLevel = (l: string) => {
+        switch (l?.toUpperCase()) {
+            case 'PREREQUISITE': return '#ef4444';
+            case 'COREQUISITE': return '#3b82f6';
+            case 'EQUIVALENT': return '#eab308';
             default: return '#cbd5e1';
         }
     };
 
-    const updatePosition = (key: string, y: number, height: number) => {
-        setPositions(prev => ({ ...prev, [key]: y + height / 2 }));
+    // --- LOGIC REPORT (API GẮN TẠI ĐÂY) ---
+
+    // Hàm gọi API thực sự
+    const sendReportToApi = async (title: string, description: string) => {
+        if (!description.trim()) {
+            Alert.alert("Thông báo", "Vui lòng nhập nội dung chi tiết.");
+            return;
+        }
+
+        const token = await AsyncStorage.getItem('AUTH_TOKEN');
+        if (!token) {
+            Alert.alert("Yêu cầu", "Vui lòng đăng nhập để gửi báo cáo.");
+            return;
+        }
+
+        setIsSendingReport(true);
+
+        try {
+            // Gọi ReportApi
+            await ReportApi.createReport({
+                title: title,
+                description: description
+            });
+
+            Alert.alert("Thành công", "Cảm ơn bạn đã đóng góp ý kiến. Chúng tôi sẽ xem xét sớm nhất.");
+            setModalVisible(false);
+            setCustomReason("");
+        } catch (error) {
+            console.error("Report Error:", error);
+            Alert.alert("Lỗi", "Gửi báo cáo thất bại. Vui lòng thử lại sau.");
+        } finally {
+            setIsSendingReport(false);
+        }
     };
 
-    // --- HANDLERS (Giữ nguyên) ---
-    const handleFollowToggle = async () => { /* ... Giữ nguyên code cũ ... */
+    // Xử lý khi nhấn nút Gửi trong Modal
+    const handleSubmitCustomReason = () => {
+        if (selectedMaterial) {
+            sendReportToApi(`Báo lỗi tài liệu: ${selectedMaterial.title}`, customReason);
+        } else {
+            sendReportToApi(`Báo cáo môn học: ${data?.info.courseCode}`, customReason);
+        }
+    };
+
+    // Mở Modal khi nhấn nút Báo lỗi (icon cờ)
+    const handleReport = (item: any) => {
+        setSelectedMaterial(item);
+        setModalVisible(true);
+    };
+
+    // --- LOGIC FOLLOW ---
+    const handleFollowToggle = async () => {
         if (!data || isUpdatingFollow) return;
         const token = await AsyncStorage.getItem('AUTH_TOKEN');
         if (!token) { Alert.alert("Yêu cầu", "Vui lòng đăng nhập."); return; }
         const courseId = data.info.id || (data.info as any).syllabusId;
-        setIsUpdatingFollow(true);
-        const prev = isFollowed;
-        setIsFollowed(!prev);
+        setIsUpdatingFollow(true); const prev = isFollowed; setIsFollowed(!prev);
         try {
             if (prev) await CourseInteractionApi.unfollowCourse(courseId);
             else await CourseInteractionApi.followCourse(courseId);
-        } catch (e) { setIsFollowed(prev); Alert.alert("Lỗi", "Cập nhật thất bại"); }
-        finally { setIsUpdatingFollow(false); }
+        } catch (e) { setIsFollowed(prev); Alert.alert("Lỗi", "Cập nhật thất bại"); } finally { setIsUpdatingFollow(false); }
     };
 
-    const sendReportToApi = async (title: string, desc: string) => { /* ... Giữ nguyên ... */ };
-    const handleSubmitCustomReason = () => { setModalVisible(false); };
-    const handleReport = (item: any) => { setSelectedMaterial(item); setModalVisible(true); };
-
-    // --- RENDER ---
     if (loading) return <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#15803d" /></View>;
     if (!data) return <View style={styles.container}><Text>Không có dữ liệu</Text></View>;
 
@@ -257,7 +234,6 @@ export default function SubjectDetailScreen() {
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-
                 {/* HEADER */}
                 <LinearGradient colors={["#32502a", "#20331b"]} style={styles.header}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -268,12 +244,14 @@ export default function SubjectDetailScreen() {
                         </View>
                         <Icon name="book-education-outline" size={60} color="rgba(255,255,255,0.1)" />
                     </View>
-                    <FollowButton isFollowed={isFollowed} isLoading={isUpdatingFollow} onPress={handleFollowToggle} />
+
+                    {/* HÀNG NÚT BẤM (CHỈ CÒN NÚT FOLLOW - ĐÃ XÓA DOWNLOAD) */}
+                    <View style={{ flexDirection: 'row', marginTop: 15 }}>
+                        <FollowButton isFollowed={isFollowed} isLoading={isUpdatingFollow} onPress={handleFollowToggle} style={{ flex: 1 }} />
+                    </View>
                 </LinearGradient>
 
-                <Section title="Mô tả tóm tắt">
-                    <Text style={styles.missionText}>{info.description}</Text>
-                </Section>
+                <Section title="Mô tả tóm tắt"><Text style={styles.missionText}>{info.description}</Text></Section>
                 <Section title="Thông tin chi tiết">
                     <InfoRow label="Giảng viên" value={info.lecturerName} icon="account-tie" />
                     <InfoRow label="Tín chỉ" value={info.credit} icon="star-circle-outline" />
@@ -281,15 +259,12 @@ export default function SubjectDetailScreen() {
                     <InfoRow label="Loại hình" value={info.type} icon="shape-outline" />
                 </Section>
 
-                {/* SƠ ĐỒ CÂY QUAN HỆ */}
+                {/* Sơ đồ cây */}
                 <View style={{ marginTop: 10, marginHorizontal: 16 }}>
                     <TouchableOpacity style={styles.toggleBtn} onPress={() => setShowDiagram(!showDiagram)}>
                         <Icon name={showDiagram ? "chevron-up" : "chevron-down"} size={20} color="#0284C7" />
-                        <Text style={styles.toggleBtnText}>
-                            {showDiagram ? "Thu gọn cây quan hệ môn học" : "Xem cây quan hệ môn học"}
-                        </Text>
+                        <Text style={styles.toggleBtnText}>{showDiagram ? "Thu gọn cây quan hệ môn học" : "Xem cây quan hệ môn học"}</Text>
                     </TouchableOpacity>
-
                     {showDiagram && (
                         <View style={[styles.section, { marginHorizontal: 0, marginTop: 16 }]}>
                             <Text style={styles.sectionTitle}>Cấu trúc môn học</Text>
@@ -298,89 +273,48 @@ export default function SubjectDetailScreen() {
                                     <View style={styles.diagramContainer}>
                                         <Svg style={styles.svgLayer}>
                                             {mappings.map((m, i) => {
-                                                const y1 = positions[m.from];
-                                                const y2 = positions[m.to];
-                                                // Chỉ vẽ dây nếu cả 2 điểm đã render xong vị trí
-                                                if (y1 !== undefined && y2 !== undefined) {
-                                                    return (
-                                                        <Line key={i} x1="25%" y1={y1} x2="75%" y2={y2}
-                                                            stroke={getColorByLevel(m.level)} strokeWidth="2" strokeOpacity={0.6} />
-                                                    );
-                                                }
+                                                const y1 = positions[m.from]; const y2 = positions[m.to];
+                                                if (y1 !== undefined && y2 !== undefined) return <Line key={i} x1="25%" y1={y1} x2="75%" y2={y2} stroke={getColorByLevel(m.level)} strokeWidth="2" strokeOpacity={0.6} />;
                                                 return null;
                                             })}
                                         </Svg>
-
-                                        {/* CỘT TRÁI: MÔN CHA / MÔN GỐC */}
                                         <View style={styles.column}>
-                                            <Text style={styles.colTitle}>Môn Gốc / Cha</Text>
-                                            {leftNodes.map(node => (
-                                                <View key={node.id} style={[styles.node, styles.ploNode]}
-                                                    onLayout={(e) => updatePosition(node.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
-                                                    <Text style={styles.nodeTitle}>{node.code}</Text>
-                                                </View>
-                                            ))}
+                                            <Text style={styles.colTitle}>Môn Gốc</Text>
+                                            {leftNodes.map(n => (<View key={n.id} style={[styles.node, styles.ploNode]} onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}><Text style={styles.nodeTitle}>{n.code}</Text></View>))}
                                         </View>
-
-                                        {/* CỘT PHẢI: MÔN CON / ĐIỀU KIỆN */}
                                         <View style={styles.column}>
                                             <Text style={styles.colTitle}>Môn Điều Kiện</Text>
-                                            {rightNodes.map(node => (
-                                                <View key={node.id} style={[styles.node, styles.cloNode]}
-                                                    onLayout={(e) => updatePosition(node.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
-                                                    <Text style={styles.nodeTitle}>{node.code}</Text>
-                                                    <Text style={styles.nodeDesc} numberOfLines={1}>{node.desc}</Text>
-                                                </View>
-                                            ))}
+                                            {rightNodes.map(n => (<View key={n.id} style={[styles.node, styles.cloNode]} onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}><Text style={styles.nodeTitle}>{n.code}</Text><Text style={styles.nodeDesc} numberOfLines={1}>{n.desc}</Text></View>))}
                                         </View>
                                     </View>
-
                                     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 10 }}>
                                         <Text style={{ fontSize: 10, color: '#ef4444', fontWeight: '600' }}>● Tiên quyết</Text>
                                         <Text style={{ fontSize: 10, color: '#3b82f6', fontWeight: '600' }}>● Song hành</Text>
                                         <Text style={{ fontSize: 10, color: '#eab308', fontWeight: '600' }}>● Tương đương</Text>
                                     </View>
                                 </>
-                            ) : (
-                                <View style={{ padding: 20, alignItems: 'center' }}>
-                                    <Icon name="link-variant-off" size={40} color="#CBD5E1" />
-                                    <Text style={{ marginTop: 8, color: '#64748B', fontStyle: 'italic' }}>Không có môn học liên quan</Text>
-                                </View>
-                            )}
+                            ) : (<View style={{ padding: 20, alignItems: 'center' }}><Icon name="link-variant-off" size={40} color="#CBD5E1" /><Text style={{ marginTop: 8, color: '#64748B' }}>Không có môn học liên quan</Text></View>)}
                         </View>
                     )}
                 </View>
 
-                {/* KẾ HOẠCH GIẢNG DẠY */}
                 {plans.length > 0 && (
                     <Section title="Kế hoạch giảng dạy">
                         {plans.sort((a, b) => a.weekNo - b.weekNo).map((item, index) => (
                             <View key={index} style={styles.timelineItem}>
-                                <View style={styles.timelineLeft}>
-                                    <View style={styles.timelineDot}><Text style={styles.weekNum}>{item.weekNo}</Text></View>
-                                    {index < plans.length - 1 && <View style={styles.timelineLine} />}
-                                </View>
-                                <View style={styles.timelineContent}>
-                                    <Text style={styles.topic}>{item.topic}</Text>
-                                    <Text style={styles.method}>PP: {item.teachingMethod}</Text>
-                                </View>
+                                <View style={styles.timelineLeft}><View style={styles.timelineDot}><Text style={styles.weekNum}>{item.weekNo}</Text></View>{index < plans.length - 1 && <View style={styles.timelineLine} />}</View>
+                                <View style={styles.timelineContent}><Text style={styles.topic}>{item.topic}</Text><Text style={styles.method}>PP: {item.teachingMethod}</Text></View>
                             </View>
                         ))}
                     </Section>
                 )}
 
-                {/* ĐÁNH GIÁ & TÀI LIỆU (Giữ nguyên) */}
                 {assessments.length > 0 && (
                     <Section title="Đánh giá & Điểm số">
                         {assessments.map((item, index) => (
                             <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                    <Icon name="clipboard-check-outline" size={18} color="#64748B" style={{ marginRight: 8 }} />
-                                    <Text style={{ color: '#334155', fontWeight: '600', fontSize: 14 }}>{item.name}</Text>
-                                </View>
-                                <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                                    <Text style={{ fontWeight: '800', color: '#2563EB', fontSize: 14 }}>{item.weightPercent}%</Text>
-                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}><Icon name="clipboard-check-outline" size={18} color="#64748B" style={{ marginRight: 8 }} /><Text style={{ color: '#334155', fontWeight: '600', fontSize: 14 }}>{item.name}</Text></View>
+                                <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}><Text style={{ fontWeight: '800', color: '#2563EB', fontSize: 14 }}>{item.weightPercent}%</Text></View>
                             </View>
                         ))}
                     </Section>
@@ -395,33 +329,46 @@ export default function SubjectDetailScreen() {
                                     <Text style={styles.bulletTitle}>{item.title}</Text>
                                     <Text style={styles.bulletSubtitle}>{item.author} ({item.materialType})</Text>
                                     <TouchableOpacity onPress={() => handleReport(item)} style={styles.reportBtn}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Icon name="flag-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} />
-                                            <Text style={styles.reportText}>Báo lỗi</Text>
-                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}><Icon name="flag-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} /><Text style={styles.reportText}>Báo lỗi</Text></View>
                                     </TouchableOpacity>
                                 </View>
                             </View>
                         ))}
                     </Section>
                 )}
-
             </ScrollView>
 
-            {/* MODAL REPORT */}
             <Modal transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)} animationType="fade">
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
                     <View style={styles.modalView}>
                         <Icon name="alert-circle-outline" size={48} color="#EF4444" style={{ alignSelf: 'center', marginBottom: 10 }} />
                         <Text style={styles.modalTitle}>Báo cáo tài liệu</Text>
                         <Text style={styles.modalSubtitle}>{selectedMaterial?.title}</Text>
-                        <TextInput style={styles.input} placeholder="Mô tả chi tiết vấn đề..." placeholderTextColor="#94A3B8" multiline value={customReason} onChangeText={setCustomReason} />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Mô tả chi tiết vấn đề..."
+                            placeholderTextColor="#94A3B8"
+                            multiline
+                            value={customReason}
+                            onChangeText={setCustomReason}
+                        />
+
                         <View style={styles.buttonRow}>
                             <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.textCancel}>Hủy bỏ</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.button, styles.buttonConfirm]} onPress={handleSubmitCustomReason}>
-                                <Text style={styles.textConfirm}>Gửi báo cáo</Text>
+
+                            <TouchableOpacity
+                                style={[styles.button, styles.buttonConfirm]}
+                                onPress={handleSubmitCustomReason}
+                                disabled={isSendingReport} // Disable khi đang gửi
+                            >
+                                {isSendingReport ? (
+                                    <ActivityIndicator size="small" color="#FFF" />
+                                ) : (
+                                    <Text style={styles.textConfirm}>Gửi báo cáo</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>
