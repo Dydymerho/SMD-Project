@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from celery.result import AsyncResult
-from app.worker import celery_app, process_ocr_task, task_summarize, task_check_clo_plo, task_diff
-from app.schemas.ai_schema import CloPloCheckRequest
+from app.worker import celery_app, process_ocr_task, task_diff_text, task_summarize_text, task_check_clo_plo, task_diff, task_extract_syllabus_json, task_compare_json_syllabus
+from app.schemas.ai_schema import CloPloCheckRequest, SummaryRequest, DiffRequest, ExtractSyllabusRequest, CompareSyllabusJsonRequest
 
 router = APIRouter()
 
@@ -18,31 +18,28 @@ async def get_task_status(task_id: str):
 async def upload_ocr(file: UploadFile = File(...)):
     content = await file.read()
     if not content: raise HTTPException(400, "File rỗng")
-    
     task = process_ocr_task.delay(content, file.filename)
     return {"task_id": task.id, "message": "Đang OCR..."}
 
-@router.post("/summarize-async")
-async def summarize_async(file: UploadFile = File(...)):
-    """Backend gửi file (PDF/Ảnh/Word) để tóm tắt"""
-    content = await file.read()
-    if not content: raise HTTPException(400, "File rỗng")
-    
-    task = task_summarize.delay(content, file.filename)
-    return {"task_id": task.id, "message": "Đang tóm tắt..."}
+@router.post("/summarize-text")
+async def summarize_text(req: SummaryRequest):
+    """
+    Nhận input JSON: { "text": "Nội dung cần tóm tắt..." }
+    """
+    if not req.text: raise HTTPException(400, "Văn bản rỗng")
+    task = task_summarize_text.delay(req.text)
+    return {"task_id": task.id, "message": "Đang tóm tắt văn bản..."}
 
 @router.post("/syllabus/compare")
-async def compare_syllabus_async(
-    file_old: UploadFile = File(...),
-    file_new: UploadFile = File(...)
-):
-    """Backend gửi 2 file để so sánh"""
-    c_old = await file_old.read()
-    c_new = await file_new.read()
-    
-    if not c_old or not c_new: raise HTTPException(400, "Thiếu file")
-
-    task = task_diff.delay(c_old, file_old.filename, c_new, file_new.filename)
+async def compare_syllabus_text(req: DiffRequest):
+    """
+    So sánh text trực tiếp (giống như summarize-text)
+    """
+    if not req.old_content or not req.new_content:
+        raise HTTPException(400, "Văn bản rỗng")
+        
+    # Gọi task mới vừa thêm
+    task = task_diff_text.delay(req.old_content, req.new_content)
     return {"task_id": task.id, "message": "Đang so sánh..."}
 
 
@@ -66,3 +63,27 @@ async def check_clo_plo_async(
     )
     
     return {"task_id": task.id, "message": "Đang đọc file và kiểm tra sự phù hợp..."}
+
+
+@router.post("/extract-syllabus-json")
+async def extract_syllabus_json(req: ExtractSyllabusRequest):
+    """
+    Input: JSON Object (theo form syl1.json)
+    Output: Task ID -> Kết quả là JSON Form Target chuẩn.
+    """
+    if not req.syllabus_data: 
+        raise HTTPException(400, "Dữ liệu JSON rỗng")
+    task = task_extract_syllabus_json.delay(req.syllabus_data)
+    return {"task_id": task.id, "message": "Đang xử lý và chuẩn hóa JSON..."}
+
+
+@router.post("/syllabus/compare-json")
+async def compare_syllabus_json(req: CompareSyllabusJsonRequest):
+    """
+    So sánh 2 JSON Syllabus (MỚI)
+    """
+    if not req.old_syllabus or not req.new_syllabus:
+        raise HTTPException(400, "Dữ liệu JSON bị thiếu")
+
+    task = task_compare_json_syllabus.delay(req.old_syllabus, req.new_syllabus)
+    return {"task_id": task.id, "message": "Đang phân tích sự khác biệt..."}

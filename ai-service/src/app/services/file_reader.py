@@ -13,10 +13,6 @@ else:
     PATH_TO_POPPLER = None 
 
 def ocr_mixed_file(file_path: str) -> str:
-    """
-    Hàm ĐA NĂNG: Đọc nội dung từ file Ảnh (.jpg, .png), PDF (.pdf) và Word (.docx).
-    Trả về: Chuỗi văn bản (String).
-    """
     try:
         text_result = ""
         file_lower = file_path.lower()

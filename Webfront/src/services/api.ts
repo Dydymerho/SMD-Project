@@ -624,4 +624,18 @@ export const getPrincipalDashboardStats = async () => {
   }
 };
 
+// AI Service API
+export const summarizeDocument = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await axiosClient.post('/ai/summarize', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  
+  return response.data.summary || response.data;
+};
+
 export default axiosClient;
