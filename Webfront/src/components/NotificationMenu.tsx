@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import './NotificationMenu.css';
 import { Bell, CheckCircle, AlertCircle, MessageSquare, Check } from 'lucide-react';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/api';
@@ -16,44 +16,63 @@ interface NotificationItem {
 interface NotificationMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  onUnreadCountChange?: (count: number) => void;
 }
 
-const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose }) => {
+const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose, onUnreadCountChange }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'unread' | 'all'>('unread');
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getNotifications(0, 100);
+      console.log('All notifications:', data);
+      let notificationsList: NotificationItem[] = [];
+      if (data.content) {
+        notificationsList = Array.isArray(data.content) ? data.content : [];
+      } else {
+        notificationsList = Array.isArray(data) ? data : [];
+      }
+      setNotifications(notificationsList);
+      
+      // Calculate and callback unread count
+      const unreadCount = notificationsList.filter(n => !n.isRead).length;
+      if (onUnreadCountChange) {
+        onUnreadCountChange(unreadCount);
+      }
+    } catch (error) {
+      console.error('Lỗi lấy thông báo:', error);
+      setNotifications([]);
+      if (onUnreadCountChange) {
+        onUnreadCountChange(0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [onUnreadCountChange]);
 
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen]);
-
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const data = await getNotifications(0, 100);
-      console.log('All notifications:', data);
-      if (data.content) {
-        setNotifications(Array.isArray(data.content) ? data.content : []);
-      } else {
-        setNotifications(Array.isArray(data) ? data : []);
-      }
-    } catch (error) {
-      console.error('Lỗi lấy thông báo:', error);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isOpen, fetchNotifications]);
 
   const handleMarkAsRead = async (id: number) => {
     try {
       await markNotificationAsRead(id);
       // Update notification in local state
-      setNotifications(notifications.map(n => 
+      const updatedNotifications = notifications.map(n => 
         n.notificationId === id ? { ...n, isRead: true } : n
-      ));
+      );
+      setNotifications(updatedNotifications);
+      
+      // Recalculate and callback unread count
+      const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
+      if (onUnreadCountChange) {
+        onUnreadCountChange(unreadCount);
+      }
     } catch (error) {
       console.error('Lỗi đánh dấu đã đọc:', error);
     }
@@ -63,7 +82,13 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose }) 
     try {
       await markAllNotificationsAsRead();
       // Update all notifications to read
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      const updatedNotifications = notifications.map(n => ({ ...n, isRead: true }));
+      setNotifications(updatedNotifications);
+      
+      // Callback unread count = 0
+      if (onUnreadCountChange) {
+        onUnreadCountChange(0);
+      }
     } catch (error) {
       console.error('Lỗi đánh dấu tất cả đã đọc:', error);
     }
@@ -72,7 +97,6 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose }) 
   if (!isOpen) return null;
 
   const unreadNotifications = notifications.filter(n => !n.isRead);
-  const readNotifications = notifications.filter(n => n.isRead);
   const displayedNotifications = activeTab === 'unread' ? unreadNotifications : notifications;
 
   const getIcon = (type: string) => {
@@ -146,83 +170,30 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ isOpen, onClose }) 
               <p>Đang tải thông báo...</p>
             </div>
           ) : displayedNotifications.length > 0 ? (
-            <>
-              {/* Unread section when viewing all */}
-              {activeTab === 'all' && unreadNotifications.length > 0 && (
-                <div className="noti-section">
-                  <div className="noti-section-title">Chưa đọc</div>
-                  {unreadNotifications.map((item) => (
-                    <div key={item.notificationId} className={`noti-item ${item.isRead ? 'read' : 'unread'}`}>
-                      <div className="noti-item-icon">
-                        {getIcon(item.type)}
-                      </div>
-                      <div className="noti-item-content">
-                        <div className="noti-item-title">
-                          {item.title}
-                          {!item.isRead && <span className="unread-dot" />}
-                        </div>
-                        <p className="noti-item-desc">{item.message}</p>
-                        <span className="noti-item-time">{formatTime(item.createdAt)}</span>
-                      </div>
-                      <button
-                        className="noti-close-btn"
-                        onClick={() => handleMarkAsRead(item.notificationId)}
-                        title="Đánh dấu đã đọc"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+            displayedNotifications.map((item) => (
+              <div key={item.notificationId} className={`noti-item ${item.isRead ? 'read' : 'unread'}`}>
+                <div className="noti-item-icon">
+                  {getIcon(item.type)}
                 </div>
-              )}
-
-              {/* Main notifications */}
-              {(activeTab === 'unread' ? unreadNotifications : displayedNotifications).map((item) => (
-                <div key={item.notificationId} className={`noti-item ${item.isRead ? 'read' : 'unread'}`}>
-                  <div className="noti-item-icon">
-                    {getIcon(item.type)}
+                <div className="noti-item-content">
+                  <div className="noti-item-title">
+                    {item.title}
+                    {!item.isRead && <span className="unread-dot" />}
                   </div>
-                  <div className="noti-item-content">
-                    <div className="noti-item-title">
-                      {item.title}
-                      {!item.isRead && <span className="unread-dot" />}
-                    </div>
-                    <p className="noti-item-desc">{item.message}</p>
-                    <span className="noti-item-time">{formatTime(item.createdAt)}</span>
-                  </div>
-                  {!item.isRead && (
-                    <button
-                      className="noti-close-btn"
-                      onClick={() => handleMarkAsRead(item.notificationId)}
-                      title="Đánh dấu đã đọc"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <p className="noti-item-desc">{item.message}</p>
+                  <span className="noti-item-time">{formatTime(item.createdAt)}</span>
                 </div>
-              ))}
-
-              {/* Read section when viewing all */}
-              {activeTab === 'all' && readNotifications.length > 0 && (
-                <div className="noti-section">
-                  <div className="noti-section-title">Đã đọc</div>
-                  {readNotifications.map((item) => (
-                    <div key={item.notificationId} className="noti-item read">
-                      <div className="noti-item-icon">
-                        {getIcon(item.type)}
-                      </div>
-                      <div className="noti-item-content">
-                        <div className="noti-item-title">
-                          {item.title}
-                        </div>
-                        <p className="noti-item-desc">{item.message}</p>
-                        <span className="noti-item-time">{formatTime(item.createdAt)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+                {!item.isRead && (
+                  <button
+                    className="noti-close-btn"
+                    onClick={() => handleMarkAsRead(item.notificationId)}
+                    title="Đánh dấu đã đọc"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <Bell size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />

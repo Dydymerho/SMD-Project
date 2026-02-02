@@ -91,6 +91,62 @@ export interface SyllabusDetailResponse {
   materials: MaterialResponse[];
 }
 
+// Course Relations API
+export interface CourseRelationResponse {
+  relationId: number;
+  targetCourseId: number;
+  targetCourseCode: string;
+  targetCourseName: string;
+  credits?: number;
+  deptName?: string;
+  relationType: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT';
+}
+
+// Raw API response structure for course relations
+interface CourseRelationRawResponse {
+  relationId: number;
+  relatedCourse: {
+    courseId: number;
+    courseCode: string;
+    courseName: string;
+    credits: number;
+    department?: {
+      departmentId: number;
+      deptName: string;
+    };
+    courseType?: string | null;
+  };
+  relationType: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT';
+}
+
+// CLO (Course Learning Outcomes) API
+export interface CLOResponse {
+  cloId: number;
+  syllabusId: number;
+  cloCode: string;
+  cloDescription: string;
+}
+
+// PLO (Program Learning Outcomes) API
+export interface PLOResponse {
+  ploId: number;
+  programId: number;
+  ploCode: string;
+  ploDescription: string;
+}
+
+// CLO-PLO Mapping
+export interface CLOPLOMappingResponse {
+  mappingId: number;
+  cloId: number;
+  cloCode: string;
+  cloDescription: string;
+  ploId: number;
+  ploCode: string;
+  ploDescription: string;
+  mappingLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
 // Authentication API
 export const login = async (username: string, password: string) => {
   const response = await axiosClient.post('/auth/login', { username, password });
@@ -245,6 +301,89 @@ export const searchSyllabuses = async (query: string): Promise<Syllabus[]> => {
 
 export const getSyllabusDetail = async (syllabusId: number): Promise<SyllabusDetailResponse> => {
   const response = await axiosClient.get(`/syllabuses/${syllabusId}/detail`);
+  return response.data;
+};
+
+// Course Relations API - Get relationship tree for a course
+export const getCourseRelationsByCourseId = async (courseId: number): Promise<CourseRelationResponse[]> => {
+  const response = await axiosClient.get(`/courses/${courseId}/relations`);
+  let data: CourseRelationRawResponse[] = [];
+  
+  // Handle different response formats
+  if (Array.isArray(response.data)) {
+    data = response.data;
+  } else if (response.data && Array.isArray(response.data.relations)) {
+    data = response.data.relations;
+  }
+  
+  // Transform raw response to CourseRelationResponse format
+  return data.map((item) => ({
+    relationId: item.relationId,
+    targetCourseId: item.relatedCourse.courseId,
+    targetCourseCode: item.relatedCourse.courseCode,
+    targetCourseName: item.relatedCourse.courseName,
+    credits: item.relatedCourse.credits,
+    deptName: item.relatedCourse.department?.deptName,
+    relationType: item.relationType
+  }));
+};
+
+// CLO API - Get CLOs by Syllabus ID
+export const getCLOsBySyllabusId = async (syllabusId: number): Promise<CLOResponse[]> => {
+  const response = await axiosClient.get(`/clos/syllabus/${syllabusId}`);
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (response.data && Array.isArray(response.data.clos)) {
+    return response.data.clos;
+  }
+  return [];
+};
+
+// PLO API - Get PLOs by Program ID
+export const getPLOsByProgramId = async (programId: number): Promise<PLOResponse[]> => {
+  const response = await axiosClient.get(`/plos/program/${programId}`);
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (response.data && Array.isArray(response.data.plos)) {
+    return response.data.plos;
+  }
+  return [];
+};
+
+// CLO-PLO Mappings API - Get mappings by Syllabus ID
+export const getCLOPLOMappingsBySyllabusId = async (syllabusId: number): Promise<CLOPLOMappingResponse[]> => {
+  const response = await axiosClient.get(`/clo-plo-mappings/syllabus/${syllabusId}`);
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (response.data && Array.isArray(response.data.mappings)) {
+    return response.data.mappings;
+  }
+  return [];
+};
+
+// PDF API - Get PDF information
+export interface SyllabusPDFInfo {
+  syllabusId: number;
+  hasPdf: boolean;
+  pdfName?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+  uploadedBy?: string;
+}
+
+export const getSyllabusPDFInfo = async (syllabusId: number): Promise<SyllabusPDFInfo> => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}/pdf-info`);
+  return response.data;
+};
+
+// PDF API - Download PDF document
+export const downloadSyllabusPDF = async (syllabusId: number): Promise<Blob> => {
+  const response = await axiosClient.get(`/syllabuses/${syllabusId}/download-pdf`, {
+    responseType: 'blob'
+  });
   return response.data;
 };
 
@@ -592,8 +731,7 @@ export const getPrincipalDashboardStats = async () => {
     const [
       pendingSyllabuses,
       allPrograms,
-      allSyllabuses,
-      notificationStats
+      allSyllabuses
     ] = await Promise.all([
       getPrincipalPendingSyllabuses(),
       getPrograms(),

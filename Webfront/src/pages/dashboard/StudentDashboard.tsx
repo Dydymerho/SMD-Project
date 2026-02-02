@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare } from 'lucide-react';
-import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport } from '../../services/api';
+import { Search, User, ChevronLeft, Loader2, Home, Star, X, Heart, MessageSquare, Download } from 'lucide-react';
+import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport, getCourseRelationsByCourseId, getCLOsBySyllabusId, getCLOPLOMappingsBySyllabusId, CourseRelationResponse, CLOResponse, CLOPLOMappingResponse, downloadSyllabusPDF, getSyllabusPDFInfo, getNotifications, getFollowedCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import { useAuth } from '../../context/AuthContext';
 
@@ -21,6 +21,7 @@ interface Syllabus {
   syllabusId: number;
   course: Course;
   program: {
+    programId?: number;
     programName: string;
   };
   lecturer: {
@@ -61,10 +62,25 @@ const StudentDashboard: React.FC = () => {
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [detailData, setDetailData] = useState<SyllabusDetailResponse | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [activeViewTool, setActiveViewTool] = useState<'info' | 'clos' | 'sessions' | 'assessments' | 'materials'>('info');
-  const [subscribedSyllabi, setSubscribedSyllabi] = useState<Set<number>>(new Set());
+  const [activeViewTool, setActiveViewTool] = useState<'info' | 'clos' | 'sessions' | 'assessments' | 'materials' | 'course-relations'>('info');
   const [feedbackModal, setFeedbackModal] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState('');
+  
+  // API Data States - Course Relations
+  const [courseRelations, setCourseRelations] = useState<CourseRelationResponse[]>([]);
+  const [loadingRelations, setLoadingRelations] = useState(false);
+  
+  // API Data States - CLOs and Mappings
+  const [clos, setClos] = useState<CLOResponse[]>([]);
+  const [mappings, setMappings] = useState<CLOPLOMappingResponse[]>([]);
+  const [loadingCLOData, setLoadingCLOData] = useState(false);
+  
+  // API Data States - PDF
+  const [hasPdf, setHasPdf] = useState(false);
+  const [loadingPDF, setLoadingPDF] = useState(false);
+
+  // API Data States - Followed Courses
+  const [followedCourseIds, setFollowedCourseIds] = useState<Set<number>>(new Set());
   
   // API Data States
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -146,21 +162,27 @@ const StudentDashboard: React.FC = () => {
         return;
       }
 
-      const newSubscribed = new Set(subscribedSyllabi);
+      const isFollowed = followedCourseIds.has(courseId);
       
-      if (newSubscribed.has(syllabusId)) {
+      if (isFollowed) {
         // Unfollow course
         await unfollowCourse(courseId);
-        newSubscribed.delete(syllabusId);
+        setFollowedCourseIds(prev => {
+          const updated = new Set(prev);
+          updated.delete(courseId);
+          return updated;
+        });
         console.log('✅ Đã hủy follow môn học:', courseId);
       } else {
         // Follow course
         await followCourse(courseId);
-        newSubscribed.add(syllabusId);
+        setFollowedCourseIds(prev => {
+          const updated = new Set(prev);
+          updated.add(courseId);
+          return updated;
+        });
         console.log('✅ Đã follow môn học:', courseId);
       }
-      
-      setSubscribedSyllabi(newSubscribed);
     } catch (error) {
       console.error('Lỗi khi follow/unfollow môn học:', error);
       alert('❌ Có lỗi xảy ra. Vui lòng thử lại!');
@@ -194,6 +216,32 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!selectedSyllabus) return;
+    
+    try {
+      setLoadingPDF(true);
+      const pdfBlob = await downloadSyllabusPDF(selectedSyllabus.syllabusId);
+      
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${selectedSyllabus.course?.courseCode}_${selectedSyllabus.course?.courseName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Tải PDF thành công!');
+    } catch (error) {
+      console.error('Lỗi khi tải PDF:', error);
+      alert('❌ Có lỗi xảy ra khi tải PDF. Vui lòng thử lại!');
+    } finally {
+      setLoadingPDF(false);
+    }
+  };
+
   // Fetch syllabus detail when modal opens
   useEffect(() => {
     if (detailModalOpen && selectedSyllabus) {
@@ -202,6 +250,16 @@ const StudentDashboard: React.FC = () => {
           setLoadingDetail(true);
           const detail = await getSyllabusDetail(selectedSyllabus.syllabusId);
           setDetailData(detail);
+          
+          // Also fetch PDF info
+          try {
+            const pdfInfo = await getSyllabusPDFInfo(selectedSyllabus.syllabusId);
+            console.log('PDF info fetched:', pdfInfo);
+            setHasPdf(Boolean(pdfInfo?.hasPdf));
+          } catch (error) {
+            console.log('Không thể lấy thông tin PDF:', error);
+            setHasPdf(false);
+          }
         } catch (error) {
           console.error('Lỗi lấy chi tiết giáo trình:', error);
         } finally {
@@ -211,6 +269,54 @@ const StudentDashboard: React.FC = () => {
       fetchDetail();
     }
   }, [detailModalOpen, selectedSyllabus]);
+
+  // Fetch course relations when detail modal opens and activeViewTool changes to 'course-relations'
+  useEffect(() => {
+    if (detailModalOpen && selectedSyllabus && activeViewTool === 'course-relations') {
+      const fetchRelations = async () => {
+        try {
+          setLoadingRelations(true);
+          const relations = await getCourseRelationsByCourseId(selectedSyllabus.course.courseId);
+          console.log('Course relations fetched:', relations);
+          setCourseRelations(Array.isArray(relations) ? relations : []);
+        } catch (error) {
+          console.error('Lỗi lấy mối quan hệ môn học:', error);
+          setCourseRelations([]);
+        } finally {
+          setLoadingRelations(false);
+        }
+      };
+      fetchRelations();
+    }
+  }, [detailModalOpen, selectedSyllabus, activeViewTool]);
+
+  // Fetch CLOs and mappings when detail modal opens and activeViewTool changes to 'clos'
+  useEffect(() => {
+    if (detailModalOpen && selectedSyllabus && activeViewTool === 'clos') {
+      const fetchCLOData = async () => {
+        try {
+          setLoadingCLOData(true);
+          
+          // Fetch CLOs by Syllabus ID
+          const closData = await getCLOsBySyllabusId(selectedSyllabus.syllabusId);
+          console.log('CLOs fetched:', closData);
+          setClos(Array.isArray(closData) ? closData : []);
+          
+          // Fetch CLO-PLO Mappings by Syllabus ID
+          const mappingsData = await getCLOPLOMappingsBySyllabusId(selectedSyllabus.syllabusId);
+          console.log('CLO-PLO Mappings fetched:', mappingsData);
+          setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+        } catch (error) {
+          console.error('Lỗi lấy dữ liệu CLO:', error);
+          setClos([]);
+          setMappings([]);
+        } finally {
+          setLoadingCLOData(false);
+        }
+      };
+      fetchCLOData();
+    }
+  }, [detailModalOpen, selectedSyllabus, activeViewTool]);
   useEffect(() => {
     if (searchQuery === '' && searched) {
       setSearched(false);
@@ -240,7 +346,9 @@ const StudentDashboard: React.FC = () => {
       try {
         const stats = await getNotificationStats();
         console.log('Notification stats:', stats);
-        setUnreadNotificationCount(stats?.unreadCount || 0);
+        // Use stats to set unread notification count
+        const unreadCount = stats?.unreadCount || 0;
+        setUnreadNotificationCount(unreadCount);
       } catch (error) {
         console.error('Lỗi lấy thống kê thông báo:', error);
         setUnreadNotificationCount(0);
@@ -256,7 +364,58 @@ const StudentDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch all courses and programs
+  // Fetch notifications on component mount (to show correct badge immediately)
+  useEffect(() => {
+    const fetchInitialNotifications = async () => {
+      try {
+        const data = await getNotifications(0, 100);
+        console.log('Initial notifications:', data);
+        let notificationsList = [];
+        if (data.content) {
+          notificationsList = Array.isArray(data.content) ? data.content : [];
+        } else {
+          notificationsList = Array.isArray(data) ? data : [];
+        }
+        
+        // Calculate unread count from actual notifications
+        const unreadCount = notificationsList.filter((n: any) => !n.isRead).length;
+        setUnreadNotificationCount(unreadCount);
+      } catch (error) {
+        console.error('Lỗi lấy thông báo ban đầu:', error);
+        setUnreadNotificationCount(0);
+      }
+    };
+    
+    fetchInitialNotifications();
+  }, []);
+
+  // Fetch followed courses to initialize followed course IDs
+  useEffect(() => {
+    const fetchFollowedCourses = async () => {
+      try {
+        const followedCoursesData = await getFollowedCourses();
+        console.log('Followed courses data:', followedCoursesData);
+
+        const courseIds = new Set<number>();
+        if (Array.isArray(followedCoursesData)) {
+          followedCoursesData.forEach((course: any) => {
+            if (course.courseId) {
+              courseIds.add(course.courseId);
+            }
+          });
+        }
+
+        setFollowedCourseIds(courseIds);
+        console.log('Followed course IDs:', Array.from(courseIds));
+      } catch (error) {
+        console.error('Lỗi lấy danh sách môn học đã follow:', error);
+        setFollowedCourseIds(new Set());
+      }
+    };
+
+    fetchFollowedCourses();
+  }, []);
+
   useEffect(() => {
     const fetchAllData = async () => {
       try {
@@ -308,7 +467,13 @@ const StudentDashboard: React.FC = () => {
                 className={`modal-tab ${activeViewTool === 'clos' ? 'active' : ''}`}
                 onClick={() => setActiveViewTool('clos')}
               >
-                CLOs
+                CLOs & Mappings
+              </button>
+              <button 
+                className={`modal-tab ${activeViewTool === 'course-relations' ? 'active' : ''}`}
+                onClick={() => setActiveViewTool('course-relations')}
+              >
+                Cây môn học
               </button>
               <button 
                 className={`modal-tab ${activeViewTool === 'sessions' ? 'active' : ''}`}
@@ -386,15 +551,216 @@ const StudentDashboard: React.FC = () => {
 
                   {activeViewTool === 'clos' && (
                     <div className="view-tool-content">
-                      <h3>Mục tiêu học phần (CLOs)</h3>
-                      {detailData?.target && detailData.target.length > 0 ? (
-                        <ul className="clos-list">
-                          {detailData.target.map((clo, idx) => (
-                            <li key={idx}>{clo}</li>
-                          ))}
-                        </ul>
+                      <h3>Mục tiêu học phần (CLOs) & Ánh xạ</h3>
+                      {loadingCLOData ? (
+                        <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                          <Loader2 size={20} style={{ display: 'inline-block', marginRight: '8px', animation: 'spin 1s linear infinite' }} />
+                          Đang tải dữ liệu...
+                        </p>
                       ) : (
-                        <p>Chưa có dữ liệu</p>
+                        <>
+                          {/* CLOs Section */}
+                          <div style={{ marginBottom: '24px' }}>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '14px', fontWeight: 600 }}>Mục tiêu học phần (CLOs)</h4>
+                            {clos && clos.length > 0 ? (
+                              <div className="clos-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {clos.map((clo) => (
+                                  <div key={clo.cloId} style={{
+                                    padding: '12px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '4px',
+                                    borderLeft: '4px solid #2196f3'
+                                  }}>
+                                    <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333', fontSize: '13px' }}>
+                                      {clo.cloCode}
+                                    </p>
+                                    <p style={{ margin: 0, color: '#666', fontSize: '13px', lineHeight: '1.4' }}>
+                                      {clo.cloDescription}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={{ color: '#999', fontSize: '13px' }}>Chưa có dữ liệu CLO</p>
+                            )}
+                          </div>
+
+                          {/* CLO-PLO Mappings Section */}
+                          <div>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '14px', fontWeight: 600 }}>Ánh xạ CLO-PLO</h4>
+                            {mappings && mappings.length > 0 ? (
+                              <div className="mappings-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {mappings.map((mapping) => (
+                                  <div key={mapping.mappingId} style={{
+                                    padding: '12px',
+                                    backgroundColor: '#fff9e6',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ffe082'
+                                  }}>
+                                    <div style={{ marginBottom: '8px' }}>
+                                      <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#333', fontSize: '13px' }}>
+                                        {mapping.cloCode} → {mapping.ploCode}
+                                      </p>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '4px 8px',
+                                        backgroundColor: mapping.mappingLevel === 'HIGH' ? '#ff6b6b' : mapping.mappingLevel === 'MEDIUM' ? '#ffa94d' : '#74b9ff',
+                                        color: 'white',
+                                        borderRadius: '3px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        marginRight: '8px'
+                                      }}>
+                                        {mapping.mappingLevel === 'HIGH' ? 'Cao' : mapping.mappingLevel === 'MEDIUM' ? 'Trung bình' : 'Thấp'}
+                                      </span>
+                                    </div>
+                                    <p style={{ margin: '0 0 6px 0', color: '#666', fontSize: '12px' }}>
+                                      <strong>CLO:</strong> {mapping.cloDescription}
+                                    </p>
+                                    <p style={{ margin: 0, color: '#666', fontSize: '12px' }}>
+                                      <strong>PLO:</strong> {mapping.ploDescription}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={{ color: '#999', fontSize: '13px' }}>Chưa có dữ liệu ánh xạ</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {activeViewTool === 'course-relations' && (
+                    <div className="view-tool-content">
+                      <h3>Cây quan hệ môn học</h3>
+                      {loadingRelations ? (
+                        <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                          <Loader2 size={20} style={{ display: 'inline-block', marginRight: '8px', animation: 'spin 1s linear infinite' }} />
+                          Đang tải dữ liệu quan hệ môn học...
+                        </p>
+                      ) : courseRelations && courseRelations.length > 0 ? (
+                        <div className="course-relations-tree">
+                          {/* Group relations by type */}
+                          {['PREREQUISITE', 'COREQUISITE', 'EQUIVALENT'].map((relationType) => {
+                            const typeRelations = courseRelations.filter(r => r.relationType === relationType);
+                            if (typeRelations.length === 0) return null;
+                            
+                            const typeLabel = relationType === 'PREREQUISITE' ? 'Môn tiên quyết' : 
+                                             relationType === 'COREQUISITE' ? 'Môn học song hành' : 
+                                             'Môn tương đương';
+                            const bgColor = relationType === 'PREREQUISITE' ? '#e3f2fd' : 
+                                           relationType === 'COREQUISITE' ? '#f3e5f5' : 
+                                           '#e8f5e9';
+                            const borderColor = relationType === 'PREREQUISITE' ? '#2196f3' : 
+                                               relationType === 'COREQUISITE' ? '#9c27b0' : 
+                                               '#4caf50';
+                            
+                            return (
+                              <div key={relationType} style={{ marginBottom: '20px' }}>
+                                <h4 style={{ 
+                                  margin: '0 0 12px 0', 
+                                  color: borderColor, 
+                                  fontSize: '14px', 
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    width: '12px',
+                                    height: '12px',
+                                    backgroundColor: borderColor,
+                                    borderRadius: '50%'
+                                  }}></span>
+                                  {typeLabel}
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {typeRelations.map((relation) => (
+                                    <div 
+                                      key={relation.relationId}
+                                      style={{
+                                        padding: '12px',
+                                        backgroundColor: bgColor,
+                                        borderRadius: '4px',
+                                        borderLeft: `4px solid ${borderColor}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                      }}
+                                    >
+                                      <div style={{ flex: 1 }}>
+                                        <p style={{ 
+                                          margin: '0 0 4px 0', 
+                                          fontWeight: 600, 
+                                          color: '#333',
+                                          fontSize: '13px'
+                                        }}>
+                                          {relation.targetCourseCode}
+                                        </p>
+                                        <p style={{ 
+                                          margin: '0 0 6px 0', 
+                                          color: '#666', 
+                                          fontSize: '12px',
+                                          lineHeight: '1.4'
+                                        }}>
+                                          {relation.targetCourseName}
+                                        </p>
+                                        <div style={{ 
+                                          display: 'flex', 
+                                          gap: '16px', 
+                                          fontSize: '11px',
+                                          color: '#888',
+                                          flexWrap: 'wrap'
+                                        }}>
+                                          {relation.targetCourseId && (
+                                            <span>📌 ID: {relation.targetCourseId}</span>
+                                          )}
+                                          {relation.credits !== undefined && (
+                                            <span>📚 {relation.credits} tín chỉ</span>
+                                          )}
+                                          {relation.deptName && (
+                                            <span>🏢 {relation.deptName}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        backgroundColor: borderColor,
+                                        color: 'white',
+                                        borderRadius: '20px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        whiteSpace: 'nowrap',
+                                        marginLeft: '12px',
+                                        flexShrink: 0
+                                      }}>
+                                        → {relationType === 'PREREQUISITE' ? 'Tiên quyết' : relationType === 'COREQUISITE' ? 'Song hành' : 'Tương đương'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{
+                          padding: '30px',
+                          textAlign: 'center',
+                          backgroundColor: '#f5f5f5',
+                          borderRadius: '8px'
+                        }}>
+                          <p style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 500, color: '#333' }}>
+                            Không có mối quan hệ môn học
+                          </p>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#999' }}>
+                            Môn học này không có môn tiên quyết, song hành hoặc tương đương
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}
@@ -476,18 +842,38 @@ const StudentDashboard: React.FC = () => {
 
             <div className="modal-actions">
               <button 
-                className={`action-btn subscribe-btn-large ${subscribedSyllabi.has(selectedSyllabus.syllabusId) ? 'active' : ''}`}
+                className={`action-btn subscribe-btn-large ${selectedSyllabus.course?.courseId && followedCourseIds.has(selectedSyllabus.course.courseId) ? 'active' : ''}`}
                 onClick={() => handleSubscribe(selectedSyllabus.syllabusId)}
               >
-                <Heart size={18} fill={subscribedSyllabi.has(selectedSyllabus.syllabusId) ? 'currentColor' : 'none'} />
-                {subscribedSyllabi.has(selectedSyllabus.syllabusId) ? 'Đã Follow' : 'Follow'}
+                <Heart size={18} fill={selectedSyllabus.course?.courseId && followedCourseIds.has(selectedSyllabus.course.courseId) ? 'currentColor' : 'none'} />
+                {selectedSyllabus.course?.courseId && followedCourseIds.has(selectedSyllabus.course.courseId) ? 'Đã Follow' : 'Follow'}
               </button>
+              
               <button 
                 className="action-btn feedback-btn-large"
                 onClick={() => setFeedbackModal(true)}
               >
                 <MessageSquare size={18} />
                 Báo cáo lỗi
+              </button>
+
+              <button 
+                className="action-btn download-btn-large"
+                onClick={handleDownloadPDF}
+                disabled={loadingPDF || !hasPdf}
+                title={!hasPdf ? 'Chưa có PDF' : undefined}
+              >
+                {loadingPDF ? (
+                  <>
+                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    Đang tải...
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    {hasPdf ? 'Tải PDF' : 'Chưa có PDF'}
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -578,7 +964,11 @@ const StudentDashboard: React.FC = () => {
                   {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
                 </span>
               </div>
-              <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
+              <NotificationMenu 
+                isOpen={isNotificationOpen} 
+                onClose={() => setIsNotificationOpen(false)}
+                onUnreadCountChange={(count) => setUnreadNotificationCount(count)}
+              />
             </div>
             <div className="user-profile" onClick={goToProfile} style={{ cursor: 'pointer' }}>
               <div className="user-info">
@@ -711,11 +1101,11 @@ const StudentDashboard: React.FC = () => {
                         Xem
                       </button>
                       <button 
-                        className={`action-btn subscribe-btn ${subscribedSyllabi.has(s.syllabusId) ? 'active' : ''}`}
+                        className={`action-btn subscribe-btn ${s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'active' : ''}`}
                         onClick={() => handleSubscribe(s.syllabusId)}
                         title="Follow để nhận thông báo"
                       >
-                        <Heart size={16} fill={subscribedSyllabi.has(s.syllabusId) ? 'currentColor' : 'none'} />
+                        <Heart size={16} fill={s.course?.courseId && followedCourseIds.has(s.course.courseId) ? 'currentColor' : 'none'} />
                       </button>
                       <button 
                         className="action-btn feedback-btn"
