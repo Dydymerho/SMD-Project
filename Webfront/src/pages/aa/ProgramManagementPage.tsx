@@ -28,6 +28,14 @@ interface PLO {
   category: string;
 }
 
+interface CourseRelation {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  credits?: number;
+  relations: api.CourseRelationResponse[];
+}
+
 const ProgramManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -37,11 +45,29 @@ const ProgramManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [plos, setPlos] = useState<PLO[]>([]);
+  const [courseRelations, setCourseRelations] = useState<CourseRelation[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [selectedRelationType, setSelectedRelationType] = useState<'ALL' | 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT'>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'prerequisites') {
+      loadCourseRelations();
+    }
+  }, [activeTab]);
+
+  const loadCourseRelations = async () => {
+    try {
+      const relations = await api.getAllCourseRelations();
+      setCourseRelations(relations);
+    } catch (err) {
+      console.error('Error loading course relations:', err);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -233,7 +259,7 @@ const ProgramManagementPage: React.FC = () => {
                   onClick={() => setActiveTab('prerequisites')}
                   style={{
                     padding: '10px 20px',
-                    background: activeTab === 'prerequisites' ? '#2196f3' : 'transparent',
+                    background: activeTab === 'prerequisites' ? '#008f81' : 'transparent',
                     color: activeTab === 'prerequisites' ? 'white' : '#666',
                     border: 'none',
                     borderRadius: '8px 8px 0 0',
@@ -246,7 +272,7 @@ const ProgramManagementPage: React.FC = () => {
                   }}
                 >
                   <GitBranch size={16} />
-                  Prerequisites
+                  Quan hệ môn học
                 </button>
               </div>
 
@@ -418,26 +444,130 @@ const ProgramManagementPage: React.FC = () => {
 
               {activeTab === 'prerequisites' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, color: '#333' }}>Module Relationships & Prerequisites</h3>
-                    <button style={{
-                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                    }}>
-                      <Plus size={18} />
-                      Thêm quy tắc
-                    </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, color: '#008f81', fontSize: '20px', fontWeight: 600 }}>Quan hệ & Điều kiện Môn học</h3>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm môn học..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                          padding: '10px 16px', border: '1px solid #ddd', borderRadius: '8px',
+                          fontSize: '14px', width: '250px', outline: 'none'
+                        }}
+                      />
+                      <select 
+                        value={selectedRelationType}
+                        onChange={(e) => setSelectedRelationType(e.target.value as any)}
+                        style={{
+                          padding: '10px 16px', border: '1px solid #ddd', borderRadius: '8px',
+                          fontSize: '14px', cursor: 'pointer', background: 'white'
+                        }}
+                      >
+                        <option value="ALL">Tất cả quan hệ</option>
+                        <option value="PREREQUISITE">Chỉ môn tiên quyết</option>
+                        <option value="COREQUISITE">Chỉ môn song hành</option>
+                        <option value="EQUIVALENT">Chỉ môn tương đương</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div style={{
-                    background: 'white', padding: '24px', borderRadius: '12px',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', color: '#999'
-                  }}>
-                    <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                    <h3>Module Relationships Management</h3>
-                    <p>Quản lý điều kiện tiên quyết (Prerequisites) và đồng cùng học (Corequisites)</p>
-                    <p style={{ fontSize: '13px' }}>Tính năng đang được phát triển...</p>
-                  </div>
+                  {courseRelations.length === 0 ? (
+                    <div style={{
+                      background: 'white', padding: '60px 24px', borderRadius: '12px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', color: '#999'
+                    }}>
+                      <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                      <h3>Chưa có quan hệ môn học</h3>
+                      <p>Hệ thống chưa thiết lập quan hệ giữa các môn học</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {courseRelations
+                        .filter(course => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return course.courseCode.toLowerCase().includes(searchLower) ||
+                                 course.courseName.toLowerCase().includes(searchLower) ||
+                                 course.relations.some(r => 
+                                   r.targetCourseCode.toLowerCase().includes(searchLower) ||
+                                   r.targetCourseName.toLowerCase().includes(searchLower)
+                                 );
+                        })
+                        .map(course => {
+                        const filteredRelations = selectedRelationType === 'ALL' 
+                          ? course.relations 
+                          : course.relations.filter(r => r.relationType === selectedRelationType);
+
+                        if (filteredRelations.length === 0) return null;
+
+                        return (
+                          <div key={course.courseId} style={{
+                            background: 'white', borderRadius: '12px', 
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              padding: '20px', background: '#008f81',
+                              color: 'white', display: 'flex', alignItems: 'center', gap: '12px'
+                            }}>
+                              <BookOpen size={24} />
+                              <div>
+                                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600 }}>
+                                  {course.courseCode}
+                                </h4>
+                                <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>
+                                  {course.courseName} • {course.credits} tín chỉ
+                                </p>
+                              </div>
+                            </div>
+
+                            <div style={{ padding: '20px' }}>
+                              <div style={{ display: 'grid', gap: '12px' }}>
+                                {filteredRelations.map(relation => {
+                                  const typeColors = {
+                                    PREREQUISITE: { bg: '#e8f5e9', text: '#2e7d32', label: 'Môn tiên quyết' },
+                                    COREQUISITE: { bg: '#fff3e0', text: '#f57c00', label: 'Môn song hành' },
+                                    EQUIVALENT: { bg: '#e3f2fd', text: '#1976d2', label: 'Môn tương đương' }
+                                  };
+                                  const typeStyle = typeColors[relation.relationType];
+
+                                  return (
+                                    <div key={relation.relationId} style={{
+                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                      padding: '16px', background: '#f9f9f9', borderRadius: '8px',
+                                      border: '1px solid #e0e0e0'
+                                    }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                                        <GitBranch size={20} color="#666" />
+                                        <div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                            <span style={{ fontWeight: 600, color: '#333', fontSize: '14px' }}>
+                                              {relation.targetCourseCode}
+                                            </span>
+                                            <span style={{
+                                              padding: '2px 8px', borderRadius: '4px', fontSize: '11px',
+                                              background: typeStyle.bg, color: typeStyle.text, fontWeight: 600
+                                            }}>
+                                              {typeStyle.label}
+                                            </span>
+                                          </div>
+                                          <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>
+                                            {relation.targetCourseName}
+                                            {relation.credits && ` • ${relation.credits} tín chỉ`}
+                                            {relation.deptName && ` • ${relation.deptName}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </>

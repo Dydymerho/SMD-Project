@@ -174,6 +174,54 @@ export const getCourseById = async (id: string) => {
   return response.data;
 };
 
+// Course Relations API
+export const getCourseRelations = async (courseId: number): Promise<CourseRelationResponse[]> => {
+  const response = await axiosClient.get<CourseRelationRawResponse[]>(`/courses/${courseId}/relations`);
+  
+  // Transform raw response to frontend format
+  return response.data.map(item => ({
+    relationId: item.relationId,
+    targetCourseId: item.relatedCourse.courseId,
+    targetCourseCode: item.relatedCourse.courseCode,
+    targetCourseName: item.relatedCourse.courseName,
+    credits: item.relatedCourse.credits,
+    deptName: item.relatedCourse.department?.deptName,
+    relationType: item.relationType
+  }));
+};
+
+export const getAllCourseRelations = async (): Promise<{
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  relations: CourseRelationResponse[];
+}[]> => {
+  const courses = await getCourses();
+  const relationsPromises = courses.map(async (course: any) => {
+    try {
+      const relations = await getCourseRelations(course.courseId);
+      return {
+        courseId: course.courseId,
+        courseCode: course.courseCode,
+        courseName: course.courseName,
+        credits: course.credits,
+        relations
+      };
+    } catch (error) {
+      return {
+        courseId: course.courseId,
+        courseCode: course.courseCode,
+        courseName: course.courseName,
+        credits: course.credits,
+        relations: []
+      };
+    }
+  });
+  
+  const allRelations = await Promise.all(relationsPromises);
+  return allRelations.filter(item => item.relations.length > 0);
+};
+
 // Departments API
 export const getDepartments = async () => {
   const response = await axiosClient.get("/departments");
