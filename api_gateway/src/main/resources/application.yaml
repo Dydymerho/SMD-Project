@@ -23,6 +23,12 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/**
+        - id: ai-service-route
+          uri: http://localhost:8000
+          predicates:
+            - Path=/ai/**
+          filters:
+            - StripPrefix=1
 eureka:
   client:
     enabled: false

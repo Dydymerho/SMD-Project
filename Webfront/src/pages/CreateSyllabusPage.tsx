@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Home, FolderOpen, MessageSquare, Search, GitCompare, Bell, User,
-  Plus, ArrowLeft, Send, Upload
+  Plus, ArrowLeft, Send, Upload, FileText, Sparkles
 } from 'lucide-react';
 import NotificationMenu from '../components/NotificationMenu';
-import Toast, { useToast } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
+import Toast from '../components/Toast';
 import AILoadingOverlay from '../components/AILoadingOverlay';
-import './CreateSyllabusPage.css';
-import './dashboard/DashboardPage.css';
-import { createSyllabus, getCourses, getPrograms, summarizeDocument } from '../services/api';
+import { 
+  getCourses, 
+  getPrograms, 
+  createSyllabus, uploadPdfForOCR, getAITaskStatus
+} from '../services/api';
+import axiosClient from '../api/axiosClient';
 
 interface CLOItem {
   id: string;
@@ -55,8 +59,6 @@ const CreateSyllabusPage: React.FC = () => {
   const [availablePrograms, setAvailablePrograms] = useState<any[]>([]);
   const [academicYear, setAcademicYear] = useState('');
   const [semester, setSemester] = useState('');
-  const [courseObjectives, setCourseObjectives] = useState('');
-  const [courseDescription, setCourseDescription] = useState('');
   
   // CLO/PLO
   const [clos, setClos] = useState<CLOItem[]>([
@@ -84,10 +86,9 @@ const CreateSyllabusPage: React.FC = () => {
   // PDF Upload
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState('');
-  
-  // AI Processing
   const [isAIProcessing, setIsAIProcessing] = useState(false);
-  const [aiLoadingMessage, setAILoadingMessage] = useState('AI đang xử lý tài liệu của bạn...');
+  const [aiResult, setAiResult] = useState<string>('');
+  const [showAIResult, setShowAIResult] = useState(false);
   
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
@@ -103,7 +104,6 @@ const CreateSyllabusPage: React.FC = () => {
         ]);
         setAvailableCourses(courses);
         setAvailablePrograms(programs);
-        // Set default program if available
         if (programs.length > 0) {
           setProgramId(programs[0].programId);
         }
@@ -221,51 +221,77 @@ const CreateSyllabusPage: React.FC = () => {
       const file = e.target.files[0];
       if (file.type === 'application/pdf') {
         setPdfFile(file);
-        setUploadStatus('File đã được chọn: ' + file.name);
+        setUploadStatus('success');
+        info(`File đã được chọn: ${file.name}`);
       } else {
-        setUploadStatus('Vui lòng chọn file PDF');
+        setUploadStatus('error');
+        error('Vui lòng chọn file PDF');
       }
     }
   };
 
-  // AI Summarization
-  const handleAISummarize = async () => {
-    if (!pdfFile) {
-      error('Vui lòng chọn file PDF trước');
-      return;
-    }
-
-    setIsAIProcessing(true);
-    setAILoadingMessage('AI đang xử lý tài liệu của bạn...');
-
-    try {
-      const summary = await summarizeDocument(pdfFile);
+// AI Process PDF - Updated version
+const handleAIProcess = async () => {
+  if (!pdfFile) {
+    error('Vui lòng chọn file PDF trước');
+    return;
+  }
+  
+  setIsAIProcessing(true);
+  setAiResult('');
+  setShowAIResult(false);
+  info('Đang upload file PDF lên AI service...');
+  
+  try {
+    // Step 1: Upload PDF to AI service
+    const { task_id } = await uploadPdfForOCR(pdfFile);
+    console.log('Task ID:', task_id);
+    info(`Đã tạo task AI: ${task_id}`);
+    
+    // Step 2: Poll for result
+    let attempts = 0;
+    const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    
+    const pollResult = async (): Promise<any> => {
+      attempts++;
       
-      setAILoadingMessage('Đang cập nhật mô tả...');
+      if (attempts > maxAttempts) {
+        throw new Error('Timeout: AI xử lý quá lâu');
+      }
       
-      // Add the summary to the existing description or replace it
-      const newDescription = courseDescription 
-        ? `${courseDescription}\n\n[AI Tóm tắt từ PDF]:\n${summary}`
-        : `[AI Tóm tắt từ PDF]:\n${summary}`;
+      const result = await getAITaskStatus(task_id);
+      console.log('Poll attempt', attempts, ':', result);
       
-      setCourseDescription(newDescription);
-      
-      success('✅ AI đã tóm tắt file PDF thành công!');
-      setPdfFile(null);
-      setUploadStatus('');
-      
-      // Reset file input
-      const fileInput = document.getElementById('pdf-upload-ai') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
-    } catch (err: any) {
-      console.error('Error summarizing document:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tóm tắt tài liệu';
-      error(`❌ ${errorMessage}`);
-    } finally {
-      setIsAIProcessing(false);
-    }
-  };
+      // Check task status
+      if (result.status === 'completed') {
+        return result;
+      } else if (result.status === 'failed') {
+        throw new Error(result.error || 'AI xử lý thất bại');
+      } else {
+        // Still processing, wait and retry
+        info(`AI đang xử lý... (${attempts}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        return pollResult();
+      }
+    };
+    
+    const finalResult = await pollResult();
+    
+    // Display result in textbox
+    setAiResult(JSON.stringify(finalResult, null, 2));
+    setShowAIResult(true);
+    success('✅ AI đã xử lý file PDF thành công!');
+    
+  } catch (err: any) {
+    console.error('Error processing PDF with AI:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi xử lý PDF';
+    error(`❌ ${errorMessage}`);
+    setAiResult(`Error: ${errorMessage}`);
+    setShowAIResult(true);
+  } finally {
+    setIsAIProcessing(false);
+  }
+};
 
   // Form Submission
   const handleSubmit = async () => {
@@ -287,51 +313,100 @@ const CreateSyllabusPage: React.FC = () => {
         return;
       }
 
-      // Prepare syllabus data - Send minimal structure with only IDs
-      // Spring Data JPA will resolve entities from IDs through @ManyToOne relationships
+      // Step 1: Create Syllabus
       const syllabusData = {
-        course: {
-          courseId: courseId
-        },
-        lecturer: {
-          userId: Number(user?.id)
-        },
-        ...(programId && {
-          program: {
-            programId: programId
-          }
-        }),
+        course: { courseId: courseId },
+        lecturer: { userId: Number(user?.id) },
+        ...(programId && { program: { programId: programId } }),
         academicYear,
         currentStatus: 'DRAFT'
-        // versionNo and isLatestVersion will be auto-set by backend
       };
 
-      console.log('Submitting syllabus with payload:', syllabusData);
-      console.log('CourseId value:', courseId, 'Type:', typeof courseId);
+      console.log('Creating syllabus with payload:', syllabusData);
+      const createdSyllabus = await createSyllabus(syllabusData);
+      const syllabusId = (createdSyllabus as any)?.syllabusId || (createdSyllabus as any)?.id;
 
-      const created = await createSyllabus(syllabusData);
-      const newId = (created as any)?.syllabusId || (created as any)?.id;
+      if (!syllabusId) {
+        throw new Error('Failed to get syllabus ID from response');
+      }
 
-      // TODO: Upload PDF if backend supports
-      // if (pdfFile && newId) {
-      //   const formData = new FormData();
-      //   formData.append('file', pdfFile);
-      //   await uploadSyllabusPdf(newId, formData);
-      // }
+      console.log('Created syllabus with ID:', syllabusId);
+
+      // Step 2: Create CLOs
+      const cloPromises = clos
+        .filter(clo => clo.code && clo.description)
+        .map(clo => 
+          axiosClient.post('/clos', {
+            syllabus: { syllabusId },
+            cloCode: clo.code,
+            cloDescription: clo.description
+          })
+        );
+      
+      if (cloPromises.length > 0) {
+        await Promise.all(cloPromises);
+        console.log(`Created ${cloPromises.length} CLOs`);
+      }
+
+      // Step 3: Create Assessments
+      const assessmentPromises = assessments
+        .filter(a => a.name)
+        .map(assessment =>
+          axiosClient.post('/assessments', {
+            syllabus: { syllabusId },
+            name: assessment.name,
+            weightPercent: Number(assessment.weight),
+            criteria: assessment.criteria || ''
+          })
+        );
+
+      if (assessmentPromises.length > 0) {
+        await Promise.all(assessmentPromises);
+        console.log(`Created ${assessmentPromises.length} assessments`);
+      }
+
+      // Step 4: Create Session Plans
+      const sessionPromises = sessionPlans
+        .filter(s => s.topic)
+        .map(session =>
+          axiosClient.post('/session-plans', {
+            syllabus: { syllabusId },
+            weekNo: session.weekNo,
+            topic: session.topic,
+            teachingMethod: session.teachingMethod || ''
+          })
+        );
+
+      if (sessionPromises.length > 0) {
+        await Promise.all(sessionPromises);
+        console.log(`Created ${sessionPromises.length} session plans`);
+      }
+
+      // Step 5: Create Materials
+      const materialPromises = materials
+        .filter(m => m.title)
+        .map(material =>
+          axiosClient.post('/materials', {
+            syllabus: { syllabusId },
+            title: material.title,
+            author: material.author || '',
+            materialType: material.type
+          })
+        );
+
+      if (materialPromises.length > 0) {
+        await Promise.all(materialPromises);
+        console.log(`Created ${materialPromises.length} materials`);
+      }
 
       success('✅ Tạo đề cương thành công!');
-      if (newId) {
-        navigate(`/syllabus/edit/${newId}`);
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(`/syllabus/edit/${syllabusId}`);
       
     } catch (error: any) {
       console.error('Error creating syllabus:', error);
       console.error('Error response data:', error.response?.data);
       console.error('Error response status:', error.response?.status);
       
-      // Handle specific error codes
       if (error.response?.status === 409) {
         const message = error.response?.data?.message || 'Đã tồn tại giáo trình cho môn học này trong năm học này';
         const existingSyllabusId = error.response?.data?.existingSyllabusId;
@@ -356,7 +431,85 @@ const CreateSyllabusPage: React.FC = () => {
       case 1:
         return (
           <div className="form-section">
-            <h2>Thông tin cơ bản</h2>
+            {/* AI Upload Banner */}
+            <div className="ai-upload-banner">
+              <div className="ai-upload-header">
+                <Sparkles size={32} className="ai-icon" />
+                <div className="ai-upload-title">
+                  <h2>Tạo nhanh với AI</h2>
+                  <p>Upload file PDF đề cương, AI sẽ tự động trích xuất và điền thông tin</p>
+                </div>
+              </div>
+              
+              <div className="ai-upload-content">
+                <div className="upload-dropzone">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handlePdfUpload}
+                    id="pdf-upload-ai"
+                    className="file-input-hidden"
+                  />
+                  <label htmlFor="pdf-upload-ai" className="upload-dropzone-label">
+                    {pdfFile ? (
+                      <>
+                        <FileText size={48} className="upload-icon-success" />
+                        <div className="upload-file-info">
+                          <div className="upload-file-name">{pdfFile.name}</div>
+                          <div className="upload-file-size">
+                            {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={48} className="upload-icon" />
+                        <div className="upload-text-main">Kéo thả file PDF vào đây</div>
+                        <div className="upload-text-sub">hoặc click để chọn file</div>
+                        <div className="upload-text-hint">Hỗ trợ file PDF, tối đa 10MB</div>
+                      </>
+                    )}
+                  </label>
+                </div>
+                
+                {pdfFile && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleAIProcess}
+                      disabled={isAIProcessing}
+                      className="btn-ai-process"
+                    >
+                      <Sparkles size={20} />
+                      {isAIProcessing ? 'AI đang xử lý...' : 'Xử lý bằng AI'}
+                    </button>
+                    
+                    {/* AI Result Display */}
+                    {showAIResult && (
+                      <div className="ai-result-box">
+                        <div className="ai-result-header">
+                          <h4>Kết quả từ AI:</h4>
+                        </div>
+                        <textarea
+                          className="ai-result-textarea"
+                          value={aiResult}
+                          readOnly
+                          rows={15}
+                          placeholder="Kết quả AI sẽ hiển thị ở đây..."
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <div className="ai-upload-divider">
+                <span>HOẶC NHẬP THỦ CÔNG</span>
+              </div>
+            </div>
+
+            {/* Manual Input Form */}
+            <h2 style={{ marginTop: '30px' }}>Thông tin cơ bản</h2>
             
             <div className="form-row">
               <div className="form-group">
@@ -414,63 +567,6 @@ const CreateSyllabusPage: React.FC = () => {
                   <option value="HK3">Học kỳ hè</option>
                 </select>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label>Mục tiêu môn học</label>
-              <textarea
-                value={courseObjectives}
-                onChange={(e) => setCourseObjectives(e.target.value)}
-                placeholder="Nhập mục tiêu môn học..."
-                rows={4}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Mô tả môn học</label>
-              <textarea
-                value={courseDescription}
-                onChange={(e) => setCourseDescription(e.target.value)}
-                placeholder="Nhập mô tả chi tiết về môn học..."
-                rows={6}
-              />
-            </div>
-
-            <div className="ai-summarize-section">
-              <h3>🤖 AI Tóm tắt từ PDF</h3>
-              <p className="ai-description">Upload file PDF để AI tự động tóm tắt và thêm vào mô tả môn học</p>
-              
-              <div className="upload-area-inline">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handlePdfUpload}
-                  id="pdf-upload-ai"
-                  className="file-input"
-                />
-                <label htmlFor="pdf-upload-ai" className="upload-label-inline">
-                  <div className="upload-icon-inline">📄</div>
-                  <div className="upload-text-inline">
-                    {pdfFile ? pdfFile.name : 'Chọn file PDF'}
-                  </div>
-                </label>
-              </div>
-
-              {uploadStatus && (
-                <div className={`upload-status ${uploadStatus.includes('✅') ? 'success' : uploadStatus.includes('chọn') ? 'error' : 'info'}`}>
-                  {uploadStatus}
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleAISummarize}
-                disabled={!pdfFile || isAIProcessing}
-                className="btn-ai-summarize"
-              >
-                <Upload size={16} />
-                {isAIProcessing ? 'AI đang xử lý...' : 'Tóm tắt bằng AI'}
-              </button>
             </div>
           </div>
         );
@@ -770,30 +866,6 @@ const CreateSyllabusPage: React.FC = () => {
             <button type="button" onClick={addMaterial} className="btn-add">
               + Thêm tài liệu
             </button>
-
-            <div className="pdf-upload-section">
-              <h3>Upload PDF đề cương</h3>
-              <div className="upload-area">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handlePdfUpload}
-                  id="pdf-upload"
-                  className="file-input"
-                />
-                <label htmlFor="pdf-upload" className="upload-label">
-                  <div className="upload-icon">📄</div>
-                  <div className="upload-text">
-                    {pdfFile ? pdfFile.name : 'Chọn file PDF hoặc kéo thả vào đây'}
-                  </div>
-                </label>
-              </div>
-              {uploadStatus && (
-                <div className={`upload-status ${uploadStatus.includes('✅') ? 'success' : 'error'}`}>
-                  {uploadStatus}
-                </div>
-              )}
-            </div>
           </div>
         );
 
@@ -804,10 +876,9 @@ const CreateSyllabusPage: React.FC = () => {
 
   return (
     <div className="dashboard-page">
-      {/* AI Loading Overlay */}
-      <AILoadingOverlay isVisible={isAIProcessing} message={aiLoadingMessage} />
+      <AILoadingOverlay isVisible={isAIProcessing} message="AI đang xử lý file PDF..." />
       
-      {/* Sidebar - Same as LecturerDashboard */}
+      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo"></div>
@@ -874,7 +945,7 @@ const CreateSyllabusPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Header - Same as LecturerDashboard */}
+        {/* Header */}
         <header className="page-header">
           <div className="header-left">
             <h1>Tạo giáo trình mới</h1>
@@ -923,7 +994,7 @@ const CreateSyllabusPage: React.FC = () => {
             { num: 2, label: 'CLO / PLO' },
             { num: 3, label: 'Đánh giá' },
             { num: 4, label: 'Kế hoạch' },
-            { num: 5, label: 'Tài liệu & PDF' }
+            { num: 5, label: 'Tài liệu' }
           ].map((step) => (
             <div
               key={step.num}
