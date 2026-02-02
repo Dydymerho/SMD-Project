@@ -1,5 +1,6 @@
 package com.smd.core.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,5 +30,6 @@ public class RegisterRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
     
+    @Schema(description = "ID của khoa (không bắt buộc, dành cho giảng viên)", example = "null", nullable = true)
     private Long departmentId;
 }

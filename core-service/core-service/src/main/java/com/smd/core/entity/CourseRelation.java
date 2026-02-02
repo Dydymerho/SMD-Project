@@ -1,11 +1,14 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "course_relation")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -18,11 +21,13 @@ public class CourseRelation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Course course;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "related_course_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Course relatedCourse;
 
     @Enumerated(EnumType.STRING)

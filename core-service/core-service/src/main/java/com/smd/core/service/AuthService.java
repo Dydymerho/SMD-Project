@@ -61,12 +61,22 @@ public class AuthService {
             User user = userRepository.findByUsername(request.getUsername())
                     .orElseThrow(() -> new InvalidDataException("username", request.getUsername(), "User không tồn tại"));
 
+            // Get role information
+            String roleName = null;
+            Long roleId = null;
+            if (user.getRole() != null) {
+                roleName = user.getRole().getRoleName();
+                roleId = user.getRole().getRoleId();
+            }
+
             return new LoginResponse(
                 token,
                 user.getUserId(),
                 user.getUsername(),
                 user.getFullName(),
-                user.getEmail()
+                user.getEmail(),
+                roleName,
+                roleId
             );
 
         } catch (AuthenticationException e) {
@@ -110,12 +120,22 @@ public class AuthService {
         // Generate JWT token
         String token = jwtUtil.generateToken(savedUser.getUsername());
 
+        // Get role information
+        String roleName = null;
+        Long roleId = null;
+        if (savedUser.getRole() != null) {
+            roleName = savedUser.getRole().getRoleName();
+            roleId = savedUser.getRole().getRoleId();
+        }
+
         return new LoginResponse(
             token,
             savedUser.getUserId(),
             savedUser.getUsername(),
             savedUser.getFullName(),
-            savedUser.getEmail()
+            savedUser.getEmail(),
+            roleName,
+            roleId
         );
     }
 }

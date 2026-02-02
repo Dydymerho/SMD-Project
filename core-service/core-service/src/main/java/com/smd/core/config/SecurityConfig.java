@@ -5,6 +5,7 @@ import com.smd.core.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableWebSecurity
@@ -24,9 +26,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Autowired
+    @Lazy
     private CustomUserDetailsService userDetailsService;
 
     @Autowired
+    @Lazy
     private JwtAuthenticationFilter jwtAuthFilter;
 
     @Bean
@@ -35,8 +39,18 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/error").permitAll()
+
+                // --- dung prometheus ---
+                .requestMatchers("/actuator/**").permitAll() 
+                // -----------------------------
+
+                // CẬP NHẬT: Chỉ cho phép ADMIN truy cập các API quản lý hệ thống
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
+                // Swagger UI endpoints
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // All other requests need authentication
                 .anyRequest().authenticated()
             )

@@ -4,9 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "plo")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -19,6 +22,7 @@ public class PLO {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "program_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Program program;
 
     @Column(name = "plo_code", nullable = false)
@@ -30,5 +34,6 @@ public class PLO {
     // Relationships
     @OneToMany(mappedBy = "plo", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CLOPLOMapping> cloMappings;
 }

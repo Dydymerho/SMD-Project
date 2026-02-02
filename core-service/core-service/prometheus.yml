@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s # Cứ 5 giây đi lấy dữ liệu 1 lần
+
+scrape_configs:
+  - job_name: "smd-backend"
+    metrics_path: "/actuator/prometheus" # Đường dẫn lấy dữ liệu từ Spring Boot
+    static_configs:
+      # QUAN TRỌNG:
+      # Nếu chạy Spring Boot bằng IntelliJ/Eclipse (ngoài Docker): Dùng 'host.docker.internal:8080'
+      # Nếu chạy Spring Boot bên trong Docker Container: Dùng tên service, ví dụ 'core-service:8080'
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          application: "smd-core-service"

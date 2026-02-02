@@ -29,21 +29,49 @@ Thư mục này chứa các PowerShell scripts hỗ trợ testing và quản lý
 - Server phải đang chạy tại `http://localhost:8080`
 - Có thể cần JWT token để test các protected endpoints
 
-### 3. test-syllabus-api.ps1
+### 3. test-syllabus-crud.ps1
 
-**Mô tả:** Script chuyên biệt để test Syllabus API endpoints
+**Mô tả:** Script chuyên biệt để test đầy đủ các CRUD operations của Syllabus API
 
 **Cách sử dụng:**
 
 ```powershell
-.\scripts\test-syllabus-api.ps1
+.\scripts\test-syllabus-crud.ps1
 ```
 
 **Chức năng:**
 
-- Test CRUD operations cho Syllabus
+- Test đầy đủ CRUD operations cho Syllabus
 - Kiểm tra validation
 - Test search functionality
+- Test update và delete operations
+
+### 4. test-syllabus-create-view.ps1
+
+**Mô tả:** Script test tính năng tạo mới và xem syllabus
+
+**Cách sử dụng:**
+
+```powershell
+.\scripts\test-syllabus-create-view.ps1
+```
+
+**Chức năng:**
+
+- Test tạo mới Syllabus
+- Test xem chi tiết Syllabus theo ID
+- Test xem danh sách tất cả Syllabuses
+- Xác nhận Syllabus vừa tạo tồn tại trong danh sách
+- Hiển thị thông tin chi tiết về Course, Lecturer, và Program
+
+**Test Flow:**
+
+1. Đăng nhập để lấy JWT token
+2. Chuẩn bị dữ liệu phụ thuộc (Department, Program, Course)
+3. Tạo mới Syllabus
+4. Xem chi tiết Syllabus vừa tạo
+5. Xem danh sách tất cả Syllabuses
+6. Xác nhận Syllabus tồn tại
 
 ## Yêu cầu chung
 
@@ -59,4 +87,4 @@ Thư mục này chứa các PowerShell scripts hỗ trợ testing và quản lý
 
 ---
 
-**Cập nhật:** 23/12/2025
+**Cập nhật:** 03/01/2026

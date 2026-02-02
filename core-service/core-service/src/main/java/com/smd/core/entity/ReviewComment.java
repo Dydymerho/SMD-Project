@@ -1,12 +1,14 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "review_comment")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -19,11 +21,13 @@ public class ReviewComment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "syllabus_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Syllabus syllabus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private User user;
 
     @Column(columnDefinition = "TEXT", nullable = false)

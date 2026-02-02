@@ -1,12 +1,14 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
 @Entity
 @Table(name = "clo")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -19,6 +21,7 @@ public class CLO {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "syllabus_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Syllabus syllabus;
 
     @Column(name = "clo_code", nullable = false)
@@ -30,5 +33,6 @@ public class CLO {
     // Relationships
     @OneToMany(mappedBy = "clo", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CLOPLOMapping> ploMappings;
 }

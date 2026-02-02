@@ -4,9 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "program")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -22,14 +25,17 @@ public class Program {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Department department;
 
     // Relationships
     @OneToMany(mappedBy = "program", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Syllabus> syllabuses;
 
     @OneToMany(mappedBy = "program", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<PLO> plos;
 }

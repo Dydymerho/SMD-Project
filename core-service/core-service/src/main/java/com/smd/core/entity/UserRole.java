@@ -1,14 +1,20 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_role")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class UserRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,10 +24,12 @@ public class UserRole {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"userRoles", "syllabuses", "reviewComments", "workflowHistories", "department", "passwordHash"})
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"userRoles"})
     private Role role;
 }

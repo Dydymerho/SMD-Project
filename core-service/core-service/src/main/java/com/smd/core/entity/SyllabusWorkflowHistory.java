@@ -1,12 +1,14 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "syllabus_workflow_history")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -19,16 +21,19 @@ public class SyllabusWorkflowHistory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "syllabus_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private Syllabus syllabus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "step_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private WorkflowStep workflowStep;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "action_by", nullable = false)
     @ToString.Exclude
+    @JsonIgnore
     private User actionBy;
 
     @Enumerated(EnumType.STRING)

@@ -1,5 +1,6 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.AssessmentResponse;
 import com.smd.core.entity.Assessment;
 import com.smd.core.service.AssessmentService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/assessments")
@@ -16,33 +18,54 @@ public class AssessmentController {
     private final AssessmentService assessmentService;
 
     @GetMapping
-    public ResponseEntity<List<Assessment>> getAllAssessments() {
-        return ResponseEntity.ok(assessmentService.getAllAssessments());
+    public ResponseEntity<List<AssessmentResponse>> getAllAssessments() {
+        List<Assessment> assessments = assessmentService.getAllAssessments();
+        List<AssessmentResponse> response = assessments.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Assessment> getAssessmentById(@PathVariable Long id) {
-        return ResponseEntity.ok(assessmentService.getAssessmentById(id));
+    public ResponseEntity<AssessmentResponse> getAssessmentById(@PathVariable Long id) {
+        Assessment assessment = assessmentService.getAssessmentById(id);
+        return ResponseEntity.ok(convertToDto(assessment));
     }
 
     @GetMapping("/syllabus/{syllabusId}")
-    public ResponseEntity<List<Assessment>> getAssessmentsBySyllabusId(@PathVariable Long syllabusId) {
-        return ResponseEntity.ok(assessmentService.getAssessmentsBySyllabusId(syllabusId));
+    public ResponseEntity<List<AssessmentResponse>> getAssessmentsBySyllabusId(@PathVariable Long syllabusId) {
+        List<Assessment> assessments = assessmentService.getAssessmentsBySyllabusId(syllabusId);
+        List<AssessmentResponse> response = assessments.stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<Assessment> createAssessment(@RequestBody Assessment assessment) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(assessmentService.createAssessment(assessment));
+    public ResponseEntity<AssessmentResponse> createAssessment(@RequestBody Assessment assessment) {
+        Assessment created = assessmentService.createAssessment(assessment);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Assessment> updateAssessment(@PathVariable Long id, @RequestBody Assessment assessment) {
-        return ResponseEntity.ok(assessmentService.updateAssessment(id, assessment));
+    public ResponseEntity<AssessmentResponse> updateAssessment(@PathVariable Long id, @RequestBody Assessment assessment) {
+        Assessment updated = assessmentService.updateAssessment(id, assessment);
+        return ResponseEntity.ok(convertToDto(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAssessment(@PathVariable Long id) {
         assessmentService.deleteAssessment(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private AssessmentResponse convertToDto(Assessment assessment) {
+        return AssessmentResponse.builder()
+            .assessmentId(assessment.getAssessmentId())
+            .syllabusId(assessment.getSyllabus() != null ? assessment.getSyllabus().getSyllabusId() : null)
+            .name(assessment.getName())
+            .weightPercent(assessment.getWeightPercent())
+            .criteria(assessment.getCriteria())
+            .build();
     }
 }

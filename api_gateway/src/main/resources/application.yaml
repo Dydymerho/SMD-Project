@@ -1,0 +1,32 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: false
+      routes:
+        - id: core-service-route
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/**
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE

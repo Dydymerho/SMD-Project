@@ -1,15 +1,19 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
 @Entity
 @Table(name = "course")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,21 +29,35 @@ public class Course {
     @Column(nullable = false)
     private Integer credits;
 
+    // Định nghĩa loại môn học
+    public enum CourseType {
+        BAT_BUOC, // Bắt buộc
+        TU_CHON   // Tự chọn
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "course_type", nullable = false)
+    private CourseType courseType = CourseType.BAT_BUOC; // Mặc định là bắt buộc
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"courses", "programs", "users", "hibernateLazyInitializer", "handler"})
     private Department department;
 
     // Relationships
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Syllabus> syllabuses;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CourseRelation> prerequisiteRelations;
 
     @OneToMany(mappedBy = "relatedCourse", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<CourseRelation> relatedToRelations;
 }

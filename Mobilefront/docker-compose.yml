@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mobile-app:
+    build: .
+    container_name: smd_mobile_app
+    ports:
+      - "8081:8081" # Map port Metro Bundler ra ngoài
+    volumes:
+      - .:/app # Đồng bộ code từ máy thật vào container (Hot Reload)
+      - /app/node_modules # Giữ node_modules của container, không cho máy thật ghi đè
+    environment:
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    stdin_open: true # Giữ terminal mở để tương tác
+    tty: true

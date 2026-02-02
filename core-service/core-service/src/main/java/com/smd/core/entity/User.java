@@ -1,5 +1,7 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -7,10 +9,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "\"user\"")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,19 +48,28 @@ public class User {
     // Relationships
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnoreProperties({"user", "role"})
     private List<UserRole> userRoles;
 
     @OneToMany(mappedBy = "lecturer", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Syllabus> syllabuses;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<ReviewComment> reviewComments;
 
     @OneToMany(mappedBy = "actionBy", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<SyllabusWorkflowHistory> workflowHistories;
+
+    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @JsonIgnore
+    private List<Notification> notifications;
 
     @PrePersist
     protected void onCreate() {
@@ -64,6 +77,17 @@ public class User {
         if (status == null) {
             status = UserStatus.ACTIVE;
         }
+    }
+    
+    /**
+     * Get the primary role of the user
+     * Returns the first role if multiple roles exist
+     */
+    public Role getRole() {
+        if (userRoles != null && !userRoles.isEmpty()) {
+            return userRoles.get(0).getRole();
+        }
+        return null;
     }
 
     public enum UserStatus {

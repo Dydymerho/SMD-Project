@@ -1,12 +1,14 @@
 package com.smd.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ai_task")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -17,8 +19,9 @@ public class AITask {
     private Long aiTaskId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "syllabus_id", nullable = false)
+    @JoinColumn(name = "syllabus_id", nullable = true)
     @ToString.Exclude
+    @JsonIgnore
     private Syllabus syllabus;
 
     @Enumerated(EnumType.STRING)
@@ -53,8 +56,6 @@ public class AITask {
 
     public enum TaskStatus {
         PENDING,
-        IN_PROGRESS,
-        COMPLETED,
-        FAILED
+        SUCCESS
     }
 }
