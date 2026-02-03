@@ -9,6 +9,8 @@ import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 import * as api from '../../services/api';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 
 interface SessionPlan {
   sessionId: number;
@@ -31,19 +33,14 @@ interface Material {
   materialType: string;
 }
 
-interface PLOMapping {
-  ploCode: string;
-  ploDescription: string;
-  closMapped: string[];
-  coveragePercentage: number;
-}
-
 interface SyllabusDetail {
   syllabusId: number;
+  courseId?: number;
   courseCode: string;
   courseName: string;
   credits: number;
   deptName?: string;
+  courseType?: string;
   programName?: string;
   lecturerName: string;
   lecturerEmail?: string;
@@ -55,7 +52,6 @@ interface SyllabusDetail {
   assessments?: Assessment[];
   materials?: Material[];
   clos: string[];
-  ploMappings: PLOMapping[];
   rubricsValid: boolean;
   rubricsIssues: string[];
   prerequisitesValid: boolean;
@@ -66,6 +62,7 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [syllabus, setSyllabus] = useState<SyllabusDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,9 +72,13 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [clos, setClos] = useState<api.CLOResponse[]>([]);
+  const [mappings, setMappings] = useState<api.CLOPLOMappingResponse[]>([]);
+  const [courseRelations, setCourseRelations] = useState<api.CourseRelationResponse[]>([]);
 
   useEffect(() => {
     loadSyllabusDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadSyllabusDetail = async () => {
@@ -85,8 +86,9 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
     
     try {
       setLoading(true);
-      const [syllabusData, unreadCount] = await Promise.all([
+      const [syllabusData, syllabusInfo, unreadCount] = await Promise.all([
         api.getSyllabusDetail(parseInt(id)),
+        api.getSyllabusById(parseInt(id)).catch(() => null),
         api.getUnreadNotificationsCount().catch(() => 0)
       ]);
 
@@ -95,22 +97,23 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
       // Transform API data to local format
       setSyllabus({
         syllabusId: syllabusData.id,
+        courseId: syllabusInfo?.course?.courseId,
         courseCode: syllabusData.courseCode,
         courseName: syllabusData.courseName,
         credits: syllabusData.credit,
-        deptName: syllabusData.deptName,
-        programName: undefined,
-        lecturerName: syllabusData.lecturerName,
+        deptName: syllabusData.deptName || syllabusInfo?.course?.department?.deptName,
+        courseType: syllabusData.type || undefined,
+        programName: syllabusInfo?.program?.programName,
+        lecturerName: syllabusData.lecturerName || syllabusInfo?.lecturer?.fullName || 'N/A',
         lecturerEmail: undefined,
         academicYear: syllabusData.academicYear,
-        currentStatus: undefined,
-        versionNotes: undefined,
+        currentStatus: syllabusInfo?.currentStatus,
+        versionNotes: syllabusInfo?.versionNotes,
         aiSummary: syllabusData.aiSumary,
         sessionPlans: syllabusData.sessionPlans || [],
         assessments: syllabusData.assessments || [],
         materials: syllabusData.materials || [],
         clos: syllabusData.target || [],
-        ploMappings: [], // TODO: Fetch PLO mappings if endpoint exists
         rubricsValid: true, // Mock data
         rubricsIssues: [],
         prerequisitesValid: true, // Mock data
@@ -119,11 +122,50 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
       setNotificationCount(unreadCount);
     } catch (error) {
       console.error('Error loading syllabus:', error);
-      alert('Không thể tải thông tin giáo trình');
+      showError('Không thể tải thông tin giáo trình');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!syllabus?.syllabusId) return;
+    const syllabusId = Number(syllabus.syllabusId);
+    if (Number.isNaN(syllabusId)) return;
+
+    const fetchCLOData = async () => {
+      try {
+        const [closData, mappingsData] = await Promise.all([
+          api.getCLOsBySyllabusId(syllabusId),
+          api.getCLOPLOMappingsBySyllabusId(syllabusId)
+        ]);
+        setClos(Array.isArray(closData) ? closData : []);
+        setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy dữ liệu CLO/Mappings:', fetchError);
+        setClos([]);
+        setMappings([]);
+      }
+    };
+
+    fetchCLOData();
+  }, [syllabus?.syllabusId]);
+
+  useEffect(() => {
+    if (!syllabus?.courseId) return;
+
+    const fetchRelations = async () => {
+      try {
+        const relations = await api.getCourseRelationsByCourseId(syllabus.courseId!);
+        setCourseRelations(Array.isArray(relations) ? relations : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy cây môn học:', fetchError);
+        setCourseRelations([]);
+      }
+    };
+
+    fetchRelations();
+  }, [syllabus?.courseId]);
 
   const handleApprove = async () => {
     if (!id) return;
@@ -131,12 +173,12 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await api.aaApproveSyllabus(parseInt(id), approvalNote);
-      alert('✅ Đã phê duyệt Level 2!\nGiáo trình sẽ được chuyển đến Principal để phê duyệt cuối cùng.');
+      success('Đã phê duyệt Level 2! Giáo trình sẽ được chuyển đến Principal để phê duyệt cuối cùng.');
       setShowApproveModal(false);
       setTimeout(() => navigate('/aa/syllabus-approval'), 1000);
     } catch (error: any) {
       console.error('Error approving:', error);
-      alert(error.response?.data?.message || '❌ Có lỗi xảy ra khi phê duyệt');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt');
     } finally {
       setIsSubmitting(false);
     }
@@ -144,19 +186,19 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!id || !rejectionReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối');
+      warning('Vui lòng nhập lý do từ chối');
       return;
     }
     
     setIsSubmitting(true);
     try {
       await api.aaRejectSyllabus(parseInt(id), rejectionReason);
-      alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về HoD với lý do từ chối.');
+      success('Đã từ chối giáo trình. Giáo trình sẽ được trả về HoD với lý do từ chối.');
       setShowRejectModal(false);
       setTimeout(() => navigate('/aa/syllabus-approval'), 1000);
     } catch (error: any) {
       console.error('Error rejecting:', error);
-      alert(error.response?.data?.message || '❌ Có lỗi xảy ra khi từ chối');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra khi từ chối');
     } finally {
       setIsSubmitting(false);
     }
@@ -174,22 +216,22 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
           <p>Academic Affairs</p>
         </div>
         <nav className="sidebar-nav">
-          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/dashboard'); }}>
+          <button type="button" className="nav-item" onClick={() => navigate('/aa/dashboard')}>
             <span className="icon"><Home size={20} /></span>
             Tổng quan
-          </a>
-          <a href="#" className="nav-item active" onClick={(e) => { e.preventDefault(); navigate('/aa/syllabus-approval'); }}>
+          </button>
+          <button type="button" className="nav-item active" onClick={() => navigate('/aa/syllabus-approval')}>
             <span className="icon"><CheckCircle size={20} /></span>
             Phê duyệt Level 2
-          </a>
-          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/program-management'); }}>
+          </button>
+          <button type="button" className="nav-item" onClick={() => navigate('/aa/program-management')}>
             <span className="icon"><Settings size={20} /></span>
             Quản lý Chương trình
-          </a>
-          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/syllabus-analysis'); }}>
+          </button>
+          <button type="button" className="nav-item" onClick={() => navigate('/aa/syllabus-analysis')}>
             <span className="icon"><Search size={20} /></span>
             Tìm kiếm & Phân tích
-          </a>
+          </button>
         </nav>
         <div className="sidebar-footer">
           <button onClick={logout} className="logout-btn">Đăng xuất</button>
@@ -247,6 +289,7 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
               <div><strong>Số tín chỉ:</strong> {syllabus.credits}</div>
               <div><strong>Khoa:</strong> {syllabus.deptName || 'N/A'}</div>
               <div><strong>Giảng viên:</strong> {syllabus.lecturerName}</div>
+              <div><strong>Loại môn:</strong> {syllabus.courseType || 'N/A'}</div>
               {syllabus.academicYear && <div><strong>Năm học:</strong> {syllabus.academicYear}</div>}
             </div>
             {syllabus.versionNotes && (
@@ -265,6 +308,34 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
               </h3>
               <div style={{ background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '8px', lineHeight: 1.8 }}>
                 {syllabus.aiSummary}
+              </div>
+            </div>
+          )}
+
+          {/* CLO Section */}
+          {clos.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={20} color="#1976d2" />
+                Chuẩn đầu ra học phần (CLO)
+              </h3>
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mã CLO</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clos.map((clo, idx) => (
+                      <tr key={clo.cloId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{clo.cloCode}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{clo.cloDescription}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -348,36 +419,76 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* PLO Mapping Section */}
-          {syllabus.ploMappings.length > 0 ? (
-            <div className="plo-mapping-section" style={{ marginBottom: '24px' }}>
+          {/* CLO-PLO Mapping Section */}
+          {mappings.length > 0 ? (
+            <div style={{ marginBottom: '24px' }}>
               <h3 style={{ margin: '0 0 16px 0', color: '#1976d2', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Award size={20} />
-                PLO Mapping Verification
+                Mapping CLO - PLO
               </h3>
-              {syllabus.ploMappings.map((plo) => (
-                <div key={plo.ploCode} style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                    <div>
-                      <span style={{ fontWeight: 600, color: '#333' }}>{plo.ploCode}</span>
-                      <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>{plo.ploDescription}</p>
-                    </div>
-                    <span style={{ fontSize: '14px', color: plo.coveragePercentage >= 70 ? '#4caf50' : '#ff9800', fontWeight: 600 }}>
-                      {plo.coveragePercentage}%
-                    </span>
-                  </div>
-                  <div>
-                    {plo.closMapped.map(clo => (
-                      <span key={clo} className="plo-tag">{clo}</span>
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>CLO</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả CLO</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả PLO</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Mức độ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map((mapping, idx) => (
+                      <tr key={mapping.mappingId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{mapping.cloCode}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{mapping.cloDescription}</td>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#7b1fa2' }}>{mapping.ploCode}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{mapping.ploDescription}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>{mapping.mappingLevel}</td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
-              ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <div style={{ background: '#fff3e0', color: '#e65100', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
               <AlertTriangle size={20} style={{ display: 'inline', marginRight: '8px' }} />
-              PLO Mapping data is not available yet. This feature will be enabled when PLO mapping endpoint is implemented.
+              Chưa có dữ liệu mapping CLO - PLO.
+            </div>
+          )}
+
+          {/* Course Relations Section */}
+          {courseRelations.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={20} color="#ff9800" />
+                Cây môn học / Quan hệ môn học
+              </h3>
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Loại quan hệ</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mã môn</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tên môn</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Tín chỉ</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Khoa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseRelations.map((relation, idx) => (
+                      <tr key={`${relation.relationId}-${relation.targetCourseId}`} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                        <td style={{ padding: '12px', color: '#333' }}>{relation.relationType}</td>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{relation.targetCourseCode}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{relation.targetCourseName}</td>
+                        <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{relation.credits ?? '-'}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{relation.deptName || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -523,6 +634,8 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

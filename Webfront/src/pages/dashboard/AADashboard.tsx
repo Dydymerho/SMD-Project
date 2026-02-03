@@ -15,7 +15,6 @@ interface DashboardStats {
   totalPLOs: number;
   recentNotifications: number;
   approvedThisMonth: number;
-  rejectedThisMonth: number;
 }
 
 interface RecentActivity {
@@ -40,7 +39,6 @@ const AADashboard: React.FC = () => {
     totalPLOs: 0,
     recentNotifications: 0,
     approvedThisMonth: 0,
-    rejectedThisMonth: 0,
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
@@ -73,7 +71,6 @@ const AADashboard: React.FC = () => {
         plosCount,
         unreadNotifications,
         approvedCount,
-        rejectedCount,
         recentLogs
       ] = await Promise.all([
         api.getPendingApprovalsCount(),
@@ -81,7 +78,6 @@ const AADashboard: React.FC = () => {
         api.getTotalPLOs(),
         api.getUnreadNotificationsCount(),
         api.getApprovedCount(),
-        api.getRejectedCount(),
         api.getRecentAuditLogs(7).catch(() => []) // Get last 7 days of activity
       ]);
 
@@ -90,8 +86,7 @@ const AADashboard: React.FC = () => {
         programsCount,
         plosCount,
         unreadNotifications,
-        approvedCount,
-        rejectedCount
+        approvedCount
       });
 
       setStats({
@@ -100,22 +95,25 @@ const AADashboard: React.FC = () => {
         totalPLOs: plosCount,
         recentNotifications: unreadNotifications,
         approvedThisMonth: approvedCount,
-        rejectedThisMonth: rejectedCount,
       });
 
       // Transform audit logs to recent activities
       if (Array.isArray(recentLogs) && recentLogs.length > 0) {
         const activities = recentLogs.slice(0, 3).map((log: any, idx: number) => {
-          const type: 'approved' | 'rejected' | 'created' = log.action?.includes('APPROVE') ? 'approved' : 
-                 log.action?.includes('REJECT') ? 'rejected' : 'created';
+          const actionType = (log.actionType || log.action || '').toString();
+          const type: 'approved' | 'rejected' | 'created' = actionType.includes('APPROVE') ? 'approved' :
+                 actionType.includes('REJECT') ? 'rejected' : 'created';
+          const performedBy = log.performedBy || log.username || 'Hệ thống';
+          const performedRole = log.performedByRole ? `(${log.performedByRole})` : '';
+          const comments = log.comments ? `• ${log.comments}` : '';
           return {
             id: `activity-${idx}`,
-            title: log.action || 'Cập nhật',
-            description: log.description || 'Hệ thống',
+            title: actionType || 'Cập nhật',
+            description: `${performedBy} ${performedRole} ${comments}`.trim(),
             type,
             timestamp: log.timestamp || log.createdAt || new Date().toISOString(),
-            courseName: log.syllabus?.course?.courseName || '',
-            department: log.syllabus?.course?.department?.deptName || ''
+            courseName: log.courseName || log.syllabus?.course?.courseName || '',
+            department: log.departmentName || log.syllabus?.course?.department?.deptName || ''
           };
         });
         setRecentActivities(activities);

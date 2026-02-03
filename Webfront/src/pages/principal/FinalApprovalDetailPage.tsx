@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, Home, BarChart3, Bell, User,
-  AlertTriangle, BookOpen, GraduationCap
+  AlertTriangle, BookOpen, GraduationCap, FileText, TrendingUp, Zap, Award
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './PrincipalPages.css';
@@ -13,13 +13,20 @@ import {
   principalApproveSyllabus, 
   principalRejectSyllabus,
   getUnreadNotificationsCount,
-  PrincipalSyllabusDetail 
+  PrincipalSyllabusDetail,
+  getSyllabusDetail,
+  getCourseRelationsByCourseId,
+  getCLOsBySyllabusId,
+  getCLOPLOMappingsBySyllabusId
 } from '../../services/api';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 
 const FinalApprovalDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -27,6 +34,10 @@ const FinalApprovalDetailPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [notificationCount, setNotificationCount] = useState(0);
   const [syllabus, setSyllabus] = useState<PrincipalSyllabusDetail | null>(null);
+  const [detailData, setDetailData] = useState<any>(null);
+  const [clos, setClos] = useState<any[]>([]);
+  const [mappings, setMappings] = useState<any[]>([]);
+  const [courseRelations, setCourseRelations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,9 +53,11 @@ const FinalApprovalDetailPage: React.FC = () => {
         ]);
         setSyllabus(syllabusData);
         setNotificationCount(notifCount);
+        const detail = await getSyllabusDetail(parseInt(id)).catch(() => null);
+        setDetailData(detail);
       } catch (error) {
         console.error('Error fetching data:', error);
-        alert('Không thể tải thông tin giáo trình');
+        showError('Không thể tải thông tin giáo trình');
       } finally {
         setLoading(false);
       }
@@ -53,18 +66,57 @@ const FinalApprovalDetailPage: React.FC = () => {
     fetchData();
   }, [id]);
 
+  useEffect(() => {
+    if (!syllabus?.syllabusId) return;
+    const syllabusId = Number(syllabus.syllabusId);
+    if (Number.isNaN(syllabusId)) return;
+
+    const fetchCLOData = async () => {
+      try {
+        const [closData, mappingsData] = await Promise.all([
+          getCLOsBySyllabusId(syllabusId),
+          getCLOPLOMappingsBySyllabusId(syllabusId)
+        ]);
+        setClos(Array.isArray(closData) ? closData : []);
+        setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy dữ liệu CLO/Mappings:', fetchError);
+        setClos([]);
+        setMappings([]);
+      }
+    };
+
+    fetchCLOData();
+  }, [syllabus?.syllabusId]);
+
+  useEffect(() => {
+    if (!syllabus?.courseId) return;
+
+    const fetchRelations = async () => {
+      try {
+        const relations = await getCourseRelationsByCourseId(syllabus.courseId!);
+        setCourseRelations(Array.isArray(relations) ? relations : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy cây môn học:', fetchError);
+        setCourseRelations([]);
+      }
+    };
+
+    fetchRelations();
+  }, [syllabus?.courseId]);
+
   const handleApprove = async () => {
     if (!syllabus || !id) return;
 
     try {
       setSubmitting(true);
       await principalApproveSyllabus(parseInt(id), approvalNotes);
-      alert('Phê duyệt thành công!');
+      success('Phê duyệt thành công!');
       setShowApproveModal(false);
       setTimeout(() => navigate('/principal/final-approval'), 1000);
     } catch (error: any) {
       console.error('Error approving syllabus:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt');
     } finally {
       setSubmitting(false);
     }
@@ -72,23 +124,25 @@ const FinalApprovalDetailPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!syllabus || !id || !rejectionReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối');
+      warning('Vui lòng nhập lý do từ chối');
       return;
     }
 
     try {
       setSubmitting(true);
       await principalRejectSyllabus(parseInt(id), rejectionReason);
-      alert('Từ chối thành công!');
+      success('Từ chối thành công!');
       setShowRejectModal(false);
       setTimeout(() => navigate('/principal/final-approval'), 1000);
     } catch (error: any) {
       console.error('Error rejecting syllabus:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi từ chối');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra khi từ chối');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const creditsValue = syllabus?.credits ?? detailData?.credit ?? detailData?.credits ?? null;
 
   return (
     <div className="dashboard-page">
@@ -227,12 +281,26 @@ const FinalApprovalDetailPage: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', color: '#666', fontSize: '14px' }}>
                   <div><strong>Khoa:</strong> {syllabus?.deptName || 'N/A'}</div>
                   <div><strong>Giảng viên:</strong> {syllabus?.lecturerName || 'N/A'}</div>
-                  <div><strong>Số tín chỉ:</strong> {syllabus?.credits || 'N/A'}</div>
+                  <div><strong>Số tín chỉ:</strong> {creditsValue ?? 'N/A'}</div>
                   <div><strong>Năm học:</strong> {syllabus?.academicYear || 'N/A'}</div>
+                  <div><strong>Loại môn:</strong> {detailData?.type || 'N/A'}</div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* AI Summary */}
+          {detailData?.aiSumary && (
+            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '24px', borderRadius: '12px', marginBottom: '24px', color: 'white' }}>
+              <h3 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px' }}>
+                <Zap size={20} />
+                AI Summary - Tổng hợp tự động
+              </h3>
+              <div style={{ background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '8px', lineHeight: 1.8 }}>
+                {detailData.aiSumary}
+              </div>
+            </div>
+          )}
 
           {/* Syllabus Details */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
@@ -251,10 +319,13 @@ const FinalApprovalDetailPage: React.FC = () => {
                   <span>{syllabus?.courseName || 'N/A'}</span>
                   
                   <strong>Số tín chỉ:</strong>
-                  <span>{syllabus?.credits || 'N/A'} tín chỉ</span>
+                  <span>{creditsValue ?? 'N/A'} tín chỉ</span>
                   
                   <strong>Khoa/Bộ môn:</strong>
                   <span>{syllabus?.deptName || 'N/A'}</span>
+
+                  <strong>Loại môn:</strong>
+                  <span>{detailData?.type || 'N/A'}</span>
                 </div>
               </div>
 
@@ -288,6 +359,186 @@ const FinalApprovalDetailPage: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* CLO Section */}
+              {clos.length > 0 && (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={20} color="#1976d2" />
+                    Chuẩn đầu ra học phần (CLO)
+                  </h3>
+                  <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mã CLO</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clos.map((clo: any, idx: number) => (
+                          <tr key={clo.cloId || idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                            <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{clo.cloCode}</td>
+                            <td style={{ padding: '12px', color: '#333' }}>{clo.cloDescription}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* CLO-PLO Mapping */}
+              {mappings.length > 0 ? (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={20} color="#7b1fa2" />
+                    Mapping CLO - PLO
+                  </h3>
+                  <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>CLO</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả CLO</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mô tả PLO</th>
+                          <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Mức độ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mappings.map((mapping: any, idx: number) => (
+                          <tr key={mapping.mappingId || idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                            <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{mapping.cloCode}</td>
+                            <td style={{ padding: '12px', color: '#333' }}>{mapping.cloDescription}</td>
+                            <td style={{ padding: '12px', fontWeight: 600, color: '#7b1fa2' }}>{mapping.ploCode}</td>
+                            <td style={{ padding: '12px', color: '#333' }}>{mapping.ploDescription}</td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>{mapping.mappingLevel}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: '#fff3e0', color: '#e65100', padding: '16px', borderRadius: '8px' }}>
+                  <AlertTriangle size={20} style={{ display: 'inline', marginRight: '8px' }} />
+                  Chưa có dữ liệu mapping CLO - PLO.
+                </div>
+              )}
+
+              {/* Session Plans */}
+              {detailData?.sessionPlans && detailData.sessionPlans.length > 0 && (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={20} color="#2196f3" />
+                    Kế hoạch giảng dạy ({detailData.sessionPlans.length} buổi)
+                  </h3>
+                  <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tuần</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Chủ đề</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Phương pháp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailData.sessionPlans.map((session: any, idx: number) => (
+                          <tr key={session.sessionId || idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                            <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
+                            <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
+                            <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Assessments */}
+              {detailData?.assessments && detailData.assessments.length > 0 && (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle size={20} color="#4caf50" />
+                    Đánh giá & Kiểm tra ({detailData.assessments.length} hình thức)
+                  </h3>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {detailData.assessments.map((assessment: any, idx: number) => (
+                      <div key={assessment.assessmentId || idx} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>{assessment.name}</h4>
+                          <span style={{ background: '#4caf5015', color: '#4caf50', padding: '4px 12px', borderRadius: '12px', fontWeight: 600, fontSize: '14px' }}>
+                            {assessment.weightPercent}%
+                          </span>
+                        </div>
+                        <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '13px' }}>{assessment.criteria}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Materials */}
+              {detailData?.materials && detailData.materials.length > 0 && (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={20} color="#ff9800" />
+                    Tài liệu tham khảo ({detailData.materials.length} tài liệu)
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                    {detailData.materials.map((material: any, idx: number) => (
+                      <div key={material.materialId || idx} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
+                          <FileText size={18} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px' }}>{material.title}</h4>
+                            <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
+                            <span style={{ background: '#ff980015', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                              {material.materialType}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Course Relations */}
+              {courseRelations.length > 0 && (
+                <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <TrendingUp size={20} color="#ff9800" />
+                    Cây môn học / Quan hệ môn học
+                  </h3>
+                  <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Loại quan hệ</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Mã môn</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tên môn</th>
+                          <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Tín chỉ</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Khoa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courseRelations.map((relation: any, idx: number) => (
+                          <tr key={`${relation.relationId}-${relation.targetCourseId}-${idx}`} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                            <td style={{ padding: '12px', color: '#333' }}>{relation.relationType}</td>
+                            <td style={{ padding: '12px', fontWeight: 600, color: '#1976d2' }}>{relation.targetCourseCode}</td>
+                            <td style={{ padding: '12px', color: '#333' }}>{relation.targetCourseName}</td>
+                            <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{relation.credits ?? '-'}</td>
+                            <td style={{ padding: '12px', color: '#666' }}>{relation.deptName || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Workflow Status */}
               <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
@@ -669,6 +920,8 @@ const FinalApprovalDetailPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
