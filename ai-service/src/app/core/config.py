@@ -1,5 +1,4 @@
 import os
-
 class Settings:
     PROJECT_NAME = "SMD AI"
     TEMP_DIR = os.path.join(os.getcwd(), "app/services/temp_uploads") 

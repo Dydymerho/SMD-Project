@@ -4,6 +4,7 @@ from celery import Celery
 from app.services.llm_service import LLMService 
 from app.services import syllabus_service
 from app.services.file_reader import ocr_mixed_file
+from app.schemas.ai_schema import SyllabusExtractResponse
 
 REDIS_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
@@ -39,22 +40,23 @@ def process_ocr_task(self, file_content, filename):
     finally:
         if os.path.exists(path): os.remove(path)
 
-@celery_app.task(name="app.worker.task_summarize", bind=True)
-def task_summarize(self, file_content, filename):
-    path = save_temp_file(file_content, filename, self.request.id)
+@celery_app.task(name="app.worker.task_summarize_text", bind=True)
+def task_summarize_text(self, syllabus_json):
     try:
-        text = ocr_mixed_file(path)
-        if len(text) < 10:
-            return {"status": "Failed", "error": "File rỗng hoặc không đọc được chữ"}
-
+        if not syllabus_json: 
+            return {"status": "Failed", "error": "Dữ liệu rỗng"}
+        
+        self.update_state(state='PROGRESS', meta={'message': 'Đang đọc cấu trúc JSON...'})
+        
         llm = LLMService()
-        summary = asyncio.run(llm.generate_summary(text[:15000])) # Cắt bớt nếu quá dài
+        import asyncio
+        
+        # Gọi hàm mới trong LLM Service
+        summary = asyncio.run(llm.generate_summary_from_json(syllabus_json)) 
         
         return {"status": "Success", "summary": summary}
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
-    finally:
-        if os.path.exists(path): os.remove(path)
 
 @celery_app.task(name="app.worker.task_diff", bind=True)
 def task_diff(self, old_bytes, old_name, new_bytes, new_name):
@@ -117,3 +119,63 @@ def task_check_clo_plo(self, clo_bytes, clo_filename, plo_bytes, plo_filename):
     finally:
         if os.path.exists(path_clo): os.remove(path_clo)
         if os.path.exists(path_plo): os.remove(path_plo)
+
+
+@celery_app.task(name="app.worker.task_extract_syllabus_json", bind=True)
+def task_extract_syllabus_json(self, file_content, filename):
+    path = save_temp_file(file_content, filename, self.request.id)
+    try:
+        self.update_state(state='PROGRESS', meta={'message': 'Đang OCR tài liệu...'})
+        text_content = ocr_mixed_file(path)
+        
+        if not text_content or len(text_content.strip()) < 10:
+            return {"status": "Failed", "error": "Không đọc được nội dung file"}
+
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang trích xuất thông tin...'})
+        llm = LLMService()
+        import asyncio
+        data = asyncio.run(llm.extract_syllabus_info(text_content)) 
+        
+        return {"status": "Success", "data": data}
+    except Exception as e:
+        return {"status": "Failed", "error": str(e)}
+    finally:
+        if os.path.exists(path): os.remove(path)  
+
+@celery_app.task(name="app.worker.task_compare_json_syllabus", bind=True)
+def task_compare_json_syllabus(self, old_json, new_json):
+    try:
+        if not old_json or not new_json:
+            return {"status": "Failed", "error": "Dữ liệu JSON bị thiếu"}
+
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang so sánh cấu trúc JSON...'})
+        
+        llm = LLMService()
+        import asyncio
+        result = asyncio.run(llm.compare_syllabus_json_structure(old_json, new_json))
+        
+        return {"status": "Success", "data": result}
+    except Exception as e:
+        return {"status": "Failed", "error": str(e)} 
+
+@celery_app.task(name="app.worker.task_diff_text", bind=True)
+def task_diff_text(self, old_text, new_text):
+    try:
+        self.update_state(state='PROGRESS', meta={'message': 'Đang tính điểm tương đồng...'})
+        score = syllabus_service.calculate_similarity(old_text, new_text)
+        
+        self.update_state(state='PROGRESS', meta={'message': 'Đang so sánh chi tiết...'})
+        highlights = syllabus_service.get_diff_highlight(old_text, new_text)
+        
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang phân tích...'})
+        llm = LLMService()
+        analysis = asyncio.run(llm.analyze_changes(old_text, new_text))
+        
+        return {
+            "status": "Success", 
+            "similarity_percent": round(score * 100, 2),
+            "highlight_data": highlights, 
+            "ai_analysis": analysis
+        }
+    except Exception as e:
+        return {"status": "Failed", "error": str(e)}    

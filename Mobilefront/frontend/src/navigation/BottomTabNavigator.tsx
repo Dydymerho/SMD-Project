@@ -1,12 +1,15 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
+import { View, Platform, StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import SettingScreen from '../screens/settingpage/SettingScreen'
-import AppHeader from '../components/AppHeader'
+import * as Animatable from 'react-native-animatable'
+
+// Import Screens & Stacks
 import HomeStack from './HomeStack'
 import ProfileScreen from '../screens/Profile/ProfileScreen'
 import NotificationScreen from '../screens/Notification/NotificationScreen'
 import SettingStackNavigator from '../screens/settingpage/SettingStackNavigation'
+
 export type TabParamList = {
     Home: undefined
     Profile: undefined
@@ -16,70 +19,118 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>()
 
-const TAB_TITLES: Record<keyof TabParamList, string> = {
-    Home: 'Trang chủ',
-    Profile: 'Cá nhân',
-    Setting: 'Cài đặt',
-    Notification: 'Thông báo',
-}
+// --- COMPONENT ICON CÓ ANIMATION ---
+const TabIcon = ({ name, focused, color }: { name: string, focused: boolean, color: string }) => {
+    const viewRef = useRef<Animatable.View & View>(null);
+
+    useEffect(() => {
+        if (focused) {
+            // Hiệu ứng "nảy" (rubberBand) khi chọn
+            viewRef.current?.animate('rubberBand');
+        }
+    }, [focused]);
+
+    return (
+        <Animatable.View
+            ref={viewRef}
+            style={styles.iconContainer}
+            duration={500}
+        >
+            <Ionicons name={name} size={24} color={color} />
+
+            {/* Dấu chấm active */}
+            {focused && (
+                <Animatable.View
+                    animation="zoomIn"
+                    duration={300}
+                    style={[styles.activeDot, { backgroundColor: color }]}
+                />
+            )}
+        </Animatable.View>
+    );
+};
 
 export default function BottomTabNavigator() {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
-                header: () => (
-                    <AppHeader title={TAB_TITLES[route.name]} />
-                ),
+                headerShown: false,
+                tabBarShowLabel: false,
 
-                tabBarIcon: ({ focused, color }) => {
-                    const ICONS: Record<string, string> = {
-                        Home: focused ? 'home' : 'home-outline',
-                        Setting: focused ? 'settings' : 'settings-outline',
-                        Profile: focused ? 'person' : 'person-outline',
-                        Notification: focused ? 'notifications' : 'notifications-outline',
+                // --- MÀU SẮC THEME ---
+                tabBarActiveTintColor: '#15803d', // Xanh Rêu đậm
+                tabBarInactiveTintColor: '#94A3B8', // Xám
 
-                    }
-
-                    return (
-                        <Ionicons
-                            name={ICONS[route.name]}
-                            size={22}
-                            color={color}
-                        />
-                    )
-                },
-
-                tabBarActiveTintColor: '#2563EB',
-                tabBarInactiveTintColor: '#9CA3AF',
-                tabBarStyle: {
-                    flexDirection: "row",
-                    borderWidth: 25,
-                    borderColor: "rgba(255, 255, 255, 0.5)",
-                    height: 60,
-                    marginHorizontal: 20,
-                    marginBottom: 15,
-                    borderRadius: 20,
-                    position: 'absolute',
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                // --- CĂN CHỈNH ITEM ---
+                tabBarItemStyle: {
                     justifyContent: 'center',
                     alignItems: 'center',
-                    paddingVertical: 8,
-                    elevation: 12,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 16,
+                    paddingVertical: 0,
                 },
+
+                // Cấu hình Icon
+                tabBarIcon: ({ focused, color }) => {
+                    let iconName = '';
+                    switch (route.name) {
+                        case 'Home':
+                            iconName = focused ? 'home' : 'home-outline';
+                            break;
+                        case 'Profile':
+                            iconName = focused ? 'person' : 'person-outline';
+                            break;
+                        case 'Notification':
+                            iconName = focused ? 'notifications' : 'notifications-outline';
+                            break;
+                        case 'Setting':
+                            iconName = focused ? 'settings' : 'settings-outline';
+                            break;
+                    }
+                    return <TabIcon name={iconName} focused={focused} color={color} />;
+                },
+
+                // Style thanh Tab Bar "Nổi"
+                tabBarStyle: styles.tabBar,
             })}
         >
             <Tab.Screen name="Home" component={HomeStack} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
             <Tab.Screen name="Notification" component={NotificationScreen} />
-            <Tab.Screen name="Setting" component={SettingStackNavigator}
-                options={{
-                    headerShown: false,
-                }} />
-
+            <Tab.Screen name="Setting" component={SettingStackNavigator} />
         </Tab.Navigator>
     )
 }
+
+const styles = StyleSheet.create({
+    tabBar: {
+        margin: 10,
+        bottom: 25,
+        left: 20,
+        right: 20,
+        height: 64,
+        borderRadius: 24,
+        backgroundColor: '#ffffff',
+
+        // --- SHADOW THEME ---
+        elevation: 10,
+        shadowColor: '#20331b', // Đổ bóng màu xanh rêu tối
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+
+        borderTopWidth: 0,
+    },
+    iconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 50,
+        height: 50,
+        marginTop: 30
+        // Đã xóa thuộc tính top để icon tự căn giữa
+    },
+    activeDot: {
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
+        marginTop: 4,
+    }
+});

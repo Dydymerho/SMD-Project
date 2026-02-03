@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
     View, Text, ScrollView, TouchableOpacity,
-    ActivityIndicator, RefreshControl
+    ActivityIndicator, RefreshControl, StatusBar
 } from "react-native";
-import { Bell, CheckCircle, Info, AlertCircle, Clock } from "lucide-react-native";
+import { Bell, CheckCircle, Info, AlertCircle, Clock, Calendar } from "lucide-react-native";
+import LinearGradient from "react-native-linear-gradient"; // Cần thư viện này
 import { NotificationApi } from "../../../../backend/api/NotificationApi";
 import { Notification } from "../../../../backend/types/Notification";
-import styles from "./Notification.styles"; // Import file style
+import styles from "./Notification.styles";
 
+/* --- HELPER FUNCTIONS --- */
 const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -17,15 +19,20 @@ const formatTimeAgo = (dateString: string) => {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
     if (diffInSeconds < 172800) return "Hôm qua";
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
 };
 
-const getIcon = (type: string) => {
+// Hàm trả về Icon và Màu nền tương ứng (Modern Badge Style)
+const getNotificationStyle = (type: string) => {
     switch (type) {
-        case "SYSTEM": return <AlertCircle size={24} color="#DC2626" />;
-        case "UPDATE": return <Info size={24} color="#2563EB" />;
-        case "SUCCESS": return <CheckCircle size={24} color="#16A34A" />;
-        default: return <Bell size={24} color="#F59E0B" />;
+        case "SYSTEM": // Lỗi / Hệ thống
+            return { icon: <AlertCircle size={22} color="#EF4444" />, bg: "#FEE2E2" };
+        case "UPDATE": // Cập nhật
+            return { icon: <Info size={22} color="#3B82F6" />, bg: "#DBEAFE" };
+        case "SUCCESS": // Thành công
+            return { icon: <CheckCircle size={22} color="#10B981" />, bg: "#D1FAE5" };
+        default: // Thông thường
+            return { icon: <Bell size={22} color="#F59E0B" />, bg: "#FEF3C7" };
     }
 };
 
@@ -55,112 +62,130 @@ export default function NotificationScreen() {
         fetchNotifications();
     }, []);
 
+    // Phân nhóm thông báo
     const today = new Date().setHours(0, 0, 0, 0);
     const todayNotifications = notifications.filter(n => new Date(n.createdAt).getTime() >= today);
     const oldNotifications = notifications.filter(n => new Date(n.createdAt).getTime() < today);
+    const unreadCount = notifications.filter(n => !n.isRead).length;
 
-    const renderItem = (item: Notification) => (
-        <TouchableOpacity
-            key={item.notificationId}
-            activeOpacity={0.7}
-            // Kết hợp style chung và style trạng thái (đã đọc/chưa đọc)
-            style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
-            onPress={async () => {
-                if (!item.isRead) {
-                    await NotificationApi.markAsRead(item.notificationId);
-                    setNotifications(prev => prev.map(n =>
-                        n.notificationId === item.notificationId ? { ...n, isRead: true } : n
-                    ));
-                }
-            }}
-        >
-            {/* ICON */}
-            <View style={styles.cardIconContainer}>
-                {getIcon(item.type)}
-            </View>
+    // --- RENDER ITEM ---
+    const renderItem = (item: Notification) => {
+        const styleConfig = getNotificationStyle(item.type);
 
-            {/* CONTENT */}
-            <View style={styles.cardContent}>
-                <View style={styles.cardHeaderRow}>
-                    <Text style={[
-                        styles.cardTitle,
-                        item.isRead ? styles.textNormal : styles.textBold
-                    ]}>
-                        {item.title}
-                    </Text>
-                    {!item.isRead && <View style={styles.unreadDot} />}
+        return (
+            <TouchableOpacity
+                key={item.notificationId}
+                activeOpacity={0.7}
+                style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
+                onPress={async () => {
+                    if (!item.isRead) {
+                        // Optimistic update: Cập nhật UI ngay lập tức
+                        setNotifications(prev => prev.map(n =>
+                            n.notificationId === item.notificationId ? { ...n, isRead: true } : n
+                        ));
+                        // Gọi API sau
+                        await NotificationApi.markAsRead(item.notificationId);
+                    }
+                }}
+            >
+                {/* 1. Icon Badge (Trái) */}
+                <View style={[styles.iconContainer, { backgroundColor: styleConfig.bg }]}>
+                    {styleConfig.icon}
                 </View>
 
-                <Text style={styles.cardMessage} numberOfLines={2}>
-                    {item.message}
-                </Text>
+                {/* 2. Nội dung (Phải) */}
+                <View style={styles.contentContainer}>
+                    <View style={styles.topRow}>
+                        <Text
+                            style={[styles.titleText, item.isRead ? styles.titleNormal : styles.titleBold]}
+                            numberOfLines={2}
+                        >
+                            {item.title}
+                        </Text>
+                        {!item.isRead && <View style={styles.blueDot} />}
+                    </View>
 
-                <View style={styles.timeRow}>
-                    <Clock size={12} color="#94A3B8" style={styles.clockIcon} />
-                    <Text style={styles.timeText}>
-                        {formatTimeAgo(item.createdAt)} • {item.courseCode}
+                    <Text style={styles.messageText} numberOfLines={2}>
+                        {item.message}
                     </Text>
+
+                    <View style={styles.footerRow}>
+                        <Clock size={12} color="#94A3B8" />
+                        <Text style={styles.timeText}>
+                            {formatTimeAgo(item.createdAt)}
+                        </Text>
+
+                        {item.courseCode && (
+                            <View style={styles.courseTag}>
+                                <Text style={styles.courseTagText}>{item.courseCode}</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     if (loading && !refreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2563EB" />
-                <Text style={styles.loadingText}>Đang tải thông báo...</Text>
+                <ActivityIndicator size="large" color="#15803D" />
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
+
+            {/* HEADER GRADIENT (Giống Home/Profile) */}
+            <LinearGradient colors={["#32502a", "#20331b"]} style={styles.headerGradient}>
+                <View style={styles.headerRow}>
+                    <View>
+                        <Text style={styles.headerTitle}>Thông báo</Text>
+                    </View>
+                    {unreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadText}>{unreadCount}</Text>
+                        </View>
+                    )}
+                </View>
+            </LinearGradient>
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2563EB"]} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#15803D" colors={["#15803D"]} />
                 }
             >
-                {/* HEADER */}
-                <View style={styles.headerContainer}>
-                    <View style={styles.iconBox}>
-                        <Bell size={24} color="#2563EB" />
-                    </View>
-                    <View style={styles.headerTextContainer}>
-                        <Text style={styles.headerTitle}>Thông báo</Text>
-                        <Text style={styles.headerSubtitle}>
-                            Bạn có <Text style={styles.unreadCount}>{notifications.filter(n => !n.isRead).length}</Text> thông báo chưa đọc
-                        </Text>
-                    </View>
-                </View>
-
                 {notifications.length === 0 ? (
-                    <View style={styles.emptyStateContainer}>
-                        <Bell size={60} color="#CBD5E1" />
-                        <Text style={styles.emptyStateText}>Không có thông báo nào</Text>
+                    <View style={styles.emptyContainer}>
+                        <Bell size={64} color="#CBD5E1" />
+                        <Text style={styles.emptyText}>Bạn chưa có thông báo nào</Text>
                     </View>
                 ) : (
                     <>
-                        {/* DANH SÁCH HÔM NAY */}
+                        {/* NHÓM HÔM NAY */}
                         {todayNotifications.length > 0 && (
-                            <>
-                                <Text style={styles.sectionTitle}>Hôm nay</Text>
+                            <View>
+                                <View style={styles.sectionHeader}>
+                                    <Calendar size={16} color="#64748B" />
+                                    <Text style={styles.sectionTitle}>Hôm nay</Text>
+                                    <View style={styles.sectionLine} />
+                                </View>
                                 {todayNotifications.map(renderItem)}
-                            </>
+                            </View>
                         )}
 
-                        {/* DANH SÁCH CŨ */}
+                        {/* NHÓM CŨ HƠN */}
                         {oldNotifications.length > 0 && (
-                            <>
-                                <Text style={[
-                                    styles.sectionTitle,
-                                    todayNotifications.length > 0 && styles.sectionMarginTop
-                                ]}>
-                                    Trước đó
-                                </Text>
+                            <View style={{ marginTop: 10 }}>
+                                <View style={styles.sectionHeader}>
+                                    <Clock size={16} color="#64748B" />
+                                    <Text style={styles.sectionTitle}>Trước đó</Text>
+                                    <View style={styles.sectionLine} />
+                                </View>
                                 {oldNotifications.map(renderItem)}
-                            </>
+                            </View>
                         )}
                     </>
                 )}

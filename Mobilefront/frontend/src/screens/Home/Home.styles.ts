@@ -1,543 +1,420 @@
-import { StyleSheet, Dimensions } from "react-native"
-
-const { width } = Dimensions.get("window")
+import { StyleSheet, Platform, StatusBar } from "react-native";
 
 const styles = StyleSheet.create({
+    // LAYOUT CHUNG
     safe: {
         flex: 1,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#F1F5F9", // Nền xám nhạt (Slate-100)
     },
     container: {
-        flexGrow: 1,
-        paddingBottom: 100,
-        paddingLeft: 8,
-        paddingRight: 8,
+        paddingBottom: 100, // Chừa khoảng trống cuộn
     },
-    header: {
-        paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 30,
-        backgroundColor: "#008f81",
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-
-    },
-
-    greeting: {
-        fontSize: 28,
-        fontWeight: "900",
-        color: "#0F172A",
-        letterSpacing: -0.5,
-    },
-    subText: {
-        fontSize: 16,
-        color: "#000000",
-        marginTop: 4,
-        fontWeight: "500",
-    },
-    searchWrapper: {
-        marginTop: 24,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        height: 56,
-        borderWidth: 1,
-        borderColor: "#b9bcc2ff",
-    },
-    searchIcon: {
-        fontSize: 20,
-        color: "#64748b69",
-        marginRight: 12,
-    },
-    SearchBar: {
-        flex: 1,
-        fontSize: 16,
-        color: "#0F172A",
-        fontWeight: "500",
-    },
-    content: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginTop: 30,
-        paddingHorizontal: 8,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "800",
-        color: "#000000",
-        textTransform: "uppercase",
-        letterSpacing: 2,
-        marginBottom: 20,
-    },
-    courseHeader: {
-        backgroundColor: "#4000FF",
-    },
-    courseList: {
-        gap: 16,
-    },
-    courseItem: {
-        backgroundColor: "#ffffff",
-        borderRadius: 20,
-        padding: 20,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderWidth: 1,
-        borderColor: "#b9bcc2ff",
-    },
-    courseItemHighlight: {
-        borderColor: "#3B82F6",
-        backgroundColor: "rgba(59, 130, 246, 0.05)",
-    },
-    courseInfo: {
-        flex: 1,
-    },
-    courseCode: {
-        fontSize: 12,
-        fontWeight: "800",
-        color: "#64748B",
-        marginBottom: 4,
-        letterSpacing: 1,
-    },
-    courseCodeHighlight: {
-        color: "#3B82F6",
-    },
-    courseName: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#0F172A",
-        lineHeight: 24,
-    },
-    descriptionContainer: {
-        borderBlockColor: "#e2e8f0",
-        marginTop: 8,
-        maxWidth: width - 140,
-    },
-    arrowIcon: {
-        fontSize: 24,
-        color: "#334155",
-        marginLeft: 16,
-    },
-    arrowIconHighlight: {
-        color: "#3B82F6",
-    },
-    card: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 14,
-        overflow: "hidden",
-        marginVertical: 12,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    /* HEADER */
-    headerCard: {
-        backgroundColor: "#4F1CFF",
-        padding: 16,
-    },
-    code: {
-        color: "#DAD7FF",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    title: {
-        color: "#FFFFFF",
-        fontSize: 20,
-        fontWeight: "800",
-        marginTop: 4,
-    },
-
-    /* BODY */
-    body: {
-        padding: 16,
-    },
-    text: {
-        fontSize: 16,
-        color: "#334155",
-        marginBottom: 6,
-    },
-
-    /* DESCRIPTION */
-    descBox: {
-        backgroundColor: "#E8F1FF",
-        borderRadius: 10,
-        padding: 12,
-        marginTop: 12,
-    },
-    descTitle: {
-        color: "#2563EB",
-        fontWeight: "700",
-        marginBottom: 4,
-        fontSize: 13,
-    },
-    descText: {
-        color: "#1E293B",
-        fontSize: 15,
-        lineHeight: 18,
-    },
-
-    /* BUTTON */
-    button: {
-        backgroundColor: "#4F1CFF",
-        borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: "center",
-        marginTop: 16,
-    },
-    buttonText: {
-        color: "#FFFFFF",
-        fontWeight: "700",
-        fontSize: 15,
-    },
-    buttonFilter: {
-        backgroundColor: "#f3f3f37e",
-        borderWidth: 1,         // Độ dày viền
-        borderColor: "#e6e3e3ff", // Màu viền (có thể thay đổi)
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        alignContent: "center",
-        alignSelf: "flex-end",
-        marginBottom: 16,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    filter_container: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.3)",
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    filter_tag: {
-        width: "80%",
-        backgroundColor: "#fff",
-        borderRadius: 10,
-        padding: 20,
-        alignItems: "center"
-    },
-    filter_choices: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 16
-    },
-    filter_elements: {
-        marginTop: 20,
-        backgroundColor: "#3B82F6",
-        paddingHorizontal: 24,
-        paddingVertical: 10,
-        borderRadius: 8
-    },
-    title_button: {
-        color: "#fff",
-        fontWeight: "bold"
-    },
-    // Loading
     centerContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F1F5F9",
     },
     loadingText: {
         marginTop: 12,
         fontSize: 16,
-        color: '#64748B',
+        color: "#64748B",
+        fontWeight: "500",
     },
 
-    // Error
-    errorContainer: {
-        padding: 20,
-        alignItems: 'center',
-        backgroundColor: '#FFF5F5',
-        margin: 16,
-        borderRadius: 12,
+    /* ===== HEADER SECTION ===== */
+    header: {
+        backgroundColor: "#20331b", // Màu chủ đạo cũ (hoặc dùng Gradient ở component)
+        paddingTop: Platform.OS === 'android' ? 20 : 10,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        // Shadow
+        shadowColor: "#20331b",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 8,
+        marginBottom: 20,
     },
-    errorText: {
-        color: '#FF3B30',
-        textAlign: 'center',
-        marginVertical: 12,
+    greeting: {
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#FFFFFF",
+        marginBottom: 4,
+        letterSpacing: 0.5,
+    },
+    subText: {
         fontSize: 14,
+        color: "#CBD5E1", // Slate-300
+        marginBottom: 20,
+        fontWeight: "500",
     },
-    retryButton: {
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 24,
+
+    /* SEARCH BAR */
+    searchWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255, 255, 255, 0.15)", // Glassmorphism
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: Platform.OS === 'ios' ? 12 : 4,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    searchIcon: {
+        marginRight: 10,
+    },
+    SearchBar: {
+        flex: 1,
+        fontSize: 16,
+        color: "#FFFFFF",
+        fontWeight: "500",
+    },
+
+    /* ===== CONTENT SECTION ===== */
+    content: {
+        paddingHorizontal: 20,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#1E293B", // Slate-800
+        marginBottom: 16,
+        letterSpacing: 0.5,
+    },
+
+    /* ===== FILTER BAR ===== */
+    filterRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    filterButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
         paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        // Shadow nhẹ
+        shadowColor: "#64748B",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    filterButtonText: {
+        marginLeft: 8,
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0F172A",
+    },
+    clearFilterButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FEE2E2", // Red-50
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         borderRadius: 8,
     },
-    retryButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        fontSize: 14,
+    clearFilterText: {
+        fontSize: 12,
+        color: "#EF4444", // Red-500
+        fontWeight: "600",
+        marginRight: 6,
+    },
+    activeFilters: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+        marginBottom: 20,
+    },
+    filterChip: {
+        backgroundColor: "#E0F2FE", // Sky-100
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#BAE6FD",
+    },
+    filterChipText: {
+        fontSize: 12,
+        color: "#0284C7", // Sky-600
+        fontWeight: "600",
     },
 
-    // Empty state
+    /* ===== COURSE LIST ===== */
+    courseList: {
+        gap: 16, // Khoảng cách giữa các card
+    },
+
+    /* EMPTY STATE */
     emptyContainer: {
-        padding: 40,
-        alignItems: 'center',
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 60,
+        opacity: 0.7,
     },
     emptyText: {
         fontSize: 16,
-        color: '#64748B',
-        textAlign: 'center',
-        marginTop: 12,
+        color: "#64748B",
+        marginTop: 16,
+        textAlign: "center",
+        maxWidth: "80%",
     },
     clearSearchButton: {
-        marginTop: 16,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+        marginTop: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: "#3b82f6",
+        borderRadius: 12,
     },
     clearSearchText: {
-        color: '#007AFF',
-        fontSize: 14,
+        color: "#FFF",
+        fontWeight: "700",
     },
 
-    // Filter
-    filterRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 8,
-    },
-    filterButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: '#007AFF',
-        borderRadius: 20,
-    },
-    filterButtonText: {
-        color: '#007AFF',
-        marginLeft: 4,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    clearFilterButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    clearFilterText: {
-        color: '#FF3B30',
-        marginRight: 4,
-        fontSize: 14,
-    },
-    activeFilters: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 12,
-        gap: 8,
-    },
-    filterChip: {
-        backgroundColor: '#E3F2FD',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+    /* ERROR STATE */
+    errorContainer: {
+        alignItems: "center",
+        marginVertical: 20,
+        backgroundColor: "#FEF2F2",
+        padding: 20,
         borderRadius: 16,
+        marginHorizontal: 20,
     },
-    filterChipText: {
-        color: '#007AFF',
-        fontSize: 12,
+    errorText: {
+        fontSize: 14,
+        color: "#EF4444",
+        marginTop: 10,
+        textAlign: "center",
+    },
+    retryButton: {
+        marginTop: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#FECACA",
+    },
+    retryButtonText: {
+        fontSize: 13,
+        color: "#DC2626",
+        fontWeight: "700",
     },
 
-    // Modal
+    /* ===== MODAL ===== */
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
+        backgroundColor: "rgba(15, 23, 42, 0.6)", // Slate-900 transparent
+        justifyContent: "flex-end", // Bottom sheet style
     },
     filterModal: {
-        backgroundColor: 'white',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '80%',
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        maxHeight: "80%",
     },
     filterHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24,
     },
     filterTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#1E293B",
     },
     filterContent: {
-        padding: 16,
+        marginBottom: 20,
     },
     filterSection: {
         marginBottom: 24,
     },
     filterSectionTitle: {
-        fontSize: 16,
-        fontWeight: '500',
-        marginBottom: 8,
-        color: '#1C1C1E',
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#64748B",
+        marginBottom: 12,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     filterDropdown: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 12,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#F8FAFC",
+        padding: 16,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#C7C7CC',
-        borderRadius: 8,
+        borderColor: "#E2E8F0",
     },
     filterDropdownText: {
-        fontSize: 16,
-        color: '#1C1C1E',
+        fontSize: 15,
+        color: "#334155",
+        fontWeight: "500",
     },
     filterList: {
         marginTop: 8,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#F2F2F7',
-        borderRadius: 8,
-        maxHeight: 200,
+        borderColor: "#E2E8F0",
+        maxHeight: 200, // Scrollable
+        overflow: 'scroll'
     },
     filterOption: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 12,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7',
+        borderBottomColor: "#F1F5F9",
     },
     filterOptionSelected: {
-        backgroundColor: '#F0F9FF',
+        backgroundColor: "#F0F9FF",
     },
     filterOptionText: {
-        fontSize: 16,
-        color: '#1C1C1E',
+        fontSize: 15,
+        color: "#334155",
     },
     filterOptionTextSelected: {
-        color: '#007AFF',
-        fontWeight: '500',
+        color: "#0284C7",
+        fontWeight: "700",
     },
     filterFooter: {
-        flexDirection: 'row',
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F2F2F7',
-        gap: 12,
+        flexDirection: "row",
+        gap: 16,
+        marginTop: 10,
     },
     filterCancelButton: {
         flex: 1,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#C7C7CC',
+        paddingVertical: 14,
+        backgroundColor: "#F1F5F9",
         borderRadius: 12,
-        alignItems: 'center',
+        alignItems: "center",
     },
     filterCancelText: {
-        color: '#FF3B30',
-        fontSize: 16,
-        fontWeight: '600',
+        color: "#64748B",
+        fontWeight: "700",
+        fontSize: 15,
     },
     filterApplyButton: {
         flex: 1,
-        padding: 16,
-        backgroundColor: '#007AFF',
+        paddingVertical: 14,
+        backgroundColor: "#3b82f6",
         borderRadius: 12,
-        alignItems: 'center',
+        alignItems: "center",
+        // Shadow
+        shadowColor: "#3b82f6",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     filterApplyText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
+        color: "#FFFFFF",
+        fontWeight: "700",
+        fontSize: 15,
     },
 
-    // Course Card
+    /* ===== COURSE CARD COMPONENT ===== */
     courseCard: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        marginBottom: 20,
+        // Shadow cao cấp
+        shadowColor: "#64748B",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 4,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: "rgba(226, 232, 240, 0.6)", // Slate-200
     },
     cardHeader: {
-        backgroundColor: '#30c4b0',
+        flexDirection: "row",
+        alignItems: "flex-start",
         padding: 16,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: "#F1F5F9",
     },
     codeBadge: {
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 8,
+        backgroundColor: "#DCFCE7", // Green-100
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: 8,
         marginRight: 12,
+        borderWidth: 1,
+        borderColor: "#86EFAC", // Green-300
     },
     codeText: {
-        color: 'white',
-        fontWeight: '600',
         fontSize: 12,
+        fontWeight: "800",
+        color: "#15803D", // Green-700
     },
     courseTitle: {
         flex: 1,
         fontSize: 16,
-        fontWeight: '600',
-        color: '#ffffff',
+        fontWeight: "700",
+        color: "#1E293B", // Slate-800
+        lineHeight: 22,
     },
     cardBody: {
         padding: 16,
     },
     courseInfoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         marginBottom: 8,
     },
     courseInfoText: {
-        marginLeft: 8,
         fontSize: 14,
-        color: '#64748B',
+        color: "#64748B", // Slate-500
+        marginLeft: 10,
+        flex: 1,
     },
     descriptionBox: {
         marginTop: 12,
         padding: 12,
-        backgroundColor: '#F8FAFC',
-        borderRadius: 8,
+        backgroundColor: "#F8FAFC", // Slate-50
+        borderRadius: 12,
     },
     descriptionTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1C1C1E',
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#475569",
         marginBottom: 4,
+        textTransform: "uppercase",
     },
     descriptionText: {
-        fontSize: 14,
-        color: '#64748B',
-        lineHeight: 20,
+        fontSize: 13,
+        color: "#64748B",
+        lineHeight: 18,
+        fontStyle: 'italic',
     },
     cardFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
         marginTop: 16,
-        paddingTop: 16,
+        paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F2F2F7',
+        borderTopColor: "#F1F5F9",
     },
     viewDetailText: {
-        color: '#007AFF',
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: "700",
+        color: "#007AFF",
+        marginRight: 4,
     },
-})
+});
 
-export default styles
+export default styles;

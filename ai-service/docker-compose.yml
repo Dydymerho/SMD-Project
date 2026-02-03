@@ -1,43 +1,60 @@
+version: '3.8'
+
 services:
-  # 1. Backend API
-  ai-service:
-    image: dinhtrng/smd-ai:latest
+  api:
+    build: .
+    container_name: smd_api
+    working_dir: /code/src
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
+    volumes:
+      - .:/code
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis_db:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3 # <--- Đã đổi lại thành llama3
+      - OLLAMA_MODEL=llama3
+      - PYTHONPATH=/code/src
     depends_on:
-      - redis
+      - redis_db
       - ollama
+    restart: on-failure
 
-  # 2. Worker
   worker:
-    image: dinhtrng/smd-ai:latest
+    build: .
+    container_name: smd_worker
+    working_dir: /code/src
     command: celery -A app.worker.celery_app worker --loglevel=info -P solo
+    volumes:
+      - .:/code
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis_db:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3 # <--- Đã đổi lại thành llama3
+      - OLLAMA_MODEL=llama3
+      - PYTHONPATH=/code/src
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
     depends_on:
-      - redis
+      - redis_db
       - ollama
+    restart: on-failure
 
-  # 3. Redis
-  redis:
+  redis_db:  
     image: redis:alpine
+    container_name: smd_redis_custom
     ports:
-      - "6380:6379"
+      - "6380:6379"  
+    restart: always
 
-  # 4. Ollama
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama_container
+    container_name: smd_ollama
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
     volumes:
       - ollama_data:/root/.ollama
+    restart: always
     deploy:
       resources:
         reservations:
