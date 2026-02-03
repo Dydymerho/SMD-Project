@@ -1,4 +1,10 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
+
+declare module "axios" {
+  interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
 
 const axiosClient = axios.create({
   baseURL: "http://localhost:9090/api",
@@ -18,7 +24,8 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const skipAuthRedirect = (error.config as any)?.skipAuthRedirect;
+    if (error.response?.status === 401 && !skipAuthRedirect) {
       localStorage.removeItem("token");
       window.location.href = "/login";
     }

@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
+import PrerequisiteModal from '../../components/PrerequisiteModal';
 import * as api from '../../services/api';
 
 interface Program {
@@ -28,6 +29,13 @@ interface PLO {
   category: string;
 }
 
+interface Course {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  credits?: number;
+}
+
 interface CourseRelation {
   courseId: number;
   courseCode: string;
@@ -46,9 +54,19 @@ const ProgramManagementPage: React.FC = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [plos, setPlos] = useState<PLO[]>([]);
   const [courseRelations, setCourseRelations] = useState<CourseRelation[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
   const [selectedRelationType, setSelectedRelationType] = useState<'ALL' | 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPrerequisiteModal, setShowPrerequisiteModal] = useState(false);
+  const [selectedCourseForPrereq, setSelectedCourseForPrereq] = useState<Course | null>(null);
+  const [ploSearchTerm, setPloSearchTerm] = useState('');
+  const [showCreatePLOModal, setShowCreatePLOModal] = useState(false);
+  const [editingPLOId, setEditingPLOId] = useState<number | null>(null);
+  const [newPLO, setNewPLO] = useState({ ploCode: '', ploDescription: '', programId: '', category: 'Knowledge' });
+  const [submittingPLO, setSubmittingPLO] = useState(false);
+  const [createPLOError, setCreatePLOError] = useState<string | null>(null);
+  const [deletingPLOId, setDeletingPLOId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -73,11 +91,12 @@ const ProgramManagementPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [programsData, plosData, allSyllabuses, unreadCount] = await Promise.all([
+      const [programsData, plosData, allSyllabuses, unreadCount, coursesData] = await Promise.all([
         api.getPrograms(),
         api.getPLOs(),
         api.getAllSyllabuses(),
-        api.getUnreadNotificationsCount()
+        api.getUnreadNotificationsCount(),
+        api.getCourses()
       ]);
 
       const syllabusCounts: { [key: number]: number } = {};
@@ -114,8 +133,16 @@ const ProgramManagementPage: React.FC = () => {
         category: 'Knowledge'
       }));
 
+      const normalizedCourses = (coursesData as any[]).map((c: any) => ({
+        courseId: c.courseId,
+        courseCode: c.courseCode,
+        courseName: c.courseName,
+        credits: c.credits
+      }));
+
       setPrograms(normalizedPrograms);
       setPlos(normalizedPLOs);
+      setCourses(normalizedCourses);
       setNotificationCount(unreadCount);
     } catch (err) {
       console.error('Error loading program data:', err);
@@ -279,6 +306,15 @@ const ProgramManagementPage: React.FC = () => {
               {activeTab === 'programs' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <PrerequisiteModal
+                isOpen={showPrerequisiteModal}
+                courseId={selectedCourseForPrereq?.courseId}
+                courseName={selectedCourseForPrereq?.courseName}
+                onClose={() => {
+                  setShowPrerequisiteModal(false);
+                  setSelectedCourseForPrereq(null);
+                }}
+              />
                     <h3 style={{ margin: 0, color: '#333' }}>Danh sách Chương trình</h3>
                     <button style={{
                       padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
@@ -445,7 +481,10 @@ const ProgramManagementPage: React.FC = () => {
               {activeTab === 'prerequisites' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, color: '#008f81', fontSize: '20px', fontWeight: 600 }}>Quan hệ & Điều kiện Môn học</h3>
+                    <div>
+                      <h3 style={{ margin: '0 0 8px 0', color: '#008f81', fontSize: '20px', fontWeight: 600 }}>Quản lý Tiên quyết Môn học</h3>
+                      <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Quản lý các quy tắc tiên quyết, song hành và tương đương giữa các môn học</p>
+                    </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         type="text"
@@ -457,115 +496,110 @@ const ProgramManagementPage: React.FC = () => {
                           fontSize: '14px', width: '250px', outline: 'none'
                         }}
                       />
-                      <select 
-                        value={selectedRelationType}
-                        onChange={(e) => setSelectedRelationType(e.target.value as any)}
-                        style={{
-                          padding: '10px 16px', border: '1px solid #ddd', borderRadius: '8px',
-                          fontSize: '14px', cursor: 'pointer', background: 'white'
-                        }}
-                      >
-                        <option value="ALL">Tất cả quan hệ</option>
-                        <option value="PREREQUISITE">Chỉ môn tiên quyết</option>
-                        <option value="COREQUISITE">Chỉ môn song hành</option>
-                        <option value="EQUIVALENT">Chỉ môn tương đương</option>
-                      </select>
                     </div>
                   </div>
 
-                  {courseRelations.length === 0 ? (
-                    <div style={{
-                      background: 'white', padding: '60px 24px', borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', color: '#999'
-                    }}>
-                      <GitBranch size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                      <h3>Chưa có quan hệ môn học</h3>
-                      <p>Hệ thống chưa thiết lập quan hệ giữa các môn học</p>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {courseRelations
-                        .filter(course => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return course.courseCode.toLowerCase().includes(searchLower) ||
-                                 course.courseName.toLowerCase().includes(searchLower) ||
-                                 course.relations.some(r => 
-                                   r.targetCourseCode.toLowerCase().includes(searchLower) ||
-                                   r.targetCourseName.toLowerCase().includes(searchLower)
-                                 );
-                        })
-                        .map(course => {
-                        const filteredRelations = selectedRelationType === 'ALL' 
-                          ? course.relations 
-                          : course.relations.filter(r => r.relationType === selectedRelationType);
-
-                        if (filteredRelations.length === 0) return null;
-
-                        return (
-                          <div key={course.courseId} style={{
-                            background: 'white', borderRadius: '12px', 
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
+                  {/* Course List with Actions */}
+                  <div style={{
+                    background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã Môn học</th>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên Môn học</th>
+                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tín chỉ</th>
+                          <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courses
+                          .filter(course => {
+                            const searchLower = searchTerm.toLowerCase();
+                            return course.courseCode.toLowerCase().includes(searchLower) ||
+                                   course.courseName.toLowerCase().includes(searchLower);
+                          })
+                          .map((course, index) => (
+                          <tr key={course.courseId} style={{
+                            borderBottom: '1px solid #e0e0e0',
+                            background: index % 2 === 0 ? '#fafafa' : 'white'
                           }}>
-                            <div style={{
-                              padding: '20px', background: '#008f81',
-                              color: 'white', display: 'flex', alignItems: 'center', gap: '12px'
-                            }}>
-                              <BookOpen size={24} />
-                              <div>
-                                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600 }}>
-                                  {course.courseCode}
-                                </h4>
-                                <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>
-                                  {course.courseName} • {course.credits} tín chỉ
-                                </p>
+                            <td style={{ padding: '16px', fontWeight: 600, color: '#2196f3' }}>{course.courseCode}</td>
+                            <td style={{ padding: '16px', color: '#333' }}>{course.courseName}</td>
+                            <td style={{ padding: '16px', color: '#666' }}>{course.credits || 0}</td>
+                            <td style={{ padding: '16px', textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCourseForPrereq(course);
+                                    setShowPrerequisiteModal(true);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px', background: '#008f81', color: 'white', border: 'none',
+                                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                                  }}
+                                >
+                                  Xem chi tiết
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Chức năng thêm cần API hỗ trợ"
+                                  style={{
+                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
+                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
+                                  }}
+                                >
+                                  <Plus size={14} style={{ display: 'inline' }} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Chức năng sửa cần API hỗ trợ"
+                                  style={{
+                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
+                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
+                                  }}
+                                >
+                                  <Edit size={14} style={{ display: 'inline' }} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Chức năng xóa cần API hỗ trợ"
+                                  style={{
+                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
+                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
+                                  }}
+                                >
+                                  <Trash2 size={14} style={{ display: 'inline' }} />
+                                </button>
                               </div>
-                            </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                            <div style={{ padding: '20px' }}>
-                              <div style={{ display: 'grid', gap: '12px' }}>
-                                {filteredRelations.map(relation => {
-                                  const typeColors = {
-                                    PREREQUISITE: { bg: '#e8f5e9', text: '#2e7d32', label: 'Môn tiên quyết' },
-                                    COREQUISITE: { bg: '#fff3e0', text: '#f57c00', label: 'Môn song hành' },
-                                    EQUIVALENT: { bg: '#e3f2fd', text: '#1976d2', label: 'Môn tương đương' }
-                                  };
-                                  const typeStyle = typeColors[relation.relationType];
-
-                                  return (
-                                    <div key={relation.relationId} style={{
-                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                      padding: '16px', background: '#f9f9f9', borderRadius: '8px',
-                                      border: '1px solid #e0e0e0'
-                                    }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                                        <GitBranch size={20} color="#666" />
-                                        <div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                            <span style={{ fontWeight: 600, color: '#333', fontSize: '14px' }}>
-                                              {relation.targetCourseCode}
-                                            </span>
-                                            <span style={{
-                                              padding: '2px 8px', borderRadius: '4px', fontSize: '11px',
-                                              background: typeStyle.bg, color: typeStyle.text, fontWeight: 600
-                                            }}>
-                                              {typeStyle.label}
-                                            </span>
-                                          </div>
-                                          <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>
-                                            {relation.targetCourseName}
-                                            {relation.credits && ` • ${relation.credits} tín chỉ`}
-                                            {relation.deptName && ` • ${relation.deptName}`}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {courses.filter(course => {
+                    const searchLower = searchTerm.toLowerCase();
+                    return course.courseCode.toLowerCase().includes(searchLower) ||
+                           course.courseName.toLowerCase().includes(searchLower);
+                  }).length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '60px 20px',
+                      color: '#999',
+                      background: 'white',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      marginTop: '12px'
+                    }}>
+                      <BookOpen size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                      <h3>{searchTerm ? 'Không tìm thấy môn học' : 'Chưa có môn học nào'}</h3>
+                      <p>{searchTerm ? 'Hãy thử với từ khóa khác' : 'Hệ thống chưa có môn học'}</p>
                     </div>
                   )}
                 </div>
@@ -574,6 +608,15 @@ const ProgramManagementPage: React.FC = () => {
           )}
         </div>
       </main>
+      <PrerequisiteModal
+        isOpen={showPrerequisiteModal}
+        courseId={selectedCourseForPrereq?.courseId}
+        courseName={selectedCourseForPrereq?.courseName}
+        onClose={() => {
+          setShowPrerequisiteModal(false);
+          setSelectedCourseForPrereq(null);
+        }}
+      />
     </div>
   );
 };

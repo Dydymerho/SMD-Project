@@ -436,8 +436,52 @@ export const downloadSyllabusPDF = async (syllabusId: number): Promise<Blob> => 
 };
 
 // Admin API
+export interface BulkUserImportError {
+  rowNumber: number;
+  fullName?: string;
+  email?: string;
+  roleCode?: string;
+  departmentCode?: string;
+  errorMessage: string;
+}
+
+export interface BulkUserImportResponse {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  message?: string;
+  errors?: BulkUserImportError[];
+}
+
 export const getUsers = async () => {
   const response = await axiosClient.get("/users");
+  return response.data;
+};
+
+export const downloadBulkUserImportTemplate = async (): Promise<Blob> => {
+  const token = localStorage.getItem('token');
+  const config = {
+    responseType: 'blob' as const,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    skipAuthRedirect: true
+  };
+  const response = await (axiosClient.get as any)("/users/bulk-import/template", config);
+  return response.data;
+};
+
+export const bulkImportUsers = async (file: File): Promise<BulkUserImportResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = localStorage.getItem('token');
+
+  const config = {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    skipAuthRedirect: true
+  };
+  const response = await (axiosClient.post as any)("/users/bulk-import", formData, config);
   return response.data;
 };
 
