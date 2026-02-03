@@ -2,72 +2,59 @@ version: '3.8'
 
 services:
   api:
-    build: .                   
+    build: .
     container_name: smd_api
     working_dir: /code/src
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    volumes:
-      - .:/code                   
-
-  ai-service:
-    build: .
     ports:
       - "8000:8000"
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - PYTHONPATH=/code/src       
-
-      - OLLAMA_MODEL=llama3
-    depends_on:
-      - redis
-      - ollama
-    restart: on-failure
-
-  worker:
-    build: .                   
-    container_name: smd_worker
-    working_dir: /code/src
-    command: celery -A app.worker.celery_app worker --loglevel=info
     volumes:
       - .:/code
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - PYTHONPATH=/code/src
-      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
-
-  # 2. Worker (Chế độ Build từ Code)
-  worker:
-    build: .
-    command: celery -A app.worker.celery_app worker --loglevel=info -P solo
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis_db:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3
+      - PYTHONPATH=/code/src
     depends_on:
-      - redis
+      - redis_db
       - ollama
     restart: on-failure
 
-  redis:
+  worker:
+    build: .
+    container_name: smd_worker
+    working_dir: /code/src
+    command: celery -A app.worker.celery_app worker --loglevel=info -P solo
+    volumes:
+      - .:/code
+    environment:
+      - CELERY_BROKER_URL=redis://redis_db:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3
+      - PYTHONPATH=/code/src
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+    depends_on:
+      - redis_db
+      - ollama
+    restart: on-failure
+
+  redis_db:  
     image: redis:alpine
-    container_name: smd_redis
+    container_name: smd_redis_custom
     ports:
-      - "6379:6379"
+      - "6380:6379"  
     restart: always
 
-
-  # 4. Ollama (Chạy nội bộ trong Docker)
   ollama:
     image: ollama/ollama:latest
     container_name: smd_ollama
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
     volumes:
       - ollama_data:/root/.ollama
     restart: always
-
     deploy:
       resources:
         reservations:
@@ -77,6 +64,4 @@ services:
               capabilities: [gpu]
 
 volumes:
-  ollama_data:
-
   ollama_data:
