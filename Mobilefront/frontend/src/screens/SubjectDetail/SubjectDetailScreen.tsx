@@ -17,7 +17,7 @@ import { CourseInteractionApi } from "../../../../backend/api/CourseInteractionA
 import { CourseRelationApi } from "../../../../backend/api/CourseRelationshipApi";
 import { CourseNode } from "../../../../backend/types/CourseRelationShip";
 import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
-import { SyllabusApi } from "../../../../backend/api/SyllabusApi";
+import { SyllabusApi } from "../../../../backend/api/SyllabusApi"; // Giữ lại API Download
 
 /* --- TYPES --- */
 type RouteParams = {
@@ -52,6 +52,7 @@ const InfoRow = ({ label, value, icon }: { label: string; value?: string | numbe
     </View>
 );
 
+// Component Nút Theo Dõi
 const FollowButton = ({ isFollowed, isLoading, onPress, style }: any) => (
     <TouchableOpacity
         onPress={onPress}
@@ -76,6 +77,35 @@ const FollowButton = ({ isFollowed, isLoading, onPress, style }: any) => (
     </TouchableOpacity>
 );
 
+// Component Nút AI Summary (Thiết kế mới)
+const AiSummaryButton = ({ isLoading, onPress, style }: any) => (
+    <TouchableOpacity
+        onPress={onPress}
+        disabled={isLoading}
+        style={[
+            styles.followBtn,
+            {
+                backgroundColor: 'rgba(139, 92, 246, 0.2)', // Màu tím nhạt
+                borderColor: 'rgba(167, 139, 250, 0.5)',
+                borderWidth: 1
+            },
+            isLoading && { opacity: 0.7 },
+            style
+        ]}
+    >
+        {isLoading ? (
+            <ActivityIndicator size="small" color="#A78BFA" />
+        ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="robot-outline" size={16} color="#A78BFA" style={{ marginRight: 6 }} />
+                <Text style={[styles.followBtnText, { color: '#A78BFA' }]}>
+                    AI Tóm tắt
+                </Text>
+            </View>
+        )}
+    </TouchableOpacity>
+);
+
 /* --- MAIN SCREEN --- */
 export default function SubjectDetailScreen() {
     const route = useRoute<RouteProp<RouteParams, "SubjectDetail">>();
@@ -89,7 +119,12 @@ export default function SubjectDetailScreen() {
     // State Logic
     const [isFollowed, setIsFollowed] = useState(false);
     const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false); // Giữ lại state download
+
+    // State AI Summary
+    const [aiModalVisible, setAiModalVisible] = useState(false);
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [aiContent, setAiContent] = useState("");
 
     // State Diagram
     const [showDiagram, setShowDiagram] = useState(false);
@@ -103,62 +138,6 @@ export default function SubjectDetailScreen() {
     const [customReason, setCustomReason] = useState("");
     const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
     const [isSendingReport, setIsSendingReport] = useState(false);
-
-    // --- STATE AI SUMMARY (MỚI) ---
-    const [aiModalVisible, setAiModalVisible] = useState(false);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-    const [aiContent, setAiContent] = useState<string>("");
-
-    // --- LOGIC TẢI FILE ---
-    const handleDownloadSyllabus = async () => {
-        if (!data || isDownloading) return;
-        const syllabusId = (data.info as any).syllabusId || data.info.id;
-        if (!syllabusId) {
-            Alert.alert("Thông báo", "Không tìm thấy thông tin giáo trình để tải.");
-            return;
-        }
-        try {
-            setIsDownloading(true);
-            const path = await SyllabusApi.downloadPdf(syllabusId);
-            Alert.alert("Thành công", `File đã được lưu tại thư mục Tải về:\n${path}`);
-        } catch (error: any) {
-            Alert.alert("Lỗi", error.message || "Tải file thất bại");
-        } finally {
-            setIsDownloading(false);
-        }
-    };
-
-    // --- LOGIC AI SUMMARY (MỚI) ---
-    const handleAISummary = async () => {
-        setAiModalVisible(true);
-
-        // Nếu đã có nội dung rồi thì không generate lại để tiết kiệm
-        if (aiContent) return;
-
-        setIsGeneratingAI(true);
-        try {
-            // --- GIẢ LẬP GỌI API AI ---
-            // Tại đây bạn sẽ thay bằng API thực tế: await AiApi.getSummary(code);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Delay giả 2s
-
-            // Tạo nội dung giả lập dựa trên dữ liệu hiện có
-            const summaryText = `🤖 **Tóm tắt AI cho môn ${data?.info.courseName} (${data?.info.courseCode})**\n\n` +
-                `✨ **Mục tiêu chính:**\n${data?.info.description ? data.info.description.substring(0, 150) + "..." : "Cung cấp kiến thức nền tảng về môn học."}\n\n` +
-                `🔑 **Điểm trọng tâm:**\n` +
-                `- Nắm vững các khái niệm cơ bản.\n` +
-                `- Hoàn thành ${data?.plans.length || 0} tuần học theo kế hoạch.\n` +
-                `- Chú trọng vào bài thi cuối kỳ (thường chiếm trọng số cao).\n\n` +
-                `💡 **Lời khuyên học tập:**\n` +
-                `- Nên tham khảo kỹ tài liệu "${data?.materials?.[0]?.title || 'Giáo trình chính'}".\n` +
-                `- Đừng bỏ lỡ các bài tập thực hành tuần quan trọng.`;
-
-            setAiContent(summaryText);
-        } catch (error) {
-            setAiContent("Xin lỗi, không thể tạo tóm tắt lúc này. Vui lòng thử lại sau.");
-        } finally {
-            setIsGeneratingAI(false);
-        }
-    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -186,12 +165,11 @@ export default function SubjectDetailScreen() {
                     const rawPre: DiagramNode[] = [];
                     const rawCo: DiagramNode[] = [];
                     const rawEq: DiagramNode[] = [];
-                    const tempLeft: DiagramNode[] = []; // Fix: Khai báo biến tempLeft
+                    const tempLeft: DiagramNode[] = [];
                     const seenLeft = new Set<string>();
                     const seenRight = new Set<string>();
 
                     const traverseTree = (parentNode: CourseNode) => {
-                        // Logic lấy node gốc
                         const pKey = `${parentNode.courseCode}`;
                         if (!seenLeft.has(pKey)) {
                             seenLeft.add(pKey);
@@ -238,7 +216,6 @@ export default function SubjectDetailScreen() {
                     setMappings(finalLinks);
                 }
 
-                // Check Follow
                 if (courseId) {
                     try {
                         const fList = await CourseInteractionApi.getFollowedCourses();
@@ -249,6 +226,49 @@ export default function SubjectDetailScreen() {
         };
         fetchData();
     }, [code]);
+
+    // --- LOGIC AI SUMMARY ---
+    const handleAiSummary = async () => {
+        setAiModalVisible(true);
+        if (aiContent) return;
+
+        setIsGeneratingAI(true);
+        try {
+            // --- SỬA LỖI TẠI ĐÂY: Dùng arrow function cho setTimeout ---
+            await new Promise(resolve => setTimeout(() => resolve(true), 1500));
+
+            const mockSummary = `🤖 **Tóm tắt môn học: ${data?.info.courseName}**\n\n` +
+                `📌 **Mục tiêu:** Môn học cung cấp kiến thức nền tảng về ${data?.info.description?.slice(0, 50)}...\n\n` +
+                `💡 **Lời khuyên:**\n` +
+                `- Tập trung vào các bài lab thực hành.\n` +
+                `- Ôn kỹ các môn tiên quyết để không bị hổng kiến thức.\n` +
+                `- Tham khảo tài liệu số 1 trong danh sách để nắm vững lý thuyết.`;
+            setAiContent(mockSummary);
+        } catch (e) {
+            setAiContent("Không thể tạo tóm tắt lúc này.");
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    };
+
+    // --- LOGIC DOWNLOAD PDF (ĐÃ GIỮ LẠI) ---
+    const handleDownloadSyllabus = async () => {
+        if (!data || isDownloading) return;
+        const syllabusId = (data.info as any).syllabusId || data.info.id;
+        if (!syllabusId) {
+            Alert.alert("Thông báo", "Không tìm thấy thông tin giáo trình để tải.");
+            return;
+        }
+        try {
+            setIsDownloading(true);
+            const path = await SyllabusApi.downloadPdf(syllabusId);
+            Alert.alert("Thành công", `File đã được lưu tại thư mục Tải về:\n${path}`);
+        } catch (error: any) {
+            Alert.alert("Lỗi", error.message || "Tải file thất bại");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     // --- HELPERS ---
     const updatePosition = (key: string, y: number, height: number) => setPositions(prev => ({ ...prev, [key]: y + height / 2 }));
@@ -320,28 +340,24 @@ export default function SubjectDetailScreen() {
                         <Icon name="book-education-outline" size={60} color="rgba(255,255,255,0.1)" />
                     </View>
 
-                    {/* HÀNG NÚT BẤM (ĐÃ THÊM AI SUMMARY) */}
+                    {/* HÀNG NÚT BẤM (Follow + AI Summary + Download) */}
                     <View style={{ flexDirection: 'row', marginTop: 15, gap: 8 }}>
                         {/* 1. Nút Theo dõi */}
-                        <FollowButton isFollowed={isFollowed} isLoading={isUpdatingFollow} onPress={handleFollowToggle} style={{ flex: 1.2 }} />
+                        <FollowButton
+                            isFollowed={isFollowed}
+                            isLoading={isUpdatingFollow}
+                            onPress={handleFollowToggle}
+                            style={{ flex: 1.2 }}
+                        />
 
-                        {/* 2. Nút AI Summary (MỚI) */}
-                        <TouchableOpacity
-                            onPress={handleAISummary}
-                            style={{
-                                backgroundColor: 'rgba(139, 92, 246, 0.2)', // Màu tím nhạt
-                                borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12,
-                                borderWidth: 1, borderColor: 'rgba(167, 139, 250, 0.5)',
-                                flex: 1, alignItems: 'center', justifyContent: 'center'
-                            }}
-                        >
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Icon name="robot-outline" size={18} color="#A78BFA" style={{ marginRight: 4 }} />
-                                <Text style={{ color: '#A78BFA', fontWeight: '600', fontSize: 13 }}>AI Tóm tắt</Text>
-                            </View>
-                        </TouchableOpacity>
+                        {/* 2. Nút AI Summary */}
+                        <AiSummaryButton
+                            isLoading={isGeneratingAI && !aiModalVisible}
+                            onPress={handleAiSummary}
+                            style={{ flex: 1 }}
+                        />
 
-                        {/* 3. Nút Download PDF */}
+                        {/* 3. Nút Download PDF (GIỮ LẠI) */}
                         <TouchableOpacity
                             onPress={handleDownloadSyllabus}
                             disabled={isDownloading}
@@ -479,7 +495,7 @@ export default function SubjectDetailScreen() {
                 </KeyboardAvoidingView>
             </Modal>
 
-            {/* MODAL AI SUMMARY (MỚI) */}
+            {/* MODAL AI SUMMARY */}
             <Modal transparent visible={aiModalVisible} onRequestClose={() => setAiModalVisible(false)} animationType="slide">
                 <View style={[styles.modalOverlay, { justifyContent: 'flex-end', margin: 0 }]}>
                     <View style={[styles.modalView, { width: '100%', borderTopLeftRadius: 20, borderTopRightRadius: 20, borderRadius: 0, paddingBottom: 40, height: '60%' }]}>

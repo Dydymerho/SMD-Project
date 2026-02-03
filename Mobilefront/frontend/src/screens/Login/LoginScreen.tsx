@@ -103,7 +103,7 @@ export default function LoginScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="nhap@email.com"
+              placeholder="Tải khoản"
               placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
@@ -130,7 +130,7 @@ export default function LoginScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder="Mật khẩu"
               placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
