@@ -41,13 +41,19 @@ def process_ocr_task(self, file_content, filename):
         if os.path.exists(path): os.remove(path)
 
 @celery_app.task(name="app.worker.task_summarize_text", bind=True)
-def task_summarize_text(self, text):
+def task_summarize_text(self, syllabus_json):
     try:
-        if not text or len(text) < 10: 
-            return {"status": "Failed", "error": "Văn bản quá ngắn hoặc rỗng"}
+        if not syllabus_json: 
+            return {"status": "Failed", "error": "Dữ liệu rỗng"}
+        
+        self.update_state(state='PROGRESS', meta={'message': 'Đang đọc cấu trúc JSON...'})
         
         llm = LLMService()
-        summary = asyncio.run(llm.generate_summary(text[:15000])) 
+        import asyncio
+        
+        # Gọi hàm mới trong LLM Service
+        summary = asyncio.run(llm.generate_summary_from_json(syllabus_json)) 
+        
         return {"status": "Success", "summary": summary}
     except Exception as e:
         return {"status": "Failed", "error": str(e)}
@@ -116,20 +122,25 @@ def task_check_clo_plo(self, clo_bytes, clo_filename, plo_bytes, plo_filename):
 
 
 @celery_app.task(name="app.worker.task_extract_syllabus_json", bind=True)
-def task_extract_syllabus_json(self, syllabus_data):
+def task_extract_syllabus_json(self, file_content, filename):
+    path = save_temp_file(file_content, filename, self.request.id)
     try:
-        if not syllabus_data: 
-            return {"status": "Failed", "error": "Dữ liệu rỗng"}
+        self.update_state(state='PROGRESS', meta={'message': 'Đang OCR tài liệu...'})
+        text_content = ocr_mixed_file(path)
         
-        self.update_state(state='PROGRESS', meta={'message': 'AI đang phân tích cấu trúc JSON...'})
-        
+        if not text_content or len(text_content.strip()) < 10:
+            return {"status": "Failed", "error": "Không đọc được nội dung file"}
+
+        self.update_state(state='PROGRESS', meta={'message': 'AI đang trích xuất thông tin...'})
         llm = LLMService()
         import asyncio
-        data = asyncio.run(llm.extract_syllabus_info(syllabus_data)) 
+        data = asyncio.run(llm.extract_syllabus_info(text_content)) 
         
         return {"status": "Success", "data": data}
     except Exception as e:
-        return {"status": "Failed", "error": str(e)}  
+        return {"status": "Failed", "error": str(e)}
+    finally:
+        if os.path.exists(path): os.remove(path)  
 
 @celery_app.task(name="app.worker.task_compare_json_syllabus", bind=True)
 def task_compare_json_syllabus(self, old_json, new_json):
