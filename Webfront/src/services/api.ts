@@ -849,6 +849,21 @@ export const getPLOs = async () => {
   }
 };
 
+export const createPLO = async (data: { ploCode: string; ploDescription: string; programId: number }) => {
+  const response = await axiosClient.post("/plos", data);
+  return response.data;
+};
+
+export const updatePLO = async (ploId: number, data: { ploCode: string; ploDescription: string; programId: number }) => {
+  const response = await axiosClient.put(`/plos/${ploId}`, data);
+  return response.data;
+};
+
+export const deletePLO = async (ploId: number) => {
+  const response = await axiosClient.delete(`/plos/${ploId}`);
+  return response.data;
+};
+
 export const approveSyllabusAA = async (syllabusId: number, comment: string) => {
   const response = await axiosClient.post(`/syllabuses/${syllabusId}/aa-approve`, {
     syllabusId,

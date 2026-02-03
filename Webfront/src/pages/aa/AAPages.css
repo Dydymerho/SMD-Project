@@ -4,7 +4,7 @@
 
 .plo-mapping-section {
   background: #f0f7ff;
-  border: 1px solid #2196f3;
+  border: 1px solid #008f81;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -47,6 +47,19 @@
   border-radius: 12px;
   padding: 20px;
   transition: all 0.2s ease;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .program-card:hover {

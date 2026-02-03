@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, CheckCircle, Settings, Search, Bell, User, 
-  Plus, Edit, Trash2, Award, BookOpen, GitBranch, AlertTriangle
+  Plus, Edit, Trash2, Award, BookOpen, GitBranch, AlertTriangle, X, Check, Loader
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './AAPages.css';
@@ -63,7 +63,7 @@ const ProgramManagementPage: React.FC = () => {
   const [ploSearchTerm, setPloSearchTerm] = useState('');
   const [showCreatePLOModal, setShowCreatePLOModal] = useState(false);
   const [editingPLOId, setEditingPLOId] = useState<number | null>(null);
-  const [newPLO, setNewPLO] = useState({ ploCode: '', ploDescription: '', programId: '', category: 'Knowledge' });
+  const [newPLO, setNewPLO] = useState({ ploCode: '', ploDescription: '', programId: '' });
   const [submittingPLO, setSubmittingPLO] = useState(false);
   const [createPLOError, setCreatePLOError] = useState<string | null>(null);
   const [deletingPLOId, setDeletingPLOId] = useState<number | null>(null);
@@ -150,6 +150,108 @@ const ProgramManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreatePLO = async () => {
+    if (!newPLO.ploCode.trim() || !newPLO.ploDescription.trim() || !newPLO.programId) {
+      setCreatePLOError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    setSubmittingPLO(true);
+    setCreatePLOError(null);
+
+    try {
+      const createdPLO = await api.createPLO({
+        ploCode: newPLO.ploCode,
+        ploDescription: newPLO.ploDescription,
+        programId: parseInt(newPLO.programId)
+      });
+
+      setPlos([...plos, {
+        ploId: createdPLO.ploId,
+        code: createdPLO.ploCode,
+        description: createdPLO.ploDescription,
+        programId: createdPLO.programId,
+        programCode: `PRG-${createdPLO.programId}`,
+        category: 'Knowledge'
+      }]);
+
+      setShowCreatePLOModal(false);
+      setNewPLO({ ploCode: '', ploDescription: '', programId: '' });
+    } catch (err) {
+      setCreatePLOError((err as Error).message || 'Không thể tạo PLO');
+    } finally {
+      setSubmittingPLO(false);
+    }
+  };
+
+  const handleEditPLO = async () => {
+    if (!editingPLOId || !newPLO.ploCode.trim() || !newPLO.ploDescription.trim() || !newPLO.programId) {
+      setCreatePLOError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    setSubmittingPLO(true);
+    setCreatePLOError(null);
+
+    try {
+      await api.updatePLO(editingPLOId, {
+        ploCode: newPLO.ploCode,
+        ploDescription: newPLO.ploDescription,
+        programId: parseInt(newPLO.programId)
+      });
+
+      setPlos(plos.map(p => 
+        p.ploId === editingPLOId 
+          ? {
+              ...p,
+              code: newPLO.ploCode,
+              description: newPLO.ploDescription,
+              programId: parseInt(newPLO.programId),
+              programCode: `PRG-${newPLO.programId}`
+            }
+          : p
+      ));
+
+      setShowCreatePLOModal(false);
+      setEditingPLOId(null);
+      setNewPLO({ ploCode: '', ploDescription: '', programId: '' });
+    } catch (err) {
+      setCreatePLOError((err as Error).message || 'Không thể cập nhật PLO');
+    } finally {
+      setSubmittingPLO(false);
+    }
+  };
+
+  const handleDeletePLO = async () => {
+    if (!deletingPLOId) return;
+
+    setSubmittingPLO(true);
+    setCreatePLOError(null);
+
+    try {
+      await api.deletePLO(deletingPLOId);
+      setPlos(plos.filter(p => p.ploId !== deletingPLOId));
+      setDeletingPLOId(null);
+    } catch (err) {
+      setCreatePLOError((err as Error).message || 'Không thể xóa PLO');
+    } finally {
+      setSubmittingPLO(false);
+    }
+  };
+
+  const loadPLOForEdit = (ploId: number) => {
+    const plo = plos.find(p => p.ploId === ploId);
+    if (!plo) return;
+
+    setNewPLO({
+      ploCode: plo.code,
+      ploDescription: plo.description,
+      programId: String(plo.programId)
+    });
+    setEditingPLOId(ploId);
+    setShowCreatePLOModal(true);
   };
 
   return (
@@ -267,7 +369,7 @@ const ProgramManagementPage: React.FC = () => {
                   onClick={() => setActiveTab('plos')}
                   style={{
                     padding: '10px 20px',
-                    background: activeTab === 'plos' ? '#2196f3' : 'transparent',
+                    background: activeTab === 'plos' ? '#008f81' : 'transparent',
                     color: activeTab === 'plos' ? 'white' : '#666',
                     border: 'none',
                     borderRadius: '8px 8px 0 0',
@@ -306,15 +408,6 @@ const ProgramManagementPage: React.FC = () => {
               {activeTab === 'programs' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <PrerequisiteModal
-                isOpen={showPrerequisiteModal}
-                courseId={selectedCourseForPrereq?.courseId}
-                courseName={selectedCourseForPrereq?.courseName}
-                onClose={() => {
-                  setShowPrerequisiteModal(false);
-                  setSelectedCourseForPrereq(null);
-                }}
-              />
                     <h3 style={{ margin: 0, color: '#333' }}>Danh sách Chương trình</h3>
                     <button style={{
                       padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
@@ -398,15 +491,37 @@ const ProgramManagementPage: React.FC = () => {
 
               {activeTab === 'plos' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, color: '#333' }}>PLO Standards</h3>
-                    <button style={{
-                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                    }}>
-                      <Plus size={18} />
-                      Thêm PLO
-                    </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+                    <div>
+                      <h3 style={{ margin: '0 0 8px 0', color: '#008f81', fontSize: '20px', fontWeight: 600 }}>Quản lý PLO Standards</h3>
+                      <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Định nghĩa các tiêu chuẩn kết quả học tập cấp chương trình (Program Learning Outcomes)</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm PLO..."
+                        value={ploSearchTerm}
+                        onChange={(e) => setPloSearchTerm(e.target.value)}
+                        style={{
+                          padding: '10px 16px', border: '1px solid #ddd', borderRadius: '8px',
+                          fontSize: '14px', width: '250px', outline: 'none'
+                        }}
+                      />
+                      <button 
+                        onClick={() => {
+                          setNewPLO({ ploCode: '', ploDescription: '', programId: '' });
+                          setEditingPLOId(null);
+                          setCreatePLOError(null);
+                          setShowCreatePLOModal(true);
+                        }}
+                        style={{
+                          padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
+                          borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                        <Plus size={18} />
+                        Thêm PLO
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{
@@ -418,40 +533,48 @@ const ProgramManagementPage: React.FC = () => {
                           <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã PLO</th>
                           <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mô tả</th>
                           <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Chương trình</th>
-                          <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Danh mục</th>
                           <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {plos.map((plo, index) => (
+                        {plos
+                          .filter(plo => {
+                            const searchLower = ploSearchTerm.toLowerCase();
+                            return plo.code.toLowerCase().includes(searchLower) ||
+                                   plo.description.toLowerCase().includes(searchLower) ||
+                                   plo.programCode.toLowerCase().includes(searchLower);
+                          })
+                          .map((plo, index) => (
                           <tr key={plo.ploId} style={{
                             borderBottom: '1px solid #e0e0e0',
                             background: index % 2 === 0 ? '#fafafa' : 'white'
                           }}>
-                            <td style={{ padding: '16px', fontWeight: 600, color: '#2196f3' }}>{plo.code}</td>
+                            <td style={{ padding: '16px', fontWeight: 600, color: '#008f81' }}>{plo.code}</td>
                             <td style={{ padding: '16px', color: '#333' }}>{plo.description}</td>
                             <td style={{ padding: '16px', color: '#666' }}>{plo.programCode}</td>
-                            <td style={{ padding: '16px' }}>
-                              <span style={{
-                                padding: '4px 10px', borderRadius: '12px', background: '#e3f2fd',
-                                color: '#1976d2', fontSize: '12px', fontWeight: 600
-                              }}>
-                                {plo.category}
-                              </span>
-                            </td>
                             <td style={{ padding: '16px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                <button style={{
-                                  padding: '6px 10px', background: '#2196f3', color: 'white', border: 'none',
-                                  borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
-                                }}>
+                              <div style={{ display: 'inline-flex', gap: '8px' }}>
+                                <button 
+                                  type="button"
+                                  onClick={() => loadPLOForEdit(plo.ploId)}
+                                  style={{
+                                    padding: '8px 12px', background: '#008f81', color: 'white', border: 'none',
+                                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                  }}>
                                   <Edit size={14} />
+                                  Sửa
                                 </button>
-                                <button style={{
-                                  padding: '6px 10px', background: '#f44336', color: 'white', border: 'none',
-                                  borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
-                                }}>
+                                <button 
+                                  type="button"
+                                  onClick={() => setDeletingPLOId(plo.ploId)}
+                                  style={{
+                                    padding: '8px 12px', background: '#f44336', color: 'white', border: 'none',
+                                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                  }}>
                                   <Trash2 size={14} />
+                                  Xóa
                                 </button>
                               </div>
                             </td>
@@ -461,20 +584,271 @@ const ProgramManagementPage: React.FC = () => {
                     </table>
                   </div>
 
-                  {plos.length === 0 && (
+                  {plos
+                    .filter(plo => {
+                      const searchLower = ploSearchTerm.toLowerCase();
+                      return plo.code.toLowerCase().includes(searchLower) ||
+                             plo.description.toLowerCase().includes(searchLower) ||
+                             plo.programCode.toLowerCase().includes(searchLower);
+                    }).length === 0 && (
                     <div style={{
                       textAlign: 'center',
                       padding: '60px 20px',
                       color: '#999',
                       background: 'white',
                       borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      marginTop: '12px'
                     }}>
                       <Award size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                      <h3>Chưa có PLO nào</h3>
-                      <p>Thêm PLO đầu tiên để bắt đầu</p>
+                      <h3>{ploSearchTerm ? 'Không tìm thấy PLO' : 'Chưa có PLO nào'}</h3>
+                      <p>{ploSearchTerm ? 'Hãy thử với từ khóa khác' : 'Thêm PLO đầu tiên để bắt đầu'}</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Create/Edit PLO Modal */}
+              {showCreatePLOModal && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    background: 'white',
+                    borderRadius: '12px',
+                    padding: '32px',
+                    maxWidth: '500px',
+                    width: '90%',
+                    maxHeight: '80vh',
+                    overflowY: 'auto',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                      <h2 style={{ margin: 0, color: '#333', fontSize: '20px' }}>
+                        {editingPLOId ? 'Chỉnh sửa PLO' : 'Thêm PLO mới'}
+                      </h2>
+                      <button 
+                        onClick={() => { 
+                          setShowCreatePLOModal(false); 
+                          setEditingPLOId(null);
+                          setNewPLO({ ploCode: '', ploDescription: '', programId: '' });
+                          setCreatePLOError(null);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        <X size={24} color="#999" />
+                      </button>
+                    </div>
+
+                    {createPLOError && (
+                      <div style={{
+                        background: '#ffebee',
+                        color: '#c62828',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px'
+                      }}>
+                        <AlertTriangle size={18} />
+                        {createPLOError}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: 600, fontSize: '14px' }}>
+                          Mã PLO <span style={{ color: '#f44336' }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., PLO1, PLO2"
+                          value={newPLO.ploCode}
+                          onChange={(e) => setNewPLO({ ...newPLO, ploCode: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: 600, fontSize: '14px' }}>
+                          Mô tả <span style={{ color: '#f44336' }}>*</span>
+                        </label>
+                        <textarea
+                          placeholder="Nhập mô tả chi tiết về tiêu chuẩn học tập này..."
+                          value={newPLO.ploDescription}
+                          onChange={(e) => setNewPLO({ ...newPLO, ploDescription: e.target.value })}
+                          rows={4}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: 600, fontSize: '14px' }}>
+                          Chương trình <span style={{ color: '#f44336' }}>*</span>
+                        </label>
+                        <select
+                          value={newPLO.programId}
+                          onChange={(e) => setNewPLO({ ...newPLO, programId: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value="">Chọn chương trình</option>
+                          {programs.map(prog => (
+                            <option key={prog.programId} value={prog.programId}>
+                              {prog.code} - {prog.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => { setShowCreatePLOModal(false); setEditingPLOId(null); }}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#f5f5f5',
+                          color: '#333',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={() => editingPLOId ? handleEditPLO() : handleCreatePLO()}
+                        disabled={submittingPLO}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#4caf50',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: submittingPLO ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          opacity: submittingPLO ? 0.6 : 1
+                        }}
+                      >
+                        {submittingPLO ? (
+                          <>
+                            <Loader size={16} className="spinner" />
+                            Đang lưu...
+                          </>
+                        ) : (
+                          <>
+                            <Check size={16} />
+                            {editingPLOId ? 'Cập nhật' : 'Thêm mới'}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Confirmation Modal */}
+              {deletingPLOId && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    background: 'white',
+                    borderRadius: '12px',
+                    padding: '32px',
+                    maxWidth: '400px',
+                    width: '90%',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                    textAlign: 'center'
+                  }}>
+                    <AlertTriangle size={48} color="#f44336" style={{ margin: '0 auto 16px' }} />
+                    <h2 style={{ margin: '0 0 8px 0', color: '#333' }}>Xóa PLO?</h2>
+                    <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '14px' }}>
+                      Bạn chắc chắn muốn xóa PLO này không? Hành động này không thể hoàn tác.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => setDeletingPLOId(null)}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#f5f5f5',
+                          color: '#333',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={handleDeletePLO}
+                        disabled={submittingPLO}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#f44336',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: submittingPLO ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          opacity: submittingPLO ? 0.6 : 1
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
