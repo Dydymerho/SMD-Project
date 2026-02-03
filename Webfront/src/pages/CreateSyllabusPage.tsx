@@ -12,7 +12,7 @@ import AILoadingOverlay from '../components/AILoadingOverlay';
 import { 
   getCourses, 
   getPrograms, 
-  createSyllabus, uploadPdfForOCR, getAITaskStatus
+  createSyllabus
 } from '../services/api';
 import axiosClient from '../api/axiosClient';
 
@@ -230,7 +230,7 @@ const CreateSyllabusPage: React.FC = () => {
     }
   };
 
-// AI Process PDF - Updated version
+// AI Process PDF - Extract Syllabus Information
 const handleAIProcess = async () => {
   if (!pdfFile) {
     error('Vui lòng chọn file PDF trước');
@@ -243,32 +243,43 @@ const handleAIProcess = async () => {
   info('Đang upload file PDF lên AI service...');
   
   try {
-    // Step 1: Upload PDF to AI service
-    const { task_id } = await uploadPdfForOCR(pdfFile);
-    console.log('Task ID:', task_id);
-    info(`Đã tạo task AI: ${task_id}`);
+    // Step 1: Upload PDF to AI service for extraction
+    const formData = new FormData();
+    formData.append('file', pdfFile);
     
-    // Step 2: Poll for result
+    const uploadResponse = await axiosClient.post('/ai/extract-syllabus', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    const taskId = uploadResponse.data.taskId || uploadResponse.data.aiTaskId;
+    console.log('AI Task ID:', taskId);
+    info(`Đã tạo task AI: ${taskId}`);
+    
+    // Step 2: Poll for result with exponential backoff
     let attempts = 0;
-    const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    const maxAttempts = 60; // Up to 2 minutes
     
     const pollResult = async (): Promise<any> => {
       attempts++;
       
       if (attempts > maxAttempts) {
-        throw new Error('Timeout: AI xử lý quá lâu');
+        throw new Error('Timeout: AI xử lý quá lâu (>2 phút)');
       }
       
-      const result = await getAITaskStatus(task_id);
-      console.log('Poll attempt', attempts, ':', result);
+      const statusResponse = await axiosClient.get(`/ai/tasks/${taskId}`);
+      console.log(`Poll attempt ${attempts}:`, statusResponse.data);
+      
+      const result = statusResponse.data;
       
       // Check task status
-      if (result.status === 'completed') {
+      if (result.status === 'COMPLETED' || result.status === 'completed') {
         return result;
-      } else if (result.status === 'failed') {
-        throw new Error(result.error || 'AI xử lý thất bại');
+      } else if (result.status === 'FAILED' || result.status === 'failed') {
+        throw new Error(result.error || result.message || 'AI xử lý thất bại');
       } else {
-        // Still processing, wait and retry
+        // Still processing
         info(`AI đang xử lý... (${attempts}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         return pollResult();
@@ -276,11 +287,77 @@ const handleAIProcess = async () => {
     };
     
     const finalResult = await pollResult();
+    console.log('AI Extraction Result:', finalResult);
     
-    // Display result in textbox
-    setAiResult(JSON.stringify(finalResult, null, 2));
-    setShowAIResult(true);
-    success('✅ AI đã xử lý file PDF thành công!');
+    // Step 3: Parse result and auto-fill form
+    if (finalResult.data && typeof finalResult.data === 'object') {
+      const extractedData = finalResult.data;
+      
+      // Auto-fill basic info
+      if (extractedData.course || extractedData.courseName) {
+        info('Tìm thấy thông tin môn học');
+      }
+      
+      if (extractedData.academicYear) {
+        setAcademicYear(extractedData.academicYear);
+        success('✅ Điền năm học');
+      }
+      
+      if (extractedData.semester) {
+        setSemester(extractedData.semester);
+      }
+      
+      // Auto-fill CLOs
+      if (Array.isArray(extractedData.clos) && extractedData.clos.length > 0) {
+        const newClos = extractedData.clos.map((clo: any, index: number) => ({
+          id: String(index + 1),
+          code: clo.code || `CLO${index + 1}`,
+          description: clo.description || '',
+          bloomLevel: clo.bloomLevel || 'Understand'
+        }));
+        setClos(newClos);
+        success(`✅ Điền ${newClos.length} CLOs`);
+      }
+      
+      // Auto-fill Assessments
+      if (Array.isArray(extractedData.assessments) && extractedData.assessments.length > 0) {
+        const newAssessments = extractedData.assessments.map((assessment: any) => ({
+          name: assessment.name || '',
+          weight: assessment.weight || assessment.weightPercent || 0,
+          criteria: assessment.criteria || ''
+        }));
+        setAssessments(newAssessments);
+        success(`✅ Điền ${newAssessments.length} phương pháp đánh giá`);
+      }
+      
+      // Auto-fill Session Plans
+      if (Array.isArray(extractedData.sessionPlans) && extractedData.sessionPlans.length > 0) {
+        const newSessionPlans = extractedData.sessionPlans.map((plan: any, index: number) => ({
+          weekNo: plan.weekNo || index + 1,
+          topic: plan.topic || '',
+          teachingMethod: plan.teachingMethod || ''
+        }));
+        setSessionPlans(newSessionPlans);
+        success(`✅ Điền ${newSessionPlans.length} kế hoạch giảng dạy`);
+      }
+      
+      // Auto-fill Materials
+      if (Array.isArray(extractedData.materials) && extractedData.materials.length > 0) {
+        const newMaterials = extractedData.materials.map((material: any) => ({
+          title: material.title || '',
+          author: material.author || '',
+          type: material.type || material.materialType || 'TEXTBOOK'
+        }));
+        setMaterials(newMaterials);
+        success(`✅ Điền ${newMaterials.length} tài liệu tham khảo`);
+      }
+      
+      success('✅ AI đã trích xuất thông tin thành công!');
+      setAiResult(JSON.stringify(extractedData, null, 2));
+      setShowAIResult(true);
+    } else {
+      throw new Error('Kết quả trích xuất không hợp lệ');
+    }
     
   } catch (err: any) {
     console.error('Error processing PDF with AI:', err);
@@ -332,23 +409,81 @@ const handleAIProcess = async () => {
 
       console.log('Created syllabus with ID:', syllabusId);
 
-      // Step 2: Create CLOs
-      const cloPromises = clos
-        .filter(clo => clo.code && clo.description)
-        .map(clo => 
-          axiosClient.post('/clos', {
+      // Step 2: Create CLOs and get their IDs
+      const createdCLOs: any[] = [];
+      for (const clo of clos.filter(c => c.code && c.description)) {
+        try {
+          const cloPayload = {
             syllabus: { syllabusId },
             cloCode: clo.code,
             cloDescription: clo.description
-          })
-        );
-      
-      if (cloPromises.length > 0) {
-        await Promise.all(cloPromises);
-        console.log(`Created ${cloPromises.length} CLOs`);
+          };
+          console.log('Creating CLO with payload:', cloPayload);
+          const response = await axiosClient.post('/clos', cloPayload);
+          console.log('CLO creation response:', response.data);
+          createdCLOs.push({
+            localId: clo.id,
+            cloId: response.data.cloId,
+            cloCode: clo.code
+          });
+          console.log(`Created CLO: ${clo.code} with ID ${response.data.cloId}`);
+        } catch (err) {
+          console.error(`Failed to create CLO ${clo.code}:`, err);
+          error(`Không thể tạo CLO ${clo.code}`);
+        }
       }
 
-      // Step 3: Create Assessments
+      // Step 3: Create PLO-CLO Mappings
+      // First, we need to get or create PLOs based on ploCode
+      const allPloMappingsToCreate: any[] = [];
+      
+      for (const createdCLO of createdCLOs) {
+        const mappings = ploMappings[createdCLO.localId] || [];
+        for (const mapping of mappings) {
+          if (mapping.ploCode && mapping.weight > 0) {
+            // Get or find PLO by code
+            try {
+              // Try to get existing PLO by code
+              const ploResponse = await axiosClient.get(`/plos?ploCode=${mapping.ploCode}`);
+              let ploId = null;
+              
+              if (ploResponse.data && ploResponse.data.length > 0) {
+                ploId = ploResponse.data[0].ploId;
+              } else {
+                // If PLO doesn't exist, create it
+                const newPloResponse = await axiosClient.post('/plos', {
+                  ploCode: mapping.ploCode,
+                  ploDescription: `Program Learning Outcome ${mapping.ploCode}`,
+                  ...(programId && { program: { programId } })
+                });
+                ploId = newPloResponse.data.ploId;
+                console.log(`Created new PLO: ${mapping.ploCode} with ID ${ploId}`);
+              }
+              
+              if (ploId) {
+                allPloMappingsToCreate.push({
+                  cloId: createdCLO.cloId,
+                  ploId: ploId,
+                  mappingLevel: mapping.weight >= 70 ? 'HIGH' : mapping.weight >= 40 ? 'MEDIUM' : 'LOW'
+                });
+              }
+            } catch (err) {
+              console.error(`Failed to process PLO ${mapping.ploCode}:`, err);
+            }
+          }
+        }
+      }
+
+      // Create all PLO mappings
+      if (allPloMappingsToCreate.length > 0) {
+        const mappingPromises = allPloMappingsToCreate.map(mapping =>
+          axiosClient.post('/clo-plo-mappings', mapping)
+        );
+        await Promise.all(mappingPromises);
+        console.log(`Created ${allPloMappingsToCreate.length} CLO-PLO mappings`);
+      }
+
+      // Step 4: Create Assessments
       const assessmentPromises = assessments
         .filter(a => a.name)
         .map(assessment =>
@@ -365,7 +500,7 @@ const handleAIProcess = async () => {
         console.log(`Created ${assessmentPromises.length} assessments`);
       }
 
-      // Step 4: Create Session Plans
+      // Step 5: Create Session Plans
       const sessionPromises = sessionPlans
         .filter(s => s.topic)
         .map(session =>
@@ -382,7 +517,7 @@ const handleAIProcess = async () => {
         console.log(`Created ${sessionPromises.length} session plans`);
       }
 
-      // Step 5: Create Materials
+      // Step 6: Create Materials
       const materialPromises = materials
         .filter(m => m.title)
         .map(material =>
@@ -402,22 +537,22 @@ const handleAIProcess = async () => {
       success('✅ Tạo đề cương thành công!');
       navigate(`/syllabus/edit/${syllabusId}`);
       
-    } catch (error: any) {
-      console.error('Error creating syllabus:', error);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
+    } catch (err: any) {
+      console.error('Error creating syllabus:', err);
+      console.error('Error response data:', err.response?.data);
+      console.error('Error response status:', err.response?.status);
       
-      if (error.response?.status === 409) {
-        const message = error.response?.data?.message || 'Đã tồn tại giáo trình cho môn học này trong năm học này';
-        const existingSyllabusId = error.response?.data?.existingSyllabusId;
+      if (err.response?.status === 409) {
+        const message = err.response?.data?.message || 'Đã tồn tại giáo trình cho môn học này trong năm học này';
+        const existingSyllabusId = err.response?.data?.existingSyllabusId;
         
         if (existingSyllabusId && window.confirm(`${message}\n\nBạn có muốn chỉnh sửa giáo trình hiện có không?`)) {
           navigate(`/syllabus/edit/${existingSyllabusId}`);
         } else {
           error(`❌ ${message}`);
         }
-      } else if (error.response?.data?.message) {
-        error(`❌ ${error.response.data.message}`);
+      } else if (err.response?.data?.message) {
+        error(`❌ ${err.response.data.message}`);
       } else {
         error('❌ Có lỗi xảy ra khi tạo đề cương');
       }

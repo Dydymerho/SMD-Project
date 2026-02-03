@@ -216,25 +216,25 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
           <p>Academic Affairs</p>
         </div>
         <nav className="sidebar-nav">
-          <button type="button" className="nav-item" onClick={() => navigate('/aa/dashboard')}>
+          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/dashboard'); }}>
             <span className="icon"><Home size={20} /></span>
             Tổng quan
-          </button>
-          <button type="button" className="nav-item active" onClick={() => navigate('/aa/syllabus-approval')}>
+          </a>
+          <a href="#" className="nav-item active" onClick={(e) => { e.preventDefault(); navigate('/aa/syllabus-approval'); }}>
             <span className="icon"><CheckCircle size={20} /></span>
             Phê duyệt Level 2
-          </button>
-          <button type="button" className="nav-item" onClick={() => navigate('/aa/program-management')}>
+          </a>
+          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/program-management'); }}>
             <span className="icon"><Settings size={20} /></span>
             Quản lý Chương trình
-          </button>
-          <button type="button" className="nav-item" onClick={() => navigate('/aa/syllabus-analysis')}>
+          </a>
+          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/aa/syllabus-analysis'); }}>
             <span className="icon"><Search size={20} /></span>
             Tìm kiếm & Phân tích
-          </button>
+          </a>
         </nav>
         <div className="sidebar-footer">
-          <button onClick={logout} className="logout-btn">Đăng xuất</button>
+          <a href="#" onClick={(e) => { e.preventDefault(); logout(); }} className="logout-btn">Đăng xuất</a>
         </div>
       </aside>
 
@@ -262,16 +262,17 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
         </header>
 
         <div className="content-section" style={{ padding: '40px' }}>
-          <button
-            onClick={() => navigate('/aa/syllabus-approval')}
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigate('/aa/syllabus-approval'); }}
             style={{
               background: 'white', border: '1px solid #ddd', padding: '10px 16px', borderRadius: '8px',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px', fontWeight: 500
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px', fontWeight: 500, textDecoration: 'none', color: 'inherit'
             }}
           >
             <ArrowLeft size={20} />
             Quay lại danh sách
-          </button>
+          </a>
 
           {/* Course Info */}
           <div style={{ background: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
