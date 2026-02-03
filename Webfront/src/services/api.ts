@@ -119,6 +119,22 @@ interface CourseRelationRawResponse {
   relationType: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT';
 }
 
+// Course Relation Create Request
+export interface CreateCourseRelationRequest {
+  sourceCourseId: number;
+  targetCourseId: number;
+  relationType: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT';
+}
+
+// Available Prerequisites Response
+export interface AvailablePrerequisiteResponse {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  deptName?: string;
+}
+
 // CLO (Course Learning Outcomes) API
 export interface CLOResponse {
   cloId: number;
@@ -374,6 +390,98 @@ export const getCourseRelationsByCourseId = async (courseId: number): Promise<Co
     deptName: item.relatedCourse.department?.deptName,
     relationType: item.relationType
   }));
+};
+
+// Create a new course relation
+export const createCourseRelation = async (request: CreateCourseRelationRequest): Promise<CourseRelationResponse> => {
+  const token = localStorage.getItem('token');
+  const response = await axiosClient.post('/v1/course-relations', {
+    courseId: request.sourceCourseId,
+    relatedCourseId: request.targetCourseId,
+    relationType: request.relationType
+  }, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+  } as any);
+  
+  // Transform response if needed
+  const item = response.data;
+  return {
+    relationId: item.relationId,
+    targetCourseId: item.relatedCourse?.courseId || item.relatedCourseId || item.targetCourseId,
+    targetCourseCode: item.relatedCourse?.courseCode || item.relatedCourseCode || item.targetCourseCode,
+    targetCourseName: item.relatedCourse?.courseName || item.relatedCourseName || item.targetCourseName,
+    credits: item.relatedCourse?.credits || item.credits,
+    deptName: item.relatedCourse?.department?.deptName || item.deptName,
+    relationType: item.relationType
+  };
+};
+
+// Delete a course relation
+export const deleteCourseRelation = async (relationId: number): Promise<void> => {
+  const token = localStorage.getItem('token');
+  await axiosClient.delete(`/v1/course-relations/${relationId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+  } as any);
+};
+
+// Get available prerequisites for a course
+export const getAvailablePrerequisites = async (courseId: number): Promise<AvailablePrerequisiteResponse[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axiosClient.get(`/v1/course-relations/available-prerequisites/${courseId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    } as any);
+    
+    console.log('Raw API response:', response.data);
+    
+    // Handle different response formats
+    let data = response.data;
+    
+    // If response is wrapped in an object, unwrap it
+    if (data && !Array.isArray(data) && typeof data === 'object') {
+      if (Array.isArray(data.courses)) {
+        data = data.courses;
+      } else if (Array.isArray(data.data)) {
+        data = data.data;
+      } else if (Array.isArray(data.availableCourses)) {
+        data = data.availableCourses;
+      }
+    }
+    
+    // Ensure it's an array
+    if (!Array.isArray(data)) {
+      console.warn('API response is not an array:', data);
+      return [];
+    }
+    
+    console.log('Processed data:', data);
+    
+    // Transform to expected format
+    return data.map((course: any) => ({
+      courseId: course.relatedCourseId || course.courseId,
+      courseCode: course.relatedCourseCode || course.courseCode,
+      courseName: course.relatedCourseName || course.courseName,
+      credits: course.relatedCourseCredits || course.credits,
+      deptName: course.relatedCourseDeptName || course.department?.deptName || course.deptName
+    }));
+  } catch (error) {
+    console.error('Error fetching available prerequisites:', error);
+    throw error;
+  }
+};
+
+// Check if adding a relation would create circular dependency
+export const checkCircularDependency = async (
+  sourceCourseId: number,
+  targetCourseId: number,
+  relationType: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT'
+): Promise<{ circular: boolean; message?: string }> => {
+  const token = localStorage.getItem('token');
+  const response = await axiosClient.get('/v1/course-relations/check-circular', {
+    params: { sourceCourseId, targetCourseId, relationType },
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+  } as any);
+  return response.data;
 };
 
 // CLO API - Get CLOs by Syllabus ID

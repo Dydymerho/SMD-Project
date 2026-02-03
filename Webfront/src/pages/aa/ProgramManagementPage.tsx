@@ -537,43 +537,12 @@ const ProgramManagementPage: React.FC = () => {
                                   }}
                                   style={{
                                     padding: '8px 12px', background: '#008f81', color: 'white', border: 'none',
-                                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: '6px'
                                   }}
                                 >
-                                  Xem chi tiết
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled
-                                  title="Chức năng thêm cần API hỗ trợ"
-                                  style={{
-                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
-                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
-                                  }}
-                                >
-                                  <Plus size={14} style={{ display: 'inline' }} />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled
-                                  title="Chức năng sửa cần API hỗ trợ"
-                                  style={{
-                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
-                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
-                                  }}
-                                >
-                                  <Edit size={14} style={{ display: 'inline' }} />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled
-                                  title="Chức năng xóa cần API hỗ trợ"
-                                  style={{
-                                    padding: '8px 10px', background: '#e0e0e0', color: '#777', border: 'none',
-                                    borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 600
-                                  }}
-                                >
-                                  <Trash2 size={14} style={{ display: 'inline' }} />
+                                  <GitBranch size={14} />
+                                  Quản lý quan hệ
                                 </button>
                               </div>
                             </td>
@@ -615,6 +584,7 @@ const ProgramManagementPage: React.FC = () => {
         onClose={() => {
           setShowPrerequisiteModal(false);
           setSelectedCourseForPrereq(null);
+          loadCourseRelations(); // Refresh data when modal closes
         }}
       />
     </div>
