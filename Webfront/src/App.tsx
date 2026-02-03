@@ -21,6 +21,8 @@ import SyllabusReviewDetailPage from './pages/hod/SyllabusReviewDetailPage';
 import CollaborativeReviewPage from './pages/hod/CollaborativeReviewPage';
 import CollaborativeReviewDetailPage from './pages/hod/CollaborativeReviewDetailPage';
 import SyllabusAnalysisPage from './pages/hod/SyllabusAnalysisPage';
+import LecturerCollaborativeReviewPage from './pages/lecturer/LecturerCollaborativeReviewPage';
+import LecturerCollaborativeReviewDetailPage from './pages/lecturer/LecturerCollaborativeReviewDetailPage';
 import AADashboard from './pages/dashboard/AADashboard';
 import AASyllabusApprovalPage from './pages/aa/SyllabusApprovalPage';
 import AASyllabusApprovalDetailPage from './pages/aa/SyllabusApprovalDetailPage';
@@ -74,6 +76,14 @@ function App() {
 
             {/* Lecturer Routes */}
             <Route
+              path="/lecturer/collaborative-reviews"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <LecturerCollaborativeReviewPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/syllabus/create"
               element={
                 <PrivateRoute allowedRoles={['LECTURER']}>
@@ -110,7 +120,7 @@ function App() {
               path="/collaborative-review/:id"
               element={
                 <PrivateRoute allowedRoles={['LECTURER']}>
-                  <CollaborativeReviewDetailPage />
+                  <LecturerCollaborativeReviewDetailPage />
                 </PrivateRoute>
               }
             />

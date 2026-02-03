@@ -1,27 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Home, Users, Search, Bell, User, FileText,
-  MessageSquare, Send, CheckCircle, Clock, UserCheck, AlertCircle,
-  Trash2, Download, Eye, Mail, Check, X, Loader
+  ArrowLeft, Home, FileText, Bell, User,
+  MessageSquare, Send, Trash2, Eye, Loader, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/Toast';
-import './HoDPages.css';
-import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 import { useCollaborativeReview } from '../../hooks/useCollaborativeReview';
+import '../dashboard/DashboardPage.css';
 
-const CollaborativeReviewDetailPage: React.FC = () => {
+const LecturerCollaborativeReviewDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
   const { toasts, removeToast, success, error: showError } = useToast();
-  const isHoD = user?.role === 'HEAD_OF_DEPARTMENT';
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [compiledSummary, setCompiledSummary] = useState('');
   const notificationCount = 0;
 
   // Use shared hook
@@ -34,6 +29,20 @@ const CollaborativeReviewDetailPage: React.FC = () => {
     handlePostComment,
     handleDeleteComment
   } = useCollaborativeReview(id ? parseInt(id) : undefined);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   const onPostComment = () => {
     handlePostComment(
@@ -48,51 +57,6 @@ const CollaborativeReviewDetailPage: React.FC = () => {
       () => success('Đã xóa góp ý'),
       (msg) => showError(msg)
     );
-  };
-
-  const handleCompleteReview = () => {
-    if (!review) return;
-
-    const summary = `TÓM TẮT PHIÊN THẢO LUẬN HỢP TÁC
-Giáo trình: ${review.courseCode} - ${review.syllabusTitle}
-Giảng viên: ${review.lecturer}
-Thời gian: ${new Date(review.createdDate).toLocaleDateString()} đến ${new Date(review.deadline).toLocaleDateString()}
-
-THỐNG KÊ:
-- Tổng số góp ý: ${review.comments.length}
-
-CÁC GÓP Ý:
-${review.comments
-  .map((c, idx) => `${idx + 1}. ${c.author?.fullName || c.author?.username || 'Ẩn danh'}: ${c.content}`)
-  .join('\n\n')}
-
-KẾT LUẬN:
-[Trưởng khoa vui lòng bổ sung kết luận và đề xuất]`;
-
-    setCompiledSummary(summary);
-    setShowCompleteModal(true);
-  };
-
-  const confirmCompleteReview = () => {
-    success('Đã hoàn thành phiên thảo luận và chuyển vào quy trình phê duyệt!');
-    setTimeout(() => {
-      setShowCompleteModal(false);
-      navigate('/hod/syllabus-review');
-    }, 1500);
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateString;
-    }
   };
 
   if (loading) {
@@ -114,7 +78,7 @@ KẾT LUẬN:
           <h3 style={{ color: '#f44336', margin: '0 0 8px 0' }}>Không tìm thấy thảo luận</h3>
           <p style={{ color: '#666', margin: '0 0 16px 0' }}>Thảo luận này không tồn tại hoặc đã bị xóa</p>
           <button
-            onClick={() => navigate('/hod/collaborative-review')}
+            onClick={() => navigate('/lecturer/dashboard')}
             style={{
               padding: '8px 16px',
               background: '#2196f3',
@@ -125,7 +89,7 @@ KẾT LUẬN:
               fontSize: '14px'
             }}
           >
-            Quay lại danh sách
+            Quay lại Dashboard
           </button>
         </div>
       </div>
@@ -135,19 +99,20 @@ KẾT LUẬN:
   return (
     <div className="dashboard-page">
       <Toast toasts={toasts} onRemove={removeToast} />
+      
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo">📋</div>
           <h2>SMD System</h2>
-          <p>Trưởng Bộ môn</p>
+          <p>Giảng viên</p>
         </div>
         
         <nav className="sidebar-nav">
           <a 
             href="#" 
             className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/hod/dashboard'); }}
+            onClick={(e) => { e.preventDefault(); navigate('/lecturer/dashboard'); }}
           >
             <span className="icon"><Home size={20} /></span>
             Tổng quan
@@ -155,26 +120,18 @@ KẾT LUẬN:
           <a 
             href="#" 
             className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/hod/syllabus-review'); }}
+            onClick={(e) => { e.preventDefault(); navigate('/lecturer/dashboard'); }}
           >
-            <span className="icon"><CheckCircle size={20} /></span>
-            Phê duyệt Giáo trình
+            <span className="icon"><FileText size={20} /></span>
+            Giáo trình của tôi
           </a>
           <a 
             href="#" 
             className="nav-item active" 
-            onClick={(e) => { e.preventDefault(); navigate('/hod/collaborative-review'); }}
+            onClick={(e) => { e.preventDefault(); navigate('/lecturer/dashboard'); }}
           >
-            <span className="icon"><Users size={20} /></span>
-            Quản lý Thảo luận
-          </a>
-          <a 
-            href="#" 
-            className="nav-item" 
-            onClick={(e) => { e.preventDefault(); navigate('/hod/syllabus-analysis'); }}
-          >
-            <span className="icon"><Search size={20} /></span>
-            Tìm kiếm & Phân tích
+            <span className="icon"><MessageSquare size={20} /></span>
+            Phiên Thảo luận
           </a>
         </nav>
 
@@ -190,8 +147,8 @@ KẾT LUẬN:
         {/* Header */}
         <header className="page-header">
           <div className="header-left">
-            <h1>Chi tiết Thảo luận Hợp tác</h1>
-            <p>Xem và quản lý góp ý từ các giảng viên</p>
+            <h1>Chi tiết Phiên Thảo luận</h1>
+            <p>Xem và tham gia góp ý về giáo trình</p>
           </div>
           <div className="header-right">
             <div className="notification-wrapper">
@@ -222,7 +179,7 @@ KẾT LUẬN:
         <div className="content-section" style={{ padding: '40px' }}>
           {/* Back Button */}
           <button
-            onClick={() => navigate('/hod/collaborative-review')}
+            onClick={() => navigate('/lecturer/dashboard')}
             style={{
               background: 'white',
               border: '1px solid #ddd',
@@ -237,7 +194,7 @@ KẾT LUẬN:
             }}
           >
             <ArrowLeft size={20} />
-            Quay lại danh sách
+            Quay lại Dashboard
           </button>
 
           {/* Syllabus Info Card */}
@@ -389,7 +346,7 @@ KẾT LUẬN:
               borderRadius: '8px',
               border: '2px dashed #ddd'
             }}>
-              <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>Thêm góp ý của bạn</h4>
+              <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>Gửi góp ý của bạn</h4>
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
@@ -436,124 +393,10 @@ KẾT LUẬN:
               </button>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          {isHoD && (
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={handleCompleteReview}
-                style={{
-                  padding: '12px 24px',
-                  background: '#4caf50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <CheckCircle size={18} />
-                Hoàn thành thảo luận
-              </button>
-            </div>
-          )}
         </div>
-
-        {/* Complete Modal */}
-        {showCompleteModal && isHoD && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}
-            onClick={() => setShowCompleteModal(false)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: 'white',
-                borderRadius: '12px',
-                padding: '32px',
-                maxWidth: '700px',
-                width: '90%',
-                maxHeight: '80vh',
-                overflow: 'auto'
-              }}
-            >
-              <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>Hoàn thành Thảo luận Hợp tác</h2>
-              <p style={{ margin: '0 0 24px 0', color: '#666' }}>
-                Xem lại tóm tắt và xác nhận hoàn thành phiên thảo luận. Sau khi xác nhận, giáo trình sẽ được chuyển vào quy trình phê duyệt chính thức.
-              </p>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
-                  Tóm tắt phiên thảo luận
-                </label>
-                <textarea
-                  value={compiledSummary}
-                  onChange={(e) => setCompiledSummary(e.target.value)}
-                  rows={15}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #ddd',
-                    fontSize: '13px',
-                    fontFamily: 'monospace',
-                    lineHeight: 1.6
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setShowCompleteModal(false)}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#f5f5f5',
-                    color: '#666',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  <X size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                  Hủy
-                </button>
-                <button
-                  onClick={confirmCompleteReview}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#4caf50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  <Check size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                  Xác nhận hoàn thành
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
 };
 
-export default CollaborativeReviewDetailPage;
+export default LecturerCollaborativeReviewDetailPage;

@@ -56,7 +56,9 @@ const CollaborativeReviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('active');
-  const notificationCount = 0;
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [createReviewError, setCreateReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     loadReviews();
@@ -73,20 +75,22 @@ const CollaborativeReviewPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const pending = await getPendingSyllabusesForHoD();
-      const list = Array.isArray(pending.data) ? pending.data : [];
+      // Load all syllabuses (not just pending) to show collaborative reviews
+      const allSyllabusesData = await fetchAllSyllabuses();
+      const allSyllabusList = Array.isArray(allSyllabusesData.data) ? allSyllabusesData.data : [];
+      
+      // Set for dropdown in create modal
+      setAllSyllabuses(allSyllabusList);
 
-      // Also load all syllabuses for the create modal dropdown
-      try {
-        const allSyllabusesData = await fetchAllSyllabuses();
-        setAllSyllabuses(Array.isArray(allSyllabusesData.data) ? allSyllabusesData.data : []);
-      } catch (err) {
-        console.log('Could not fetch all syllabuses:', err);
-      }
-
-      const mapped = await Promise.all(list.map(async (item: any) => {
+      // Filter syllabuses that belong to HoD's department or have comments
+      const mapped = await Promise.all(allSyllabusList.map(async (item: any) => {
         const syllabusId = item.syllabusId || item.id;
+        
+        // Count comments for this syllabus
         const feedbackCount = syllabusId ? await getReviewCommentCount(syllabusId) : 0;
+        
+        // Skip syllabuses with no comments (no collaborative review initiated)
+        if (feedbackCount === 0) return null;
         
         // Fetch syllabus detail to get lecturer info
         let lecturerName = item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ';
@@ -119,22 +123,35 @@ const CollaborativeReviewPage: React.FC = () => {
           console.log('Could not fetch recent comments:', err);
         }
 
+        // Count unique participants from comments
+        const uniqueParticipants = new Set(recentComments.map(c => c.author?.username).filter(Boolean));
+        
+        // Determine status based on feedback count and time
+        let status: CollaborativeReview['status'] = 'active';
+        if (item.currentStatus?.toLowerCase().includes('approved')) {
+          status = 'completed';
+        } else if (feedbackCount === 0) {
+          status = 'pending';
+        }
+
         return {
           id: (syllabusId || '').toString(),
           courseCode: item.courseCode || item.course?.courseCode || 'N/A',
           courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
           dueDate: item.updatedAt || item.createdAt || new Date().toISOString(),
-          status: mapStatus(item.currentStatus),
-          participantCount: item.participantCount || 0,
+          status,
+          participantCount: uniqueParticipants.size,
           feedbackCount,
           lecturer: lecturerName,
           lecturerEmail,
           recentComments,
-          isFinalized: mapStatus(item.currentStatus) === 'completed'
+          isFinalized: status === 'completed'
         } as CollaborativeReview;
       }));
 
-      setReviews(mapped);
+      // Filter out null values (syllabuses without comments)
+      const filteredReviews = mapped.filter(Boolean) as CollaborativeReview[];
+      setReviews(filteredReviews);
     } catch (err) {
       console.error('Error loading collaborative reviews:', err);
       setError('Không thể tải danh sách thảo luận');
@@ -148,6 +165,9 @@ const CollaborativeReviewPage: React.FC = () => {
       warning('Vui lòng chọn giáo trình và nhập hạn cuối');
       return;
     }
+
+    setSubmittingReview(true);
+    setCreateReviewError(null);
 
     try {
       await createCollaborativeReview(
@@ -163,7 +183,11 @@ const CollaborativeReviewPage: React.FC = () => {
       loadReviews();
     } catch (error) {
       console.error('Error creating review:', error);
-      showError('Có lỗi xảy ra khi tạo phiên thảo luận');
+      const errorMsg = error instanceof Error ? error.message : 'Có lỗi xảy ra khi tạo phiên thảo luận';
+      setCreateReviewError(errorMsg);
+      showError(errorMsg);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -595,6 +619,19 @@ const CollaborativeReviewPage: React.FC = () => {
                 Khởi tạo phiên thảo luận hợp tác để thu thập góp ý từ các giảng viên
               </p>
               
+              {createReviewError && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#ffebee',
+                  color: '#c62828',
+                  borderRadius: '4px',
+                  marginBottom: '16px',
+                  fontSize: '14px'
+                }}>
+                  ❌ {createReviewError}
+                </div>
+              )}
+              
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                   Chọn giáo trình <span style={{ color: '#f44336' }}>*</span>
@@ -674,19 +711,23 @@ const CollaborativeReviewPage: React.FC = () => {
                 </button>
                 <button
                   onClick={handleCreateReview}
-                  disabled={!newReview.syllabusId || !newReview.deadline}
+                  disabled={!newReview.syllabusId || !newReview.deadline || submittingReview}
                   style={{
                     padding: '10px 20px',
                     background: '#4caf50',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    cursor: submittingReview ? 'not-allowed' : 'pointer',
                     fontWeight: 600,
-                    opacity: (!newReview.syllabusId || !newReview.deadline) ? 0.6 : 1
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: (!newReview.syllabusId || !newReview.deadline || submittingReview) ? 0.6 : 1
                   }}
                 >
-                  Tạo phiên thảo luận
+                  {submittingReview && <Loader size={16} className="spinner" />}
+                  {submittingReview ? 'Đang tạo...' : 'Tạo phiên thảo luận'}
                 </button>
               </div>
             </div>

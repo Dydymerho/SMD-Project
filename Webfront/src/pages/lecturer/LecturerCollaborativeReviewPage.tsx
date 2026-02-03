@@ -64,30 +64,40 @@ const LecturerCollaborativeReviewPage: React.FC = () => {
       const result = await fetchAllSyllabuses();
       const list = Array.isArray(result.data) ? result.data : [];
 
-      // Filter syllabuses that are in collaborative review status
-      const collaborativeList = list.filter((item: any) => {
-        const status = (item.currentStatus || '').toLowerCase();
-        return status.includes('review') || status.includes('collab') || status.includes('feedback');
-      });
-
-      const mapped = await Promise.all(collaborativeList.map(async (item: any) => {
+      // Map all syllabuses and filter those with comments (active collaborative reviews)
+      const mapped = await Promise.all(list.map(async (item: any) => {
         const syllabusId = item.syllabusId || item.id;
         const feedbackCount = syllabusId ? await getReviewCommentCount(syllabusId) : 0;
 
+        // Skip syllabuses with no comments (no collaborative review)
+        if (feedbackCount === 0) return null;
+
         // Count my comments
         let myCommentCount = 0;
+        let allComments: any[] = [];
         try {
           if (syllabusId) {
             const commentsResponse = await axiosClient.get(
               `/syllabuses/${syllabusId}/comments/all`
             );
-            const allComments = Array.isArray(commentsResponse.data) ? commentsResponse.data : [];
+            allComments = Array.isArray(commentsResponse.data) ? commentsResponse.data : [];
             myCommentCount = allComments.filter(
               c => c.author?.username === user?.username
             ).length;
           }
         } catch (err) {
-          console.log('Could not fetch my comments:', err);
+          console.log('Could not fetch comments:', err);
+        }
+
+        // Count unique participants
+        const uniqueParticipants = new Set(allComments.map(c => c.author?.username).filter(Boolean));
+
+        // Determine status
+        let status: CollaborativeReview['status'] = 'active';
+        if (item.currentStatus?.toLowerCase().includes('approved')) {
+          status = 'completed';
+        } else if (feedbackCount === 0) {
+          status = 'pending';
         }
 
         return {
@@ -95,17 +105,19 @@ const LecturerCollaborativeReviewPage: React.FC = () => {
           courseCode: item.courseCode || item.course?.courseCode || 'N/A',
           courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
           dueDate: item.updatedAt || item.createdAt || new Date().toISOString(),
-          status: mapStatus(item.currentStatus),
-          participantCount: item.participantCount || 0,
+          status,
+          participantCount: uniqueParticipants.size,
           feedbackCount,
           lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
           lecturerEmail: item.lecturer?.email || item.createdBy?.email || '',
           myCommentCount,
-          isFinalized: mapStatus(item.currentStatus) === 'completed'
+          isFinalized: status === 'completed'
         } as CollaborativeReview;
       }));
 
-      setReviews(mapped);
+      // Filter out null values (syllabuses without comments)
+      const filteredReviews = mapped.filter(Boolean) as CollaborativeReview[];
+      setReviews(filteredReviews);
     } catch (err) {
       console.error('Error loading collaborative reviews:', err);
       setError('Không thể tải danh sách thảo luận');
