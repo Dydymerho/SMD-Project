@@ -257,7 +257,8 @@ const StudentDashboard: React.FC = () => {
           try {
             const pdfInfo = await getSyllabusPDFInfo(selectedSyllabus.syllabusId);
             console.log('PDF info fetched:', pdfInfo);
-            setHasPdf(Boolean(pdfInfo?.hasPdf));
+            // Check if PDF exists by checking fileName or filePath instead of hasPdf
+            setHasPdf(Boolean(pdfInfo?.fileName || pdfInfo?.filePath));
           } catch (error) {
             console.log('Không thể lấy thông tin PDF:', error);
             setHasPdf(false);
