@@ -51,11 +51,14 @@ public class AITask {
         SUGGEST_ASSESSMENT,
         IMPROVE_CONTENT,
         GRAMMAR_CHECK,
-        PLAGIARISM_CHECK
+        PLAGIARISM_CHECK,
+        EXTRACT_SYLLABUS // <--- Thêm loại mới này
     }
 
     public enum TaskStatus {
         PENDING,
-        SUCCESS
+        SUCCESS,
+        FAILURE,
+        PROCESSING
     }
 }

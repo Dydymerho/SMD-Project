@@ -1,112 +1,167 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Home, CheckCircle, BarChart3, Bell, User, TrendingUp, 
-  Users, FileText, Award, Target, Activity, Calendar
+import {
+  Search, Home, CheckCircle, Eye, Copy, Bell, User, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './PrincipalPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
-import { getPrograms, getAllSyllabuses, getUnreadNotificationsCount, Syllabus } from '../../services/api';
+import * as api from '../../services/api';
+
+interface SyllabusVersion {
+  version: number;
+  academicYear: string;
+  updatedAt: string;
+  changedSections: string[];
+}
+
+interface Syllabus {
+  id: string;
+  courseCode: string;
+  courseName: string;
+  lecturer: string;
+  currentVersion: number;
+  lastUpdated: string;
+  department: string;
+  credits: number;
+  versions: SyllabusVersion[];
+}
+
+const fallbackSyllabuses: Syllabus[] = [
+  {
+    id: '1',
+    courseCode: 'CS101',
+    courseName: 'Lập trình cơ bản',
+    lecturer: 'Nguyễn Văn A',
+    currentVersion: 3,
+    lastUpdated: '2024-01-20',
+    department: 'Khoa CNTT',
+    credits: 3,
+    versions: [
+      { version: 1, academicYear: '2022-2023', updatedAt: '2023-02-10', changedSections: ['CLOs', 'Assessment'] },
+      { version: 2, academicYear: '2023-2024', updatedAt: '2023-10-02', changedSections: ['Modules'] },
+      { version: 3, academicYear: '2024-2025', updatedAt: '2024-01-20', changedSections: ['CLOs', 'Projects'] },
+    ],
+  },
+  {
+    id: '2',
+    courseCode: 'CS102',
+    courseName: 'Cấu trúc dữ liệu',
+    lecturer: 'Trần Thị B',
+    currentVersion: 2,
+    lastUpdated: '2024-01-18',
+    department: 'Khoa CNTT',
+    credits: 4,
+    versions: [
+      { version: 1, academicYear: '2023-2024', updatedAt: '2023-09-12', changedSections: ['Modules', 'Labs'] },
+      { version: 2, academicYear: '2024-2025', updatedAt: '2024-01-18', changedSections: ['Assessment'] },
+    ],
+  },
+  {
+    id: '3',
+    courseCode: 'MATH101',
+    courseName: 'Đại số tuyến tính',
+    lecturer: 'Lê Văn C',
+    currentVersion: 1,
+    lastUpdated: '2024-01-15',
+    department: 'Khoa Toán',
+    credits: 3,
+    versions: [
+      { version: 1, academicYear: '2024-2025', updatedAt: '2024-01-15', changedSections: ['CLOs'] },
+    ],
+  },
+];
 
 const SystemOversightPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [notificationCount, setNotificationCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDept, setFilterDept] = useState('all');
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [syllabuses, setSyllabuses] = useState<Syllabus[]>(fallbackSyllabuses);
 
-  // System KPIs
-  const [kpis, setKpis] = useState({
-    totalUsers: 0,
-    activeSyllabuses: 0,
-    pendingApprovals: {
-      level1: 0,
-      level2: 0,
-      final: 0,
-    },
-    completionRate: 0,
-    avgApprovalTime: 0,
-    systemUptime: 99.8,
-  });
+  const normalizeSyllabus = (item: any, index: number): Syllabus => {
+    const course = item.course || {};
+    const dept = item.course?.department || item.program || {};
+
+    const versions = Array.isArray(item.versions) && item.versions.length > 0
+      ? item.versions.map((v: any, vIdx: number) => ({
+          version: v.version || vIdx + 1,
+          academicYear: v.academicYear || v.year || item.academicYear || 'Chưa rõ',
+          updatedAt: v.updatedAt || v.modifiedDate || v.createdAt || item.updatedAt || 'Chưa rõ',
+          changedSections: v.changedSections || v.changes || [],
+        }))
+      : [{
+          version: item.versionNo || item.version || 1,
+          academicYear: item.academicYear || 'Chưa rõ',
+          updatedAt: item.updatedAt || item.modifiedDate || item.createdAt || 'Chưa rõ',
+          changedSections: [],
+        }];
+
+    return {
+      id: String(item.syllabusId || item.id || index),
+      courseCode: course.courseCode || item.courseCode || `Môn-${index + 1}`,
+      courseName: course.courseName || item.courseName || item.title || 'Chưa có tên',
+      lecturer: item.lecturer?.fullName || item.lecturer?.name || item.lecturerName || item.createdBy?.fullName || 'Chưa rõ',
+      currentVersion: item.versionNo || item.version || versions[versions.length - 1].version || 1,
+      lastUpdated: item.updatedAt
+        ? new Date(item.updatedAt).toLocaleDateString('vi-VN')
+        : item.modifiedDate || item.createdAt || versions[versions.length - 1].updatedAt,
+      department: dept.deptName || dept.name || dept.departmentName || dept.programName || 'Chưa xác định',
+      credits: course.credits || item.credits || 0,
+      versions,
+    };
+  };
+
+  const loadSyllabuses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [syllabusResponse, unreadCount] = await Promise.all([
+        api.getAllSyllabuses(),
+        api.getUnreadNotificationsCount()
+      ]);
+
+      const payload = Array.isArray(syllabusResponse) ? syllabusResponse : [];
+      const normalized = payload.map((item, idx) => normalizeSyllabus(item, idx));
+
+      setSyllabuses(normalized.length ? normalized : fallbackSyllabuses);
+      setNotificationCount(unreadCount);
+    } catch (err) {
+      console.error('Failed to load syllabuses', err);
+      setError('Không tải được dữ liệu, hiển thị dữ liệu mẫu.');
+      setSyllabuses(fallbackSyllabuses);
+      try {
+        const unreadCount = await api.getUnreadNotificationsCount();
+        setNotificationCount(unreadCount);
+      } catch {
+        setNotificationCount(0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const [programs, syllabuses, notifCount] = await Promise.all([
-          getPrograms(),
-          getAllSyllabuses(),
-          getUnreadNotificationsCount().catch(() => 0)
-        ]);
-        setNotificationCount(notifCount);
-
-        const syllabusArray = Array.isArray(syllabuses) ? syllabuses : [];
-        
-        // Count syllabuses by status
-        const activeSyllabuses = syllabusArray.filter((s: Syllabus) => 
-          s.currentStatus === 'APPROVED' || s.currentStatus === 'PUBLISHED'
-        ).length;
-        
-        const pendingReview = syllabusArray.filter((s: Syllabus) => 
-          s.currentStatus === 'PENDING_REVIEW'
-        ).length;
-        
-        const pendingApproval = syllabusArray.filter((s: Syllabus) => 
-          s.currentStatus === 'PENDING_APPROVAL'
-        ).length;
-        
-        const finalApproval = syllabusArray.filter((s: Syllabus) => 
-          s.currentStatus === 'APPROVED'
-        ).length;
-
-        const totalSyllabuses = syllabusArray.length;
-        const completionRate = totalSyllabuses > 0 
-          ? ((activeSyllabuses / totalSyllabuses) * 100).toFixed(1)
-          : 0;
-
-        setKpis({
-          totalUsers: 245, // Mock data
-          activeSyllabuses,
-          pendingApprovals: {
-            level1: pendingReview,
-            level2: pendingApproval,
-            final: finalApproval,
-          },
-          completionRate: parseFloat(completionRate.toString()),
-          avgApprovalTime: 3.5, // Mock data
-          systemUptime: 99.8, // Mock data
-        });
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
+    loadSyllabuses();
   }, []);
 
-  // Department Performance
-  const departments = [
-    { name: 'Khoa CNTT', syllabuses: 45, approved: 42, pending: 3, completion: 93.3 },
-    { name: 'Khoa Toán', syllabuses: 32, approved: 30, pending: 2, completion: 93.8 },
-    { name: 'Khoa Vật Lý', syllabuses: 28, approved: 27, pending: 1, completion: 96.4 },
-    { name: 'Khoa Hóa', syllabuses: 25, approved: 23, pending: 2, completion: 92.0 },
-    { name: 'Khoa Sinh', syllabuses: 26, approved: 24, pending: 2, completion: 92.3 },
-  ];
+  const filteredSyllabuses = syllabuses.filter((s) => {
+    const matchesSearch =
+      s.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.courseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.lecturer.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Monthly Trends
-  const monthlyData = [
-    { month: 'T8', submitted: 28, approved: 25, rejected: 2 },
-    { month: 'T9', submitted: 35, approved: 32, rejected: 1 },
-    { month: 'T10', submitted: 42, approved: 38, rejected: 3 },
-    { month: 'T11', submitted: 38, approved: 36, rejected: 1 },
-    { month: 'T12', submitted: 45, approved: 41, rejected: 2 },
-    { month: 'T1', submitted: 32, approved: 28, rejected: 1 },
-  ];
+    const matchesFilter = filterDept === 'all' || s.department === filterDept;
+
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="dashboard-page">
@@ -115,9 +170,9 @@ const SystemOversightPage: React.FC = () => {
         <div className="sidebar-header">
           <div className="logo">🎓</div>
           <h2>SMD System</h2>
-          <p>Principal</p>
+          <p>{user?.name || 'Principal'}</p>
         </div>
-        
+
         <nav className="sidebar-nav">
           <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/principal/dashboard'); }}>
             <span className="icon"><Home size={20} /></span>
@@ -128,8 +183,8 @@ const SystemOversightPage: React.FC = () => {
             Phê duyệt Cuối cùng
           </a>
           <a href="#" className="nav-item active" onClick={(e) => { e.preventDefault(); navigate('/principal/system-oversight'); }}>
-            <span className="icon"><BarChart3 size={20} /></span>
-            Tổng quan Hệ thống
+            <span className="icon"><Search size={20} /></span>
+            Tìm kiếm & Phân tích
           </a>
         </nav>
 
@@ -142,14 +197,14 @@ const SystemOversightPage: React.FC = () => {
       <main className="main-content">
         <header className="page-header">
           <div className="header-left">
-            <h1>Tổng quan Hệ thống</h1>
-            <p>Giám sát KPI, báo cáo và trạng thái hoạt động toàn hệ thống</p>
+            <h1>Tìm kiếm & Phân tích Giáo trình</h1>
+            <p>Tra cứu, lọc và so sánh giáo trình toàn trường</p>
           </div>
           <div className="header-right">
             <div className="notification-wrapper">
               <div className="notification-icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)} style={{ cursor: 'pointer' }}>
                 <Bell size={24} />
-                <span className="badge">{notificationCount}</span>
+                {notificationCount > 0 && <span className="badge">{notificationCount}</span>}
               </div>
               {isNotificationOpen && <NotificationMenu isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
             </div>
@@ -163,213 +218,265 @@ const SystemOversightPage: React.FC = () => {
         </header>
 
         <div className="content-section" style={{ padding: '40px' }}>
-          {/* Period Selector */}
-          <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <Calendar size={20} color="#666" />
-            <span style={{ color: '#666', fontWeight: 500 }}>Kỳ báo cáo:</span>
-            {(['week', 'month', 'quarter', 'year'] as const).map(period => (
-              <button
-                key={period}
-                onClick={() => setSelectedPeriod(period)}
-                style={{
-                  padding: '8px 16px',
-                  background: selectedPeriod === period ? '#2196f3' : '#f5f5f5',
-                  color: selectedPeriod === period ? 'white' : '#666',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              >
-                {period === 'week' && 'Tuần'}
-                {period === 'month' && 'Tháng'}
-                {period === 'quarter' && 'Quý'}
-                {period === 'year' && 'Năm'}
-              </button>
-            ))}
-          </div>
-
-          {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div>
-                  <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Tổng Người dùng</p>
-                  <h2 style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 700, color: '#333' }}>{kpis.totalUsers}</h2>
-                </div>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e3f2fd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Users size={24} color="#2196f3" />
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: '#4caf50', fontWeight: 500 }}>
-                <TrendingUp size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                +12% so với tháng trước
-              </div>
+          {error && (
+            <div style={{
+              background: '#ffebee',
+              border: '1px solid #f44336',
+              color: '#b71c1c',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertTriangle size={20} />
+              {error}
             </div>
+          )}
 
-            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div>
-                  <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Giáo trình Hoạt động</p>
-                  <h2 style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 700, color: '#333' }}>{kpis.activeSyllabuses}</h2>
-                </div>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f3e5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FileText size={24} color="#9c27b0" />
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: '#4caf50', fontWeight: 500 }}>
-                <TrendingUp size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                +8% so với tháng trước
-              </div>
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              color: '#999'
+            }}>
+              <div>Đang tải dữ liệu...</div>
             </div>
+          ) : (
+            <>
+              {/* Search Bar */}
+              <div style={{
+                background: 'white',
+                padding: '20px',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                marginBottom: '16px'
+              }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Tìm kiếm theo mã môn, tên môn hoặc giảng viên..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
 
-            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div>
-                  <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Tỷ lệ Hoàn thành</p>
-                  <h2 style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 700, color: '#333' }}>{kpis.completionRate}%</h2>
-                </div>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Target size={24} color="#4caf50" />
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: '#4caf50', fontWeight: 500 }}>
-                <TrendingUp size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                +2.3% so với tháng trước
-              </div>
-            </div>
-
-            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div>
-                  <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>Thời gian Phê duyệt TB</p>
-                  <h2 style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 700, color: '#333' }}>{kpis.avgApprovalTime} ngày</h2>
-                </div>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#fff3e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={24} color="#ff9800" />
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: '#4caf50', fontWeight: 500 }}>
-                <TrendingUp size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                Cải thiện 15%
-              </div>
-            </div>
-          </div>
-
-          {/* Approval Pipeline */}
-          <div style={{ background: 'white', padding: '28px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#333' }}>Pipeline Phê duyệt</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-              <div style={{ textAlign: 'center', padding: '20px', background: '#f9f9f9', borderRadius: '10px' }}>
-                <div style={{ fontSize: '28px', fontWeight: 700, color: '#2196f3', marginBottom: '8px' }}>{kpis.pendingApprovals.level1}</div>
-                <div style={{ color: '#666', fontSize: '14px', fontWeight: 500 }}>Level 1 (HoD)</div>
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>Chờ trưởng bộ môn</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: '20px', background: '#f9f9f9', borderRadius: '10px' }}>
-                <div style={{ fontSize: '28px', fontWeight: 700, color: '#ff9800', marginBottom: '8px' }}>{kpis.pendingApprovals.level2}</div>
-                <div style={{ color: '#666', fontSize: '14px', fontWeight: 500 }}>Level 2 (AA)</div>
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>Chờ phòng đào tạo</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: '20px', background: '#fff3e0', borderRadius: '10px', border: '2px solid #ff9800' }}>
-                <div style={{ fontSize: '28px', fontWeight: 700, color: '#9c27b0', marginBottom: '8px' }}>{kpis.pendingApprovals.final}</div>
-                <div style={{ color: '#666', fontSize: '14px', fontWeight: 500 }}>Final (Principal)</div>
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>Chờ hiệu trưởng</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Department Performance */}
-          <div style={{ background: 'white', padding: '28px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#333' }}>Hiệu suất Theo Bộ môn</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Bộ môn</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tổng GT</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Đã duyệt</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Chờ duyệt</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hoàn thành</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tiến độ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {departments.map((dept, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#333' }}>{dept.name}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{dept.syllabuses}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', color: '#4caf50', fontWeight: 600 }}>{dept.approved}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', color: '#ff9800', fontWeight: 600 }}>{dept.pending}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>{dept.completion}%</td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ background: '#f0f0f0', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${dept.completion}%`, height: '100%', background: dept.completion >= 95 ? '#4caf50' : dept.completion >= 90 ? '#ff9800' : '#f44336', borderRadius: '4px' }}></div>
-                      </div>
-                    </td>
-                  </tr>
+              {/* Filter Tabs */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                marginBottom: '24px',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={() => setFilterDept('all')}
+                  style={{
+                    padding: '10px 16px',
+                    background: filterDept === 'all' ? '#007bff' : '#f5f5f5',
+                    color: filterDept === 'all' ? 'white' : '#666',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  Tất cả bộ môn ({syllabuses.length})
+                </button>
+                {Array.from(new Set(syllabuses.map(s => s.department))).map(dept => (
+                  <button
+                    key={dept}
+                    onClick={() => setFilterDept(dept)}
+                    style={{
+                      padding: '10px 16px',
+                      background: filterDept === dept ? '#007bff' : '#f5f5f5',
+                      color: filterDept === dept ? 'white' : '#666',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      transition: 'all 0.3s'
+                    }}
+                  >
+                    {dept} ({syllabuses.filter(s => s.department === dept).length})
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
 
-          {/* Monthly Trends */}
-          <div style={{ background: 'white', padding: '28px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#333' }}>Xu hướng 6 Tháng gần đây</h3>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', height: '250px', padding: '20px 0' }}>
-              {monthlyData.map((data, idx) => (
-                <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '4px', width: '100%' }}>
-                    <div
-                      style={{
-                        background: '#4caf50',
-                        height: `${(data.approved / 50) * 100}%`,
-                        borderRadius: '4px 4px 0 0',
-                        minHeight: '20px',
-                        position: 'relative',
-                      }}
-                      title={`Đã duyệt: ${data.approved}`}
-                    >
-                      <span style={{ position: 'absolute', top: '-18px', left: '50%', transform: 'translateX(-50%)', fontSize: '11px', fontWeight: 600, color: '#4caf50' }}>
-                        {data.approved}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        background: '#2196f3',
-                        height: `${((data.submitted - data.approved - data.rejected) / 50) * 100}%`,
-                        minHeight: '10px',
-                      }}
-                      title={`Đang xử lý: ${data.submitted - data.approved - data.rejected}`}
-                    ></div>
-                    <div
-                      style={{
-                        background: '#f44336',
-                        height: `${(data.rejected / 50) * 100}%`,
-                        borderRadius: '0 0 4px 4px',
-                        minHeight: data.rejected > 0 ? '8px' : '0',
-                      }}
-                      title={`Từ chối: ${data.rejected}`}
-                    ></div>
-                  </div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#666', marginTop: '8px' }}>{data.month}</div>
+              {/* Results Table */}
+              <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã môn học</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên môn học</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Giảng viên</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Bộ môn</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Tín chỉ</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Phiên bản</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Cập nhật</th>
+                      <th style={{ padding: '16px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSyllabuses.map((syllabus) => (
+                      <tr key={syllabus.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <td style={{ padding: '16px', color: '#007bff', fontWeight: 600 }}>{syllabus.courseCode}</td>
+                        <td style={{ padding: '16px', color: '#333' }}>{syllabus.courseName}</td>
+                        <td style={{ padding: '16px', color: '#666' }}>{syllabus.lecturer}</td>
+                        <td style={{ padding: '16px', color: '#666', fontSize: '13px' }}>{syllabus.department}</td>
+                        <td style={{ padding: '16px', textAlign: 'center', color: '#666' }}>{syllabus.credits}</td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <span style={{ background: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                            v{syllabus.currentVersion}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>{syllabus.lastUpdated}</td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/principal/final-approval/${syllabus.id}`)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#2196f3',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Eye size={14} />
+                              Xem
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedSyllabus(syllabus); setShowCompareModal(true); }}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#ff9800',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Copy size={14} />
+                              So sánh
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredSyllabuses.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginTop: '24px' }}>
+                  <Search size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                  <h3>Không tìm thấy giáo trình nào</h3>
+                  <p>Hãy thử thay đổi tiêu chí tìm kiếm hoặc lọc của bạn</p>
                 </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></div>
-                <span>Đã duyệt</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', background: '#2196f3', borderRadius: '2px' }}></div>
-                <span>Đang xử lý</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', background: '#f44336', borderRadius: '2px' }}></div>
-                <span>Từ chối</span>
-              </div>
-            </div>
-          </div>
+              )}
+
+              {/* Version Comparison Modal */}
+              {showCompareModal && selectedSyllabus && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }} onClick={() => setShowCompareModal(false)}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '12px', padding: '28px', width: '90%', maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h2 style={{ margin: '0 0 6px 0', color: '#333' }}>So sánh phiên bản - {selectedSyllabus.courseCode}</h2>
+                        <p style={{ margin: 0, color: '#666' }}>{selectedSyllabus.courseName}</p>
+                      </div>
+                      <button onClick={() => setShowCompareModal(false)} style={{ border: 'none', background: '#f5f5f5', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontWeight: 600, color: '#666' }}>Đóng</button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                      <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
+                        <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Phiên bản mới nhất</p>
+                        <h3 style={{ margin: 0, color: '#333' }}>v{selectedSyllabus.currentVersion}</h3>
+                        <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Cập nhật: {selectedSyllabus.lastUpdated}</p>
+                      </div>
+                      <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px' }}>
+                        <p style={{ margin: '0 0 6px 0', color: '#999', fontSize: '12px' }}>Số phiên bản</p>
+                        <h3 style={{ margin: 0, color: '#333' }}>{selectedSyllabus.versions.length}</h3>
+                        <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>Từ {selectedSyllabus.versions[0].academicYear} → {selectedSyllabus.versions[selectedSyllabus.versions.length - 1].academicYear}</p>
+                      </div>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                      <thead>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Phiên bản</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Năm học</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Ngày cập nhật</th>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Mục thay đổi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSyllabus.versions.map((v) => (
+                          <tr key={`${selectedSyllabus.id}-v${v.version}`} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '12px', fontWeight: 600 }}>v{v.version}</td>
+                            <td style={{ padding: '12px' }}>{v.academicYear}</td>
+                            <td style={{ padding: '12px' }}>{v.updatedAt}</td>
+                            <td style={{ padding: '12px' }}>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {v.changedSections.length > 0 ? (
+                                  v.changedSections.map((section) => (
+                                    <span key={`${v.version}-${section}`} style={{ padding: '4px 8px', borderRadius: '6px', background: '#e3f2fd', color: '#1976d2', fontSize: '12px', fontWeight: 600 }}>{section}</span>
+                                  ))
+                                ) : (
+                                  <span style={{ padding: '4px 8px', color: '#999', fontSize: '12px' }}>Không có thay đổi</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {selectedSyllabus.versions.length >= 2 && (
+                      <div style={{ background: '#fff8e1', padding: '14px', borderRadius: '10px', border: '1px solid #ffd54f' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#e65100' }}>Khác biệt giữa 2 phiên bản gần nhất</h4>
+                        {(() => {
+                          const lastTwo = selectedSyllabus.versions.slice(-2);
+                          const newest = lastTwo[lastTwo.length - 1];
+                          const prev = lastTwo[lastTwo.length - 2];
+                          const added = newest.changedSections.filter(c => !prev.changedSections.includes(c));
+                          const persisted = newest.changedSections.filter(c => prev.changedSections.includes(c));
+                          return (
+                            <ul style={{ margin: 0, paddingLeft: '18px', color: '#555', fontSize: '13px' }}>
+                              <li>Năm học: {prev.academicYear} → {newest.academicYear}</li>
+                              <li>Các mục cập nhật mới: {added.length ? added.join(', ') : 'Không có mục mới'}</li>
+                              <li>Các mục tiếp tục thay đổi: {persisted.length ? persisted.join(', ') : 'Không lặp lại thay đổi'}</li>
+                            </ul>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>

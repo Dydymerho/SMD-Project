@@ -79,7 +79,7 @@ const FinalApprovalPage: React.FC = () => {
           </a>
           <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/principal/system-oversight'); }}>
             <span className="icon"><BarChart3 size={20} /></span>
-            Tổng quan Hệ thống
+            Tìm kiếm & Phân tích
           </a>
         </nav>
 

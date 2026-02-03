@@ -37,6 +37,7 @@ interface Syllabus {
   createdAt?: string;
   publishedAt?: string;
   aiSummary?: string;
+  description?: string;
   deptName?: string;
 }
 
@@ -257,7 +258,8 @@ const StudentDashboard: React.FC = () => {
           try {
             const pdfInfo = await getSyllabusPDFInfo(selectedSyllabus.syllabusId);
             console.log('PDF info fetched:', pdfInfo);
-            setHasPdf(Boolean(pdfInfo?.hasPdf));
+            // Check if PDF exists by checking fileName or filePath instead of hasPdf
+            setHasPdf(Boolean(pdfInfo?.fileName || pdfInfo?.filePath));
           } catch (error) {
             console.log('Không thể lấy thông tin PDF:', error);
             setHasPdf(false);
@@ -692,6 +694,12 @@ const StudentDashboard: React.FC = () => {
                       <h3>Thông tin chung</h3>
                       {detailData && (
                         <div className="info-section">
+                          {detailData.description && detailData.description.trim().length > 0 && (
+                            <div className="ai-summary-box" style={{ marginBottom: '16px', padding: '16px', background: '#f9f9f9', borderRadius: '8px', borderLeft: '4px solid #2196f3' }}>
+                              <h4 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '15px', fontWeight: 600 }}>Mô tả giáo trình</h4>
+                              <p style={{ margin: 0, color: '#555', lineHeight: '1.6' }}>{detailData.description}</p>
+                            </div>
+                          )}
                           {detailData.aiSumary && (
                             <div className="ai-summary-box">
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>

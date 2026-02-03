@@ -81,6 +81,7 @@ export interface SyllabusDetailResponse {
   courseName: string;
   deptName: string;
   aiSumary: string;
+  description?: string;
   lecturerName: string;
   credit: number;
   academicYear: string;
@@ -552,11 +553,11 @@ export const getCLOPLOMappingsBySyllabusId = async (syllabusId: number): Promise
 // PDF API - Get PDF information
 export interface SyllabusPDFInfo {
   syllabusId: number;
-  hasPdf: boolean;
-  pdfName?: string;
+  fileName?: string;
+  filePath?: string;
   fileSize?: number;
   uploadedAt?: string;
-  uploadedBy?: string;
+  message?: string;
 }
 
 export const getSyllabusPDFInfo = async (syllabusId: number): Promise<SyllabusPDFInfo> => {
@@ -1008,33 +1009,44 @@ export const getPrincipalDashboardStats = async () => {
 };
 
 // AI Service API
-export const summarizeDocument = async (file: File): Promise<string> => {
+export const summarizeDocument = async (file: File, syllabusId?: number): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
+  if (syllabusId) {
+    formData.append('syllabusId', String(syllabusId));
+  }
 
-  const response = await aiAxiosClient.post('/summarize-async', formData, {
+  const response = await axiosClient.post('/ai/summarize', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
 
-  return response.data.summary || response.data;
-};
-
-export const uploadPdfForOCR = async (file: File): Promise<{ task_id: string }> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  const response = await aiAxiosClient.post('/upload-ocr-async', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
   return response.data;
 };
 
-export const getAITaskStatus = async (taskId: string): Promise<any> => {
-  const response = await aiAxiosClient.get(`/task-status/${taskId}`);
+export const uploadPdfForOCR = async (file: File): Promise<{ taskId: string; status?: string; message?: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await axiosClient.post('ai/summarize', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  const raw = response.data || {};
+  const taskId = String(raw.taskId ?? raw.aiTaskId ?? raw.id ?? '');
+
+  return {
+    taskId,
+    status: raw.status,
+    message: raw.message,
+  };
+};
+
+export const getAITaskStatus = async (taskId: string | number): Promise<any> => {
+  const response = await axiosClient.get(`ai/tasks/${taskId}`);
   return response.data;
 };
 
