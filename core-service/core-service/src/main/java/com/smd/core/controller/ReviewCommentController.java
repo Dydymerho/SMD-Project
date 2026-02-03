@@ -312,48 +312,4 @@ public class ReviewCommentController {
         reviewCommentService.deleteComment(commentId);
         return ResponseEntity.noContent().build();
     }
-
-    @PutMapping("/{commentId}/resolve")
-    @Operation(
-        summary = "Resolve a comment",
-        description = "Mark a comment as resolved with resolution note"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Comment resolved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Comment not found")
-    })
-    public ResponseEntity<CommentResponse> resolveComment(
-            @Parameter(description = "ID of the syllabus", required = true)
-            @PathVariable Long syllabusId,
-            @Parameter(description = "ID of the comment to resolve", required = true)
-            @PathVariable Long commentId,
-            @Parameter(description = "Resolution note")
-            @RequestParam(required = false) String resolutionNote) {
-        
-        CommentResponse response = reviewCommentService.resolveComment(commentId, resolutionNote);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{parentCommentId}/reply")
-    @Operation(
-        summary = "Add a reply to a comment",
-        description = "Create a reply to an existing comment (nested comments)"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Reply created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Parent comment not found")
-    })
-    public ResponseEntity<CommentResponse> replyToComment(
-            @Parameter(description = "ID of the syllabus", required = true)
-            @PathVariable Long syllabusId,
-            @Parameter(description = "ID of the parent comment", required = true)
-            @PathVariable Long parentCommentId,
-            @Valid @RequestBody CommentRequest request) {
-        
-        CommentResponse response = reviewCommentService.replyToComment(parentCommentId, request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
-    }
 }
