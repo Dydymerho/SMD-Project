@@ -1,7 +1,6 @@
-import { getUsers, getRecentAuditLogs, createUser, lockUser, unlockUser, assignRoleToUser, getUserRoles, removeRoleFromUser, getAllRoles, getNotificationStats, downloadBulkUserImportTemplate, bulkImportUsers, BulkUserImportResponse } from '../../services/api';
+import { getUsers, getRecentAuditLogs, createUser, lockUser, unlockUser, assignRoleToUser, getUserRoles, removeRoleFromUser, getAllRoles, getNotificationStats, downloadBulkUserImportTemplate, bulkImportUsers, BulkUserImportResponse, getAllSyllabuses, getDepartments } from '../../services/api';
 import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { FileText, Download, ShieldAlert, Database, FileType, Filter, ShieldCheck, Lock, RotateCcw, X, BookOpen, Home, Users, Bell, User, BarChart3, Upload } from 'lucide-react';
+import { FileText, Download, ShieldAlert, Database, Filter, ShieldCheck, Lock, RotateCcw, X, BookOpen, Home, Users, Bell, User, BarChart3, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './SystemManagementPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -27,7 +26,7 @@ interface AuditLog {
 const SystemManagementPage: React.FC = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, totalSyllabi: 0, dataUsage: '0 GB' });
+  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, totalDepartments: 0, totalSyllabi: 0 });
   const [loading, setLoading] = useState(true);
 
   const { user, logout } = useAuth();
@@ -86,16 +85,24 @@ const SystemManagementPage: React.FC = () => {
       const totalUsers = usersWithRoles.length;
       const activeUsers = usersWithRoles.filter((u: UserData) => u.status === 'Hoạt động').length;
 
+      // Fetch syllabuses to count total courses
+      const syllabusesData = await getAllSyllabuses();
+      const totalSyllabi = Array.isArray(syllabusesData) ? syllabusesData.length : 0;
+
+      // Fetch departments to count total departments
+      const departmentsData = await getDepartments();
+      const totalDepartments = Array.isArray(departmentsData) ? departmentsData.length : 0;
+
       setStats({
         totalUsers: totalUsers,
         activeToday: activeUsers,
-        totalSyllabi: 0,
-        dataUsage: '0 GB'
+        totalDepartments: totalDepartments,
+        totalSyllabi: totalSyllabi
       });
     } catch (error) {
         console.error("Không thể lấy danh sách người dùng:", error);
         setUsers([]);
-        setStats({ totalUsers: 0, activeToday: 0, totalSyllabi: 0, dataUsage: '0 GB' });
+        setStats({ totalUsers: 0, activeToday: 0, totalDepartments: 0, totalSyllabi: 0 });
     } finally {
         setLoading(false);
     }
@@ -180,13 +187,6 @@ useEffect(() => {
     roles: [] as string[],
     status: 'Hoạt động',
   });
-
-  const trafficData = [
-    { hour: '00:00', users: 120 }, { hour: '04:00', users: 80 },
-    { hour: '08:00', users: 450 }, { hour: '12:00', users: 980 },
-    { hour: '16:00', users: 1200 }, { hour: '20:00', users: 600 },
-    { hour: '23:59', users: 300 },
-  ];
 
   const [workflowSteps, setWorkflowSteps] = useState([
     { id: 1, name: 'Giảng viên soạn thảo', role: 'Lecturer', order: 1 },
@@ -529,95 +529,6 @@ useEffect(() => {
 
         <div className="sidebar-footer">
           <button onClick={logout} className="logout-btn">
-
-        {isBulkImportOpen && (
-          <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content" style={{ maxWidth: '720px' }}>
-              <div className="modal-header">
-                <h3>Import người dùng hàng loạt</h3>
-                <button className="close-btn" onClick={() => setIsBulkImportOpen(false)}>&times;</button>
-              </div>
-              <div className="modal-body">
-                <p style={{ marginTop: 0, color: '#666' }}>
-                  Tải file mẫu, điền dữ liệu theo đúng định dạng rồi tải lên để tạo nhiều tài khoản cùng lúc.
-                </p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
-                  <button type="button" className="add-button" onClick={handleDownloadBulkTemplate}>
-                    <Download size={16} /> Tải mẫu Excel
-                  </button>
-                  <input
-                    type="file"
-                    accept=".xlsx"
-                    onChange={(e) => setBulkImportFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-
-                {bulkImportFile && (
-                  <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-                    Đã chọn: <strong>{bulkImportFile.name}</strong>
-                  </div>
-                )}
-
-                {bulkImportError && (
-                  <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: '6px', marginBottom: '12px' }}>
-                    {bulkImportError}
-                  </div>
-                )}
-
-                {bulkImportResult && (
-                  <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '12px' }}>
-                    <div style={{ fontWeight: 600, marginBottom: '6px' }}>{bulkImportResult.message || 'Kết quả import'}</div>
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px' }}>
-                      <span>Tổng dòng: {bulkImportResult.totalRows}</span>
-                      <span>Thành công: {bulkImportResult.successCount}</span>
-                      <span>Lỗi: {bulkImportResult.errorCount}</span>
-                    </div>
-                  </div>
-                )}
-
-                {bulkImportResult?.errors && bulkImportResult.errors.length > 0 && (
-                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '6px' }}>
-                    <table className="data-table" style={{ margin: 0 }}>
-                      <thead>
-                        <tr>
-                          <th>Dòng</th>
-                          <th>Họ tên</th>
-                          <th>Email</th>
-                          <th>Vai trò</th>
-                          <th>Khoa</th>
-                          <th>Lỗi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bulkImportResult.errors.map((err, idx) => (
-                          <tr key={`${err.rowNumber}-${idx}`}>
-                            <td>{err.rowNumber}</td>
-                            <td>{err.fullName || '-'}</td>
-                            <td>{err.email || '-'}</td>
-                            <td>{err.roleCode || '-'}</td>
-                            <td>{err.departmentCode || '-'}</td>
-                            <td style={{ color: '#c62828' }}>{err.errorMessage}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => setIsBulkImportOpen(false)}>Đóng</button>
-                <button
-                  type="button"
-                  className="save-btn"
-                  onClick={handleBulkImport}
-                  disabled={bulkImportLoading}
-                >
-                  {bulkImportLoading ? 'Đang import...' : 'Bắt đầu import'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
             Đăng xuất
           </button>
         </div>
@@ -672,8 +583,8 @@ useEffect(() => {
               <div className="stat-card">
                 <div className="stat-icon"><Database size={20} /></div>
                 <div className="stat-info">
-                  <div className="stat-label">Lưu trữ</div>
-                  <div className="stat-value">{stats.dataUsage}</div>
+                  <div className="stat-label">Tổng số khoa</div>
+                  <div className="stat-value">{stats.totalDepartments}</div>
                 </div>
               </div>
               <div className="stat-card">
@@ -735,54 +646,39 @@ useEffect(() => {
           </>
         )}
 
-        {activeTab === 'reports' && (
+        {activeTab === 'reports' && user && user.role === 'ADMIN' && (
           <div className="reports-container">
-            <div className="reports-action-bar">
-              <h2>Báo cáo hệ thống chuyên sâu</h2>
-              <div className="export-btns">
-                <button className="export-btn pdf"><Download size={16}/> Xuất PDF</button>
-                <button className="export-btn excel"><FileText size={16}/> Xuất Excel</button>
-              </div>
+            <div className="reports-header">
+              <h2>Báo cáo thống kê</h2>
             </div>
 
-            <div className="content-section chart-section">
-              <div className="section-header">
-                <h3><ShieldAlert size={20} /> Lưu lượng truy cập hệ thống (24h)</h3>
-              </div>
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer>
-                  <LineChart data={trafficData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="hour" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="users" stroke="#764ba2" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="resource-report-grid">
-              <div className="stat-card resource">
-                <div className="stat-icon"><Database color="#667eea"/></div>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon"><Users size={20} /></div>
                 <div className="stat-info">
-                  <div className="stat-label">Dung lượng giáo trình</div>
-                  <div className="stat-value">8.4 GB <small>/ 12GB</small></div>
-                  <div className="progress-bar"><div className="fill" style={{width: '70%'}}></div></div>
+                  <div className="stat-label">Người dùng</div>
+                  <div className="stat-value">{stats.totalUsers}</div>
                 </div>
               </div>
-              <div className="stat-card resource">
-                <div className="stat-icon"><FileType color="#ff4444"/></div>
+              <div className="stat-card">
+                <div className="stat-icon"><BarChart3 size={20} /></div>
                 <div className="stat-info">
-                  <div className="stat-label">Tệp PDF đã số hóa</div>
-                  <div className="stat-value">450 <small>tệp</small></div>
+                  <div className="stat-label">Hoạt động hôm nay</div>
+                  <div className="stat-value">{stats.activeToday}</div>
                 </div>
               </div>
-              <div className="stat-card resource">
-                <div className="stat-icon"><FileType color="#2196f3"/></div>
+              <div className="stat-card">
+                <div className="stat-icon"><Database size={20} /></div>
                 <div className="stat-info">
-                  <div className="stat-label">Tệp Docx đã số hóa</div>
-                  <div className="stat-value">320 <small>tệp</small></div>
+                  <div className="stat-label">Tổng số khoa</div>
+                  <div className="stat-value">{stats.totalDepartments}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon"><BookOpen size={20} /></div>
+                <div className="stat-info">
+                  <div className="stat-label">Tổng số giáo trình</div>
+                  <div className="stat-value">{stats.totalSyllabi}</div>
                 </div>
               </div>
             </div>
@@ -813,6 +709,16 @@ useEffect(() => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reports' && (!user || user.role !== 'ADMIN') && (
+          <div className="reports-container">
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
+              <ShieldAlert size={48} style={{ margin: '0 auto 20px', color: '#999' }} />
+              <h3>Chỉ quản trị viên có thể xem báo cáo</h3>
+              <p>Bạn không có quyền truy cập phần này. Vui lòng liên hệ quản trị viên để được cấp quyền.</p>
             </div>
           </div>
         )}
@@ -1189,6 +1095,96 @@ useEffect(() => {
                     <button type="submit" className="submit-btn">Xác nhận thêm</button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Bulk Import Users */}
+        {isBulkImportOpen && (
+          <div className="modal-overlay" onClick={handleOverlayClick}>
+            <div className="modal-content" style={{ maxWidth: '720px' }}>
+              <div className="modal-header">
+                <h3>Import người dùng hàng loạt</h3>
+                <button className="close-btn" onClick={() => setIsBulkImportOpen(false)}>&times;</button>
+              </div>
+              <div className="modal-body">
+                <p style={{ marginTop: 0, color: '#666' }}>
+                  Tải file mẫu, điền dữ liệu theo đúng định dạng rồi tải lên để tạo nhiều tài khoản cùng lúc.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <button type="button" className="add-button" onClick={handleDownloadBulkTemplate}>
+                    <Download size={16} /> Tải mẫu Excel
+                  </button>
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={(e) => setBulkImportFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+
+                {bulkImportFile && (
+                  <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
+                    Đã chọn: <strong>{bulkImportFile.name}</strong>
+                  </div>
+                )}
+
+                {bulkImportError && (
+                  <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: '6px', marginBottom: '12px' }}>
+                    {bulkImportError}
+                  </div>
+                )}
+
+                {bulkImportResult && (
+                  <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '12px' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '6px' }}>{bulkImportResult.message || 'Kết quả import'}</div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px' }}>
+                      <span>Tổng dòng: {bulkImportResult.totalRows}</span>
+                      <span>Thành công: {bulkImportResult.successCount}</span>
+                      <span>Lỗi: {bulkImportResult.errorCount}</span>
+                    </div>
+                  </div>
+                )}
+
+                {bulkImportResult?.errors && bulkImportResult.errors.length > 0 && (
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '6px' }}>
+                    <table className="data-table" style={{ margin: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>Dòng</th>
+                          <th>Họ tên</th>
+                          <th>Email</th>
+                          <th>Vai trò</th>
+                          <th>Khoa</th>
+                          <th>Lỗi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkImportResult.errors.map((err, idx) => (
+                          <tr key={`${err.rowNumber}-${idx}`}>
+                            <td>{err.rowNumber}</td>
+                            <td>{err.fullName || '-'}</td>
+                            <td>{err.email || '-'}</td>
+                            <td>{err.roleCode || '-'}</td>
+                            <td>{err.departmentCode || '-'}</td>
+                            <td style={{ color: '#c62828' }}>{err.errorMessage}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={() => setIsBulkImportOpen(false)}>Đóng</button>
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handleBulkImport}
+                  disabled={bulkImportLoading}
+                >
+                  {bulkImportLoading ? 'Đang import...' : 'Bắt đầu import'}
+                </button>
               </div>
             </div>
           </div>
