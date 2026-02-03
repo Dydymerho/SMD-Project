@@ -28,7 +28,7 @@ public class CourseRelationController {
     private final CourseRelationService relationService;
     
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CURRICULUM_MANAGER', 'DEPARTMENT_HEAD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_AFFAIRS', 'HEAD_OF_DEPARTMENT')")
     @Operation(summary = "Create a new course relationship",
                description = "Create a relationship between two courses such as prerequisite, corequisite or equivalent")
     @ApiResponses({
@@ -119,7 +119,7 @@ public class CourseRelationController {
     }
     
     @DeleteMapping("/{relationId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CURRICULUM_MANAGER', 'DEPARTMENT_HEAD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_AFFAIRS', 'HEAD_OF_DEPARTMENT')")
     @Operation(summary = "Delete a course relationship",
                description = "Remove the relationship between two courses")
     @ApiResponses({
