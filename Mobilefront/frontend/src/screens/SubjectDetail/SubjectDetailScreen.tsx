@@ -12,19 +12,29 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 /* --- IMPORT CUSTOM --- */
 import styles from "./SubjectDetailScreen.styles";
 import { SubjectService } from "../../../../backend/Service/SubjectService";
-// 1. IMPORT API REPORT
 import { ReportApi } from "../../../../backend/api/ReportApi";
 import { CourseInteractionApi } from "../../../../backend/api/CourseInteractionApi";
 import { CourseRelationApi } from "../../../../backend/api/CourseRelationshipApi";
 import { CourseNode } from "../../../../backend/types/CourseRelationShip";
 import { SubjectDetailData } from "../../../../backend/types/SubjectDetail";
-import { SyllabusApi } from "../../../../backend/api/SyllabusApi";
+
 /* --- TYPES --- */
 type RouteParams = {
     SubjectDetail: { code: string; name?: string; }
 };
-type DiagramNode = { id: string; code: string; desc?: string; y?: number };
+// Thêm type 'type' và 'level' để phân loại màu sắc và priority
+type DiagramNode = {
+    id: string;
+    code: string;
+    desc?: string;
+    y?: number;
+    type?: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT';
+    level?: number; // Dùng để sort priority
+};
 type Link = { from: string; to: string; level: string; };
+
+/* --- CONFIG LIMIT --- */
+const MAX_ITEMS_PER_TYPE = 3; // Giới hạn mỗi loại chỉ hiện tối đa 3 môn
 
 /* --- COMPONENTS CON --- */
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -73,7 +83,7 @@ export default function SubjectDetailScreen() {
     const route = useRoute<RouteProp<RouteParams, "SubjectDetail">>();
     const navigation = useNavigation();
     const { code } = route.params;
-    const [isDownloading, setIsDownloading] = useState(false);
+
     // State Data
     const [data, setData] = useState<SubjectDetailData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -93,32 +103,13 @@ export default function SubjectDetailScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [customReason, setCustomReason] = useState("");
     const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
-    const [isSendingReport, setIsSendingReport] = useState(false); // Loading khi gửi report
-    const handleDownloadSyllabus = async () => {
-        if (!data || isDownloading) return;
+    const [isSendingReport, setIsSendingReport] = useState(false);
 
-        // Lấy ID (ưu tiên syllabusId nếu có)
-        const syllabusId = (data.info as any).syllabusId || data.info.id;
-
-        if (!syllabusId) {
-            Alert.alert("Thông báo", "Không tìm thấy thông tin giáo trình để tải.");
-            return;
-        }
-
-        try {
-            setIsDownloading(true);
-            const path = await SyllabusApi.downloadPdf(syllabusId);
-            Alert.alert("Thành công", `File đã được lưu tại thư mục Tải về:\n${path}`);
-        } catch (error: any) {
-            Alert.alert("Lỗi", error.message || "Tải file thất bại");
-        } finally {
-            setIsDownloading(false);
-        }
-    };
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                // 1. Get Detail
                 const subjectResult = await SubjectService.getFullDetail(code);
                 if (!subjectResult) {
                     Alert.alert("Thông báo", `Không tìm thấy dữ liệu: ${code}`);
@@ -128,7 +119,7 @@ export default function SubjectDetailScreen() {
 
                 const courseId = subjectResult.info.id || (subjectResult.info as any).syllabusId;
 
-                // Get Tree Relation
+                // 2. Get Tree Relation
                 let treeData: CourseNode | null = null;
                 if (courseId) {
                     try {
@@ -137,30 +128,89 @@ export default function SubjectDetailScreen() {
                     } catch (err) { console.log("Lỗi lấy cây quan hệ:", err); }
                 }
 
+                // 3. Process Tree (Logic Mới: Phân loại, Sắp xếp Priority & Giới hạn)
                 if (treeData) {
-                    const newLeft: DiagramNode[] = [], newRight: DiagramNode[] = [], newLinks: Link[] = [];
-                    const seenLeft = new Set<string>(), seenRight = new Set<string>();
+                    const tempLeft: DiagramNode[] = [];
+                    // Dùng 3 mảng tạm để chứa các loại quan hệ
+                    const rawPre: DiagramNode[] = [];
+                    const rawCo: DiagramNode[] = [];
+                    const rawEq: DiagramNode[] = [];
+                    const seenLeft = new Set<string>();
+                    const seenRight = new Set<string>();
 
                     const traverseTree = (parentNode: CourseNode) => {
-                        const process = (children: CourseNode[] | null, type: string) => {
+                        // Thêm Node Gốc (Left Column)
+                        const pKey = `${parentNode.courseCode}`;
+                        if (!seenLeft.has(pKey)) {
+                            seenLeft.add(pKey);
+                            tempLeft.push({ id: pKey, code: parentNode.courseCode, desc: parentNode.courseName });
+                        }
+
+                        const process = (children: CourseNode[] | null, type: 'PREREQUISITE' | 'COREQUISITE' | 'EQUIVALENT') => {
                             if (!children) return;
                             children.forEach(child => {
-                                const pKey = `${parentNode.courseCode}`;
                                 const cKey = `${child.courseCode}_${parentNode.courseCode}_${type}`;
-                                if (!seenLeft.has(pKey)) { seenLeft.add(pKey); newLeft.push({ id: pKey, code: parentNode.courseCode, desc: parentNode.courseName }); }
-                                if (!seenRight.has(cKey)) { seenRight.add(cKey); newRight.push({ id: cKey, code: child.courseCode, desc: child.courseName }); }
-                                newLinks.push({ from: pKey, to: cKey, level: type });
+
+                                if (!seenRight.has(cKey)) {
+                                    seenRight.add(cKey);
+                                    const node: DiagramNode = {
+                                        id: cKey,
+                                        code: child.courseCode,
+                                        desc: child.courseName,
+                                        type: type,
+                                        level: child.level || 99 // Priority: Level càng nhỏ càng ưu tiên
+                                    };
+
+                                    // Phân loại vào từng giỏ
+                                    if (type === 'PREREQUISITE') rawPre.push(node);
+                                    else if (type === 'COREQUISITE') rawCo.push(node);
+                                    else rawEq.push(node);
+                                }
+                                // Đệ quy tiếp tục
                                 traverseTree(child);
                             });
                         };
-                        process(parentNode.prerequisites, 'PREREQUISITE');
-                        process(parentNode.corequisites, 'COREQUISITE');
-                        process(parentNode.equivalents, 'EQUIVALENT');
+
+                        process(parentNode.prerequisites as any, 'PREREQUISITE');
+                        process(parentNode.corequisites as any, 'COREQUISITE');
+                        process(parentNode.equivalents as any, 'EQUIVALENT');
                     };
+
                     traverseTree(treeData);
-                    setLeftNodes(newLeft); setRightNodes(newRight); setMappings(newLinks);
+
+                    // --- LOGIC SẮP XẾP VÀ GIỚI HẠN (Priority Logic) ---
+                    const sortAndLimit = (arr: DiagramNode[]) => {
+                        return arr
+                            .sort((a, b) => (a.level || 99) - (b.level || 99)) // Ưu tiên level nhỏ
+                            .slice(0, MAX_ITEMS_PER_TYPE); // Cắt lấy top N
+                    };
+
+                    const finalRightNodes = [
+                        ...sortAndLimit(rawPre),
+                        ...sortAndLimit(rawCo),
+                        ...sortAndLimit(rawEq)
+                    ];
+
+                    // Tạo lại đường nối
+                    const finalLinks: Link[] = [];
+                    const rootId = tempLeft.length > 0 ? tempLeft[0].id : "";
+
+                    finalRightNodes.forEach(node => {
+                        if (rootId) {
+                            finalLinks.push({
+                                from: rootId,
+                                to: node.id,
+                                level: node.type || 'PREREQUISITE'
+                            });
+                        }
+                    });
+
+                    setLeftNodes(tempLeft.slice(0, 1)); // Chỉ lấy 1 node gốc chính
+                    setRightNodes(finalRightNodes);
+                    setMappings(finalLinks);
                 }
 
+                // 4. Check Follow
                 if (courseId) {
                     try {
                         const fList = await CourseInteractionApi.getFollowedCourses();
@@ -174,64 +224,47 @@ export default function SubjectDetailScreen() {
 
     // --- HELPERS ---
     const updatePosition = (key: string, y: number, height: number) => setPositions(prev => ({ ...prev, [key]: y + height / 2 }));
+
+    // Màu sắc dựa trên loại quan hệ
     const getColorByLevel = (l: string) => {
         switch (l?.toUpperCase()) {
-            case 'PREREQUISITE': return '#ef4444';
-            case 'COREQUISITE': return '#3b82f6';
-            case 'EQUIVALENT': return '#eab308';
+            case 'PREREQUISITE': return '#ef4444'; // Đỏ
+            case 'COREQUISITE': return '#3b82f6'; // Xanh
+            case 'EQUIVALENT': return '#eab308'; // Vàng
             default: return '#cbd5e1';
         }
     };
 
-    // --- LOGIC REPORT (API GẮN TẠI ĐÂY) ---
+    // Label hiển thị loại quan hệ
+    const getLabelByType = (type?: string) => {
+        switch (type) {
+            case 'PREREQUISITE': return 'Tiên quyết';
+            case 'COREQUISITE': return 'Song hành';
+            case 'EQUIVALENT': return 'Tương đương';
+            default: return '';
+        }
+    };
 
-    // Hàm gọi API thực sự
+    // --- LOGIC REPORT ---
     const sendReportToApi = async (title: string, description: string) => {
-        if (!description.trim()) {
-            Alert.alert("Thông báo", "Vui lòng nhập nội dung chi tiết.");
-            return;
-        }
-
+        if (!description.trim()) { Alert.alert("Thông báo", "Vui lòng nhập nội dung."); return; }
         const token = await AsyncStorage.getItem('AUTH_TOKEN');
-        if (!token) {
-            Alert.alert("Yêu cầu", "Vui lòng đăng nhập để gửi báo cáo.");
-            return;
-        }
+        if (!token) { Alert.alert("Yêu cầu", "Đăng nhập để gửi báo cáo."); return; }
 
         setIsSendingReport(true);
-
         try {
-            // Gọi ReportApi
-            await ReportApi.createReport({
-                title: title,
-                description: description
-            });
-
-            Alert.alert("Thành công", "Cảm ơn bạn đã đóng góp ý kiến. Chúng tôi sẽ xem xét sớm nhất.");
-            setModalVisible(false);
-            setCustomReason("");
-        } catch (error) {
-            console.error("Report Error:", error);
-            Alert.alert("Lỗi", "Gửi báo cáo thất bại. Vui lòng thử lại sau.");
-        } finally {
-            setIsSendingReport(false);
-        }
+            await ReportApi.createReport({ title, description });
+            Alert.alert("Thành công", "Đã gửi báo cáo.");
+            setModalVisible(false); setCustomReason("");
+        } catch (error) { Alert.alert("Lỗi", "Gửi thất bại."); }
+        finally { setIsSendingReport(false); }
     };
 
-    // Xử lý khi nhấn nút Gửi trong Modal
     const handleSubmitCustomReason = () => {
-        if (selectedMaterial) {
-            sendReportToApi(`Báo lỗi tài liệu: ${selectedMaterial.title}`, customReason);
-        } else {
-            sendReportToApi(`Báo cáo môn học: ${data?.info.courseCode}`, customReason);
-        }
+        if (selectedMaterial) sendReportToApi(`Lỗi tài liệu: ${selectedMaterial.title}`, customReason);
+        else sendReportToApi(`Báo cáo môn: ${data?.info.courseCode}`, customReason);
     };
-
-    // Mở Modal khi nhấn nút Báo lỗi (icon cờ)
-    const handleReport = (item: any) => {
-        setSelectedMaterial(item);
-        setModalVisible(true);
-    };
+    const handleReport = (item: any) => { setSelectedMaterial(item); setModalVisible(true); };
 
     // --- LOGIC FOLLOW ---
     const handleFollowToggle = async () => {
@@ -243,7 +276,7 @@ export default function SubjectDetailScreen() {
         try {
             if (prev) await CourseInteractionApi.unfollowCourse(courseId);
             else await CourseInteractionApi.followCourse(courseId);
-        } catch (e) { setIsFollowed(prev); Alert.alert("Lỗi", "Cập nhật thất bại"); } finally { setIsUpdatingFollow(false); }
+        } catch (e) { setIsFollowed(prev); } finally { setIsUpdatingFollow(false); }
     };
 
     if (loading) return <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#15803d" /></View>;
@@ -264,36 +297,12 @@ export default function SubjectDetailScreen() {
                         </View>
                         <Icon name="book-education-outline" size={60} color="rgba(255,255,255,0.1)" />
                     </View>
-
-                    {/* HÀNG NÚT BẤM ĐÃ CẬP NHẬT */}
-                    <View style={{ flexDirection: 'row', marginTop: 15, gap: 10 }}>
-                        <FollowButton
-                            isFollowed={isFollowed}
-                            isLoading={isUpdatingFollow}
-                            onPress={handleFollowToggle}
-                            style={{ flex: 1 }}
-                        />
-
-                        <TouchableOpacity
-                            style={[
-                                styles.followBtn,
-                                { backgroundColor: '#F8FAFC', flex: 1 },
-                                isDownloading && { opacity: 0.7 }
-                            ]}
-                            onPress={handleDownloadSyllabus}
-                            disabled={isDownloading}
-                        >
-                            {isDownloading ? (
-                                <ActivityIndicator size="small" color="#475569" />
-                            ) : (
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Icon name="file-pdf-box" size={18} color="#EF4444" style={{ marginRight: 6 }} />
-                                    <Text style={[styles.followBtnText, { color: '#475569' }]}>Tải PDF</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
+                    {/* CHỈ CÒN NÚT FOLLOW */}
+                    <View style={{ flexDirection: 'row', marginTop: 15 }}>
+                        <FollowButton isFollowed={isFollowed} isLoading={isUpdatingFollow} onPress={handleFollowToggle} style={{ flex: 1 }} />
                     </View>
                 </LinearGradient>
+
                 <Section title="Mô tả tóm tắt"><Text style={styles.missionText}>{info.description}</Text></Section>
                 <Section title="Thông tin chi tiết">
                     <InfoRow label="Giảng viên" value={info.lecturerName} icon="account-tie" />
@@ -302,7 +311,7 @@ export default function SubjectDetailScreen() {
                     <InfoRow label="Loại hình" value={info.type} icon="shape-outline" />
                 </Section>
 
-                {/* Sơ đồ cây */}
+                {/* SƠ ĐỒ QUAN HỆ (ĐÃ CẬP NHẬT GIAO DIỆN) */}
                 <View style={{ marginTop: 10, marginHorizontal: 16 }}>
                     <TouchableOpacity style={styles.toggleBtn} onPress={() => setShowDiagram(!showDiagram)}>
                         <Icon name={showDiagram ? "chevron-up" : "chevron-down"} size={20} color="#0284C7" />
@@ -317,20 +326,47 @@ export default function SubjectDetailScreen() {
                                         <Svg style={styles.svgLayer}>
                                             {mappings.map((m, i) => {
                                                 const y1 = positions[m.from]; const y2 = positions[m.to];
-                                                if (y1 !== undefined && y2 !== undefined) return <Line key={i} x1="25%" y1={y1} x2="75%" y2={y2} stroke={getColorByLevel(m.level)} strokeWidth="2" strokeOpacity={0.6} />;
+                                                if (y1 !== undefined && y2 !== undefined) return <Line key={i} x1="30%" y1={y1} x2="70%" y2={y2} stroke={getColorByLevel(m.level)} strokeWidth="2" strokeOpacity={0.6} />;
                                                 return null;
                                             })}
                                         </Svg>
+
+                                        {/* Cột Trái: Môn Gốc */}
                                         <View style={styles.column}>
-                                            <Text style={styles.colTitle}>Môn Gốc</Text>
-                                            {leftNodes.map(n => (<View key={n.id} style={[styles.node, styles.ploNode]} onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}><Text style={styles.nodeTitle}>{n.code}</Text></View>))}
+                                            <Text style={styles.colTitle}>Môn</Text>
+                                            {leftNodes.map(n => (
+                                                <View key={n.id} style={[styles.node, styles.ploNode]} onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
+                                                    <Text style={styles.nodeTitle}>{n.code}</Text>
+                                                </View>
+                                            ))}
                                         </View>
+
+                                        {/* Cột Phải: Các môn điều kiện (Đã sắp xếp & Phân loại) */}
                                         <View style={styles.column}>
-                                            <Text style={styles.colTitle}>Môn Điều Kiện</Text>
-                                            {rightNodes.map(n => (<View key={n.id} style={[styles.node, styles.cloNode]} onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}><Text style={styles.nodeTitle}>{n.code}</Text><Text style={styles.nodeDesc} numberOfLines={1}>{n.desc}</Text></View>))}
+                                            <Text style={styles.colTitle}>Môn điều kiện</Text>
+                                            {rightNodes.map((n) => (
+                                                <View key={n.id}
+                                                    style={[
+                                                        styles.node,
+                                                        styles.cloNode,
+                                                        { borderLeftColor: getColorByLevel(n.type || ''), borderLeftWidth: 4 } // Viền trái màu theo loại
+                                                    ]}
+                                                    onLayout={(e) => updatePosition(n.id, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
+                                                >
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                                                        <Text style={[styles.nodeTitle, { fontSize: 12 }]}>{n.code}</Text>
+                                                        <Text style={{ fontSize: 9, color: getColorByLevel(n.type || ''), fontWeight: 'bold' }}>
+                                                            {getLabelByType(n.type)}
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={styles.nodeDesc} numberOfLines={1}>{n.desc}</Text>
+                                                </View>
+                                            ))}
                                         </View>
                                     </View>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 10 }}>
+
+                                    {/* Chú thích màu */}
+                                    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
                                         <Text style={{ fontSize: 10, color: '#ef4444', fontWeight: '600' }}>● Tiên quyết</Text>
                                         <Text style={{ fontSize: 10, color: '#3b82f6', fontWeight: '600' }}>● Song hành</Text>
                                         <Text style={{ fontSize: 10, color: '#eab308', fontWeight: '600' }}>● Tương đương</Text>
@@ -381,37 +417,20 @@ export default function SubjectDetailScreen() {
                 )}
             </ScrollView>
 
+            {/* MODAL REPORT */}
             <Modal transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)} animationType="fade">
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
                     <View style={styles.modalView}>
                         <Icon name="alert-circle-outline" size={48} color="#EF4444" style={{ alignSelf: 'center', marginBottom: 10 }} />
                         <Text style={styles.modalTitle}>Báo cáo tài liệu</Text>
                         <Text style={styles.modalSubtitle}>{selectedMaterial?.title}</Text>
-
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Mô tả chi tiết vấn đề..."
-                            placeholderTextColor="#94A3B8"
-                            multiline
-                            value={customReason}
-                            onChangeText={setCustomReason}
-                        />
-
+                        <TextInput style={styles.input} placeholder="Mô tả chi tiết vấn đề..." placeholderTextColor="#94A3B8" multiline value={customReason} onChangeText={setCustomReason} />
                         <View style={styles.buttonRow}>
                             <TouchableOpacity style={[styles.button, styles.buttonCancel]} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.textCancel}>Hủy bỏ</Text>
                             </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.button, styles.buttonConfirm]}
-                                onPress={handleSubmitCustomReason}
-                                disabled={isSendingReport} // Disable khi đang gửi
-                            >
-                                {isSendingReport ? (
-                                    <ActivityIndicator size="small" color="#FFF" />
-                                ) : (
-                                    <Text style={styles.textConfirm}>Gửi báo cáo</Text>
-                                )}
+                            <TouchableOpacity style={[styles.button, styles.buttonConfirm]} onPress={handleSubmitCustomReason} disabled={isSendingReport}>
+                                {isSendingReport ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.textConfirm}>Gửi báo cáo</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>

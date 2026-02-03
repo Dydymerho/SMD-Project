@@ -5,7 +5,6 @@ import {
 } from "react-native";
 import { Bell, CheckCircle, Info, AlertCircle, Clock, Calendar } from "lucide-react-native";
 import LinearGradient from "react-native-linear-gradient"; // Cần thư viện này
-
 import { NotificationApi } from "../../../../backend/api/NotificationApi";
 import { Notification } from "../../../../backend/types/Notification";
 import styles from "./Notification.styles";
@@ -147,7 +146,7 @@ export default function NotificationScreen() {
                     </View>
                     {unreadCount > 0 && (
                         <View style={styles.unreadBadge}>
-                            <Text style={styles.unreadText}>{unreadCount} mới</Text>
+                            <Text style={styles.unreadText}>{unreadCount}</Text>
                         </View>
                     )}
                 </View>
