@@ -29,7 +29,7 @@ interface SyllabusDetail {
   version: number;
   submissionDate: string;
   academicYear: string;
-  description: string;
+  description?: string;
   aiSummary?: string | null;
   currentStatus?: string;
   rejectionReason?: string;
@@ -563,6 +563,22 @@ const SyllabusReviewDetailPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Description */}
+          <div style={{
+            background: 'white',
+            padding: '20px 24px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '18px', fontWeight: 700 }}>Mô tả giáo trình</h3>
+            {syllabus.description && syllabus.description.trim().length > 0 ? (
+              <p style={{ margin: 0, color: '#555', lineHeight: 1.6 }}>{syllabus.description}</p>
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có mô tả cho giáo trình này</p>
+            )}
+          </div>
 
           {/* AI Summary */}
           {syllabus.aiSummary && (

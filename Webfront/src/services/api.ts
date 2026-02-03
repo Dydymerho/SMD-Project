@@ -81,6 +81,7 @@ export interface SyllabusDetailResponse {
   courseName: string;
   deptName: string;
   aiSumary: string;
+  description?: string;
   lecturerName: string;
   credit: number;
   academicYear: string;

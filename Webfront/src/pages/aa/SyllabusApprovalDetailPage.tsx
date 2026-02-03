@@ -47,6 +47,7 @@ interface SyllabusDetail {
   academicYear?: string;
   currentStatus?: string;
   versionNotes?: string;
+  description?: string;
   aiSummary?: string;
   sessionPlans?: SessionPlan[];
   assessments?: Assessment[];
@@ -109,6 +110,7 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
         academicYear: syllabusData.academicYear,
         currentStatus: syllabusInfo?.currentStatus,
         versionNotes: syllabusInfo?.versionNotes,
+        description: syllabusData.description,
         aiSummary: syllabusData.aiSumary,
         sessionPlans: syllabusData.sessionPlans || [],
         assessments: syllabusData.assessments || [],
@@ -297,6 +299,22 @@ const AASyllabusApprovalDetailPage: React.FC = () => {
               <div style={{ marginTop: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', borderLeft: '4px solid #2196f3' }}>
                 <strong>Ghi chú:</strong> {syllabus.versionNotes}
               </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <div style={{
+            background: 'white',
+            padding: '20px 24px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '18px', fontWeight: 700 }}>Mô tả giáo trình</h3>
+            {syllabus.description && syllabus.description.trim().length > 0 ? (
+              <p style={{ margin: 0, color: '#555', lineHeight: 1.6 }}>{syllabus.description}</p>
+            ) : (
+              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có mô tả cho giáo trình này</p>
             )}
           </div>
 
