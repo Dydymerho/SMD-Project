@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle, XCircle, ArrowLeft, Eye, MessageSquare, 
-  Home, Users, Search, Bell, User, Loader, AlertCircle, X
+  CheckCircle, Eye,
+  Home, Users, Search, Bell, User, Loader, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSyllabusesForHoD, approveSyllabus, rejectSyllabus, getSyllabusDetailForReview } from '../../services/workflowService';
+import { getPendingSyllabusesForHoD } from '../../services/workflowService';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -29,12 +31,12 @@ interface SyllabusSubmission {
 const HoDSyllabusReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toasts, removeToast } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [syllabuses, setSyllabuses] = useState<SyllabusSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const [selectedSyllabus, setSelectedSyllabus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const notificationCount = 0;
 
@@ -86,42 +88,6 @@ const HoDSyllabusReviewPage: React.FC = () => {
     }
   };
 
-  const handleApprove = async (id: string) => {
-    const approvalNote = prompt('Nhập ghi chú phê duyệt (tùy chọn):');
-    if (approvalNote === null) return; // User cancelled
-    
-    try {
-      const syllabusId = parseInt(id);
-      await approveSyllabus(syllabusId, approvalNote || 'Phê duyệt từ cấp trưởng bộ môn');
-      // Update local state
-      setSyllabuses(prev =>
-        prev.map(s => s.id === id ? { ...s, status: 'approved' } : s)
-      );
-      alert('Đã phê duyệt giáo trình thành công!');
-    } catch (err: any) {
-      console.error('Error approving syllabus:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Lỗi khi phê duyệt giáo trình';
-      alert(`❌ ${errorMsg}`);
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    const reason = prompt('Vui lòng nhập lý do từ chối:');
-    if (!reason) return;
-    try {
-      const syllabusId = parseInt(id);
-      await rejectSyllabus(syllabusId, reason);
-      setSyllabuses(prev =>
-        prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
-      );
-      alert('Đã từ chối giáo trình!');
-    } catch (err: any) {
-      console.error('Error rejecting syllabus:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Lỗi khi từ chối giáo trình';
-      alert(`❌ ${errorMsg}`);
-    }
-  };
-
   const filteredSyllabuses = syllabuses.filter(s => {
     if (filter !== 'all' && s.status !== filter) return false;
     if (searchTerm) {
@@ -143,6 +109,7 @@ const HoDSyllabusReviewPage: React.FC = () => {
 
   return (
     <div className="dashboard-page">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
@@ -390,7 +357,6 @@ const HoDSyllabusReviewPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-
         {filteredSyllabuses.length === 0 && pendingReviewSyllabuses.length === 0 && (
           <div style={{
             textAlign: 'center',

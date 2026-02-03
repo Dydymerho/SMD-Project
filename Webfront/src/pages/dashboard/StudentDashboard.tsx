@@ -135,10 +135,11 @@ const StudentDashboard: React.FC = () => {
         };
       });
 
-      // Áp dụng filter department nếu có chọn
-      let filteredData = normalizedData;
+      // Chỉ hiển thị syllabus có trạng thái PUBLISHED cho sinh viên
+      let filteredData = normalizedData.filter(s => s.currentStatus === 'PUBLISHED');
+      
       if (selectedMajor) {
-        filteredData = normalizedData.filter(s => 
+        filteredData = filteredData.filter(s => 
           s.course?.department?.departmentId?.toString() === selectedMajor
         );
       }
@@ -449,7 +450,9 @@ const StudentDashboard: React.FC = () => {
           } as Syllabus;
         });
 
-        setAllSyllabi(mappedSyllabi);
+        // Chỉ hiển thị syllabus có trạng thái PUBLISHED cho sinh viên
+        const publishedSyllabi = mappedSyllabi.filter((s: Syllabus) => s.currentStatus === 'PUBLISHED');
+        setAllSyllabi(publishedSyllabi);
       } catch (error) {
         console.error('Lỗi lấy dữ liệu giáo trình:', error);
       }

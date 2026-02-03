@@ -3,19 +3,25 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   CheckCircle, XCircle, ArrowLeft, AlertTriangle, 
   Home, Users, Search, Bell, User, FileText, Clock, 
-  TrendingUp, Zap, Loader, AlertCircle
+  TrendingUp, Zap, Loader, AlertCircle, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getSyllabusDetailForReview, approveSyllabus, rejectSyllabus, getPendingSyllabusesForHoD } from '../../services/workflowService';
+import * as api from '../../services/api';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 
 interface SyllabusDetail {
   id: string;
+  courseId?: number;
   courseCode: string;
   courseName: string;
   credits: number;
+  deptName?: string;
+  courseType?: string;
   lecturer: {
     name: string;
     email: string;
@@ -28,6 +34,12 @@ interface SyllabusDetail {
   currentStatus?: string;
   rejectionReason?: string;
   clos: string[];
+  sessionPlans?: Array<{
+    sessionId?: number;
+    weekNo: number;
+    topic: string;
+    teachingMethod: string;
+  }>;
   modules: Array<{
     moduleNo: number;
     moduleName: string;
@@ -38,6 +50,12 @@ interface SyllabusDetail {
     type: string;
     percentage: number;
     description: string;
+  }>;
+  materials?: Array<{
+    materialId?: number;
+    title: string;
+    author: string;
+    materialType: string;
   }>;
   changes?: Array<{
     section: string;
@@ -51,10 +69,14 @@ const SyllabusReviewDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [syllabus, setSyllabus] = useState<SyllabusDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clos, setClos] = useState<api.CLOResponse[]>([]);
+  const [mappings, setMappings] = useState<api.CLOPLOMappingResponse[]>([]);
+  const [courseRelations, setCourseRelations] = useState<api.CourseRelationResponse[]>([]);
   
   // Modals
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -103,9 +125,48 @@ const SyllabusReviewDetailPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  useEffect(() => {
+    if (!syllabus?.id) return;
+    const syllabusId = Number(syllabus.id);
+    if (Number.isNaN(syllabusId)) return;
+
+    const fetchCLOData = async () => {
+      try {
+        const [closData, mappingsData] = await Promise.all([
+          api.getCLOsBySyllabusId(syllabusId),
+          api.getCLOPLOMappingsBySyllabusId(syllabusId)
+        ]);
+        setClos(Array.isArray(closData) ? closData : []);
+        setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy dữ liệu CLO/Mappings:', fetchError);
+        setClos([]);
+        setMappings([]);
+      }
+    };
+
+    fetchCLOData();
+  }, [syllabus?.id]);
+
+  useEffect(() => {
+    if (!syllabus?.courseId) return;
+
+    const fetchRelations = async () => {
+      try {
+        const relations = await api.getCourseRelationsByCourseId(syllabus.courseId!);
+        setCourseRelations(Array.isArray(relations) ? relations : []);
+      } catch (fetchError) {
+        console.error('Lỗi lấy cây môn học:', fetchError);
+        setCourseRelations([]);
+      }
+    };
+
+    fetchRelations();
+  }, [syllabus?.courseId]);
+
   const handleApprove = async () => {
     if (!approvalNote.trim()) {
-      alert('Vui lòng nhập ghi chú phê duyệt');
+      warning('Vui lòng nhập ghi chú phê duyệt');
       return;
     }
 
@@ -114,15 +175,15 @@ const SyllabusReviewDetailPage: React.FC = () => {
       if (!id) throw new Error('Không có ID giáo trình');
       const syllabusId = parseInt(id);
       await approveSyllabus(syllabusId, approvalNote);
-      alert('✅ Đã phê duyệt giáo trình thành công!\nGiáo trình sẽ được chuyển đến phòng Đào tạo.');
-      navigate('/hod/syllabus-review');
+      success('Đã phê duyệt giáo trình thành công! Giáo trình sẽ được chuyển đến phòng Đào tạo.');
+      setTimeout(() => navigate('/hod/syllabus-review'), 1500);
     } catch (error: any) {
       console.error('Error approving syllabus:', error);
       // Check if error is due to status
       if (error.response?.data?.message?.includes('PENDING_REVIEW')) {
-        alert(`❌ Giáo trình không ở trạng thái "Chờ xử lý"\n\n${error.response.data.message}`);
+        showError(`Giáo trình không ở trạng thái "Chờ xử lý" - ${error.response.data.message}`);
       } else {
-        alert('❌ Có lỗi xảy ra khi phê duyệt');
+        showError('Có lỗi xảy ra khi phê duyệt');
       }
     } finally {
       setIsSubmitting(false);
@@ -131,7 +192,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối (bắt buộc)');
+      warning('Vui lòng nhập lý do từ chối (bắt buộc)');
       return;
     }
 
@@ -140,15 +201,15 @@ const SyllabusReviewDetailPage: React.FC = () => {
       if (!id) throw new Error('Không có ID giáo trình');
       const syllabusId = parseInt(id);
       await rejectSyllabus(syllabusId, rejectionReason);
-      alert('✅ Đã từ chối giáo trình.\nGiáo trình sẽ được trả về cho giảng viên với lý do từ chối.');
-      navigate('/hod/syllabus-review');
+      success('Đã từ chối giáo trình. Giáo trình sẽ được trả về cho giảng viên với lý do từ chối.');
+      setTimeout(() => navigate('/hod/syllabus-review'), 1500);
     } catch (error: any) {
       console.error('Error rejecting syllabus:', error);
       // Check if error is due to status
       if (error.response?.data?.message?.includes('PENDING_REVIEW')) {
-        alert(`❌ Giáo trình không ở trạng thái "Chờ xử lý"\n\n${error.response.data.message}`);
+        showError(`Giáo trình không ở trạng thái "Chờ xử lý" - ${error.response.data.message}`);
       } else {
-        alert('❌ Có lỗi xảy ra khi từ chối');
+        showError('Có lỗi xảy ra khi từ chối');
       }
     } finally {
       setIsSubmitting(false);
@@ -228,6 +289,7 @@ const SyllabusReviewDetailPage: React.FC = () => {
 
   return (
     <div className="dashboard-page">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
@@ -389,6 +451,18 @@ const SyllabusReviewDetailPage: React.FC = () => {
                 <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '12px' }}>Phiên bản</p>
                 <p style={{ margin: 0, color: '#333', fontWeight: 500 }}>v{syllabus.version}</p>
               </div>
+              <div>
+                <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '12px' }}>Loại môn học</p>
+                <p style={{ margin: 0, color: '#333', fontWeight: 500 }}>{syllabus.courseType || 'N/A'}</p>
+              </div>
+              <div>
+                <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '12px' }}>Năm học</p>
+                <p style={{ margin: 0, color: '#333', fontWeight: 500 }}>{syllabus.academicYear || 'N/A'}</p>
+              </div>
+              <div>
+                <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '12px' }}>Bộ môn</p>
+                <p style={{ margin: 0, color: '#333', fontWeight: 500 }}>{syllabus.deptName || 'N/A'}</p>
+              </div>
             </div>
           </div>
 
@@ -521,20 +595,6 @@ const SyllabusReviewDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Description */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            marginBottom: '24px'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Mô tả môn học</h3>
-            <p style={{ margin: 0, color: '#666', lineHeight: 1.6 }}>
-              {typeof syllabus.description === 'string' ? syllabus.description : (typeof syllabus.description === 'object' && syllabus.description ? JSON.stringify(syllabus.description) : 'Chưa có mô tả')}
-            </p>
-          </div>
-
           {/* CLOs */}
           <div style={{
             background: 'white',
@@ -546,7 +606,15 @@ const SyllabusReviewDetailPage: React.FC = () => {
             <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>
               Chuẩn đầu ra (CLOs)
             </h3>
-            {syllabus.clos && syllabus.clos.length > 0 ? (
+            {clos.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {clos.map((clo) => (
+                  <li key={clo.cloId} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>
+                    <strong style={{ color: '#333' }}>{clo.cloCode}</strong>: {clo.cloDescription}
+                  </li>
+                ))}
+              </ul>
+            ) : syllabus.clos && syllabus.clos.length > 0 ? (
               <ul style={{ margin: 0, paddingLeft: '20px' }}>
                 {syllabus.clos.map((clo: any, index: number) => (
                   <li key={index} style={{ margin: '8px 0', color: '#666', lineHeight: 1.6 }}>
@@ -559,44 +627,134 @@ const SyllabusReviewDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Modules */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            marginBottom: '24px'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Nội dung học phần</h3>
-            {syllabus.modules && syllabus.modules.length > 0 ? (
-              syllabus.modules.map((module) => (
-                <div
-                  key={module.moduleNo}
-                  style={{
-                    padding: '16px',
-                    background: '#f9f9f9',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
-                >
-                  <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>
-                    Module {module.moduleNo}: {module.moduleName} ({module.hours} giờ)
-                  </h4>
-                  {module.topics && module.topics.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                      {module.topics.map((topic, idx) => (
-                        <li key={idx} style={{ margin: '4px 0', color: '#666' }}>{topic}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có nội dung chi tiết</p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có module được định nghĩa</p>
-            )}
-          </div>
+          {/* CLO-PLO Mappings */}
+          {mappings.length > 0 && (
+            <div style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BookOpen size={20} color="#4caf50" />
+                CLO-PLO Mappings
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>CLO Code</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO Code</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO Description</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Mapping Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map((mapping, idx) => (
+                      <tr key={mapping.mappingId || idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>{mapping.cloCode}</td>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#4caf50' }}>{mapping.ploCode}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{mapping.ploDescription}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <span style={{
+                            background: mapping.mappingLevel === 'HIGH' ? '#4caf5020' :
+                                        mapping.mappingLevel === 'MEDIUM' ? '#ff980020' :
+                                        '#f4433620',
+                            color: mapping.mappingLevel === 'HIGH' ? '#4caf50' :
+                                   mapping.mappingLevel === 'MEDIUM' ? '#ff9800' :
+                                   '#f44336',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}>
+                            {mapping.mappingLevel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Course Relations */}
+          {courseRelations.length > 0 && (
+            <div style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BookOpen size={20} color="#ff9800" />
+                Cây môn học
+              </h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {courseRelations.map((relation) => (
+                  <div key={relation.relationId} style={{ padding: '12px', background: '#f9f9f9', borderRadius: '8px', borderLeft: '4px solid #ff9800' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ color: '#333', fontWeight: 600 }}>
+                        {relation.targetCourseCode} - {relation.targetCourseName}
+                      </div>
+                      <span style={{
+                        background: relation.relationType === 'PREREQUISITE' ? '#2196f320' :
+                                    relation.relationType === 'COREQUISITE' ? '#ff980020' :
+                                    '#4caf5020',
+                        color: relation.relationType === 'PREREQUISITE' ? '#2196f3' :
+                               relation.relationType === 'COREQUISITE' ? '#ff9800' :
+                               '#4caf50',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>
+                        {relation.relationType}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Session Plans */}
+          {syllabus.sessionPlans && syllabus.sessionPlans.length > 0 && (
+            <div style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>
+                Kế hoạch giảng dạy ({syllabus.sessionPlans.length} buổi)
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tuần</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Chủ đề</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Phương pháp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {syllabus.sessionPlans.map((session, idx) => (
+                      <tr key={session.sessionId || idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Assessments */}
           <div style={{
@@ -632,6 +790,37 @@ const SyllabusReviewDetailPage: React.FC = () => {
               <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>Chưa có phương pháp đánh giá được định nghĩa</p>
             )}
           </div>
+
+          {/* Materials */}
+          {syllabus.materials && syllabus.materials.length > 0 && (
+            <div style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              marginBottom: '24px'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>
+                Tài liệu tham khảo ({syllabus.materials.length} tài liệu)
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                {syllabus.materials.map((material, idx) => (
+                  <div key={material.materialId || idx} style={{ background: '#f9f9f9', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #ff9800' }}>
+                    <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                      <FileText size={18} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px', fontWeight: 600 }}>{material.title}</h4>
+                        <p style={{ margin: '0 0 8px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
+                        <span style={{ background: '#ff980020', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                          {material.materialType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           {(() => {

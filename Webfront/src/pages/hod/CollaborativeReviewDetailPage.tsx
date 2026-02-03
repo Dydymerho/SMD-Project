@@ -6,6 +6,8 @@ import {
   Trash2, Download, Eye, Mail, Check, X, Loader
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 import axiosClient from '../../api/axiosClient';
 import { fetchSyllabusById } from '../../services/workflowService';
 import './HoDPages.css';
@@ -59,6 +61,7 @@ const CollaborativeReviewDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error: showError } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [review, setReview] = useState<CollaborativeReviewDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +110,7 @@ const CollaborativeReviewDetailPage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading review:', error);
-      alert('Không thể tải chi tiết thảo luận');
+      showError('Không thể tải chi tiết thảo luận');
     } finally {
       setLoading(false);
     }
@@ -115,7 +118,7 @@ const CollaborativeReviewDetailPage: React.FC = () => {
 
   const handlePostComment = async () => {
     if (!newComment.trim()) {
-      alert('Vui lòng nhập nội dung góp ý');
+      showError('Vui lòng nhập nội dung góp ý');
       return;
     }
 
@@ -124,13 +127,13 @@ const CollaborativeReviewDetailPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await postComment(review.syllabusId, newComment);
-      alert('✅ Đã gửi góp ý thành công!');
+      success('Đã gửi góp ý thành công!');
       setNewComment('');
       // Reload comments
       await loadReviewDetail();
     } catch (error) {
       console.error('Error posting comment:', error);
-      alert('❌ Có lỗi xảy ra khi gửi góp ý');
+      showError('Có lỗi xảy ra khi gửi góp ý');
     } finally {
       setIsSubmitting(false);
     }
@@ -143,12 +146,12 @@ const CollaborativeReviewDetailPage: React.FC = () => {
 
     try {
       await removeComment(review.syllabusId, commentId);
-      alert('✅ Đã xóa góp ý');
+      success('Đã xóa góp ý');
       // Reload comments
       await loadReviewDetail();
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert('❌ Không thể xóa góp ý');
+      showError('Không thể xóa góp ý');
     }
   };
 
@@ -176,9 +179,11 @@ KẾT LUẬN:
   };
 
   const confirmCompleteReview = () => {
-    alert('✅ Đã hoàn thành phiên thảo luận và chuyển vào quy trình phê duyệt!');
-    setShowCompleteModal(false);
-    navigate('/hod/syllabus-review');
+    success('Đã hoàn thành phiên thảo luận và chuyển vào quy trình phê duyệt!');
+    setTimeout(() => {
+      setShowCompleteModal(false);
+      navigate('/hod/syllabus-review');
+    }, 1500);
   };
 
   const formatDate = (dateString: string) => {
@@ -234,6 +239,7 @@ KẾT LUẬN:
 
   return (
     <div className="dashboard-page">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">

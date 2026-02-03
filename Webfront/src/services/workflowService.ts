@@ -150,6 +150,23 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
       return [];
     })();
 
+    // Normalize session plans
+    const sessionPlans = (() => {
+      if (Array.isArray(data.sessionPlans)) return data.sessionPlans;
+      if (Array.isArray(data.teachingPlan)) return data.teachingPlan;
+      if (Array.isArray(data.lessonPlans)) return data.lessonPlans;
+      if (Array.isArray(data.sessionsPlan)) return data.sessionsPlan;
+      return [];
+    })();
+
+    // Normalize materials
+    const materials = (() => {
+      if (Array.isArray(data.materials)) return data.materials;
+      if (Array.isArray(data.references)) return data.references;
+      if (Array.isArray(data.referenceMaterials)) return data.referenceMaterials;
+      return [];
+    })();
+
     // Normalize assessments
     const assessments = (() => {
       if (Array.isArray(data.assessments)) return data.assessments;
@@ -163,9 +180,12 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
 
     return {
       id: String(data.syllabusId || data.id),
+      courseId: data.courseId || course.courseId,
       courseCode: course.courseCode || data.courseCode || 'N/A',
       courseName: course.courseName || data.courseName || 'Giáo trình không tên',
       credits: course.credits || data.credits || 0,
+      deptName: data.deptName || course.department?.deptName || data.department?.deptName,
+      courseType: data.type || course.courseType || data.courseType,
       lecturer: {
         name: data.lecturerName || data.lecturer?.fullName || data.createdBy?.fullName || 'Chưa rõ',
         email: data.lecturer?.email || data.createdBy?.email || 'N/A'
@@ -174,9 +194,16 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
       submissionDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
       academicYear: data.academicYear || 'Chưa xác định',
       description: data.description || data.content || data.summary || 'Chưa có mô tả',
+      aiSummary: data.aiSummary || data.aiSumary || data.aiSummaryText || undefined,
       currentStatus: data.currentStatus || data.status || 'DRAFT',
       rejectionReason: data.rejectionReason || data.rejectionNote || undefined,
       clos,
+      sessionPlans: sessionPlans.map((plan: any, idx: number) => ({
+        sessionId: plan.sessionId || plan.id || idx + 1,
+        weekNo: plan.weekNo || plan.week || plan.order || idx + 1,
+        topic: plan.topic || plan.title || plan.name || 'Chưa có chủ đề',
+        teachingMethod: plan.teachingMethod || plan.method || plan.strategy || 'Chưa rõ'
+      })),
       modules: modules.map((m: any, idx: number) => ({
         moduleNo: m.moduleNo || m.module || m.week || m.order || idx + 1,
         moduleName: m.moduleName || m.title || m.topic || m.name || `Module ${idx + 1}`,
@@ -195,6 +222,12 @@ export const getSyllabusDetailForReview = async (syllabusId: number) => {
           description: mergedDesc
         };
       }),
+      materials: materials.map((m: any, idx: number) => ({
+        materialId: m.materialId || m.id || idx + 1,
+        title: m.title || m.name || 'Tài liệu tham khảo',
+        author: m.author || m.authors || m.publisher || 'N/A',
+        materialType: m.materialType || m.type || 'N/A'
+      })),
       changes
     };
   } catch (error) {
