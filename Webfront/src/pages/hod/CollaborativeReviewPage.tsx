@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getPendingSyllabusesForHoD, getReviewCommentCount, getReviewComments, createCollaborativeReview, fetchSyllabusById, fetchAllSyllabuses } from '../../services/workflowService';
+import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 import './HoDPages.css';
 import '../dashboard/DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
@@ -40,6 +42,7 @@ interface CollaborativeReview {
 const CollaborativeReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newReview, setNewReview] = useState({
@@ -142,7 +145,7 @@ const CollaborativeReviewPage: React.FC = () => {
 
   const handleCreateReview = async () => {
     if (!newReview.syllabusId || !newReview.deadline) {
-      alert('Vui lòng chọn giáo trình và nhập hạn cuối');
+      warning('Vui lòng chọn giáo trình và nhập hạn cuối');
       return;
     }
 
@@ -153,14 +156,14 @@ const CollaborativeReviewPage: React.FC = () => {
         newReview.deadline,
         newReview.participants
       );
-      alert('✅ Đã tạo phiên thảo luận thành công!');
+      success('Đã tạo phiên thảo luận thành công!');
       setShowCreateModal(false);
       setNewReview({ syllabusId: '', description: '', deadline: '', participants: [] });
       // Reload reviews
       loadReviews();
     } catch (error) {
       console.error('Error creating review:', error);
-      alert('❌ Có lỗi xảy ra khi tạo phiên thảo luận');
+      showError('Có lỗi xảy ra khi tạo phiên thảo luận');
     }
   };
 
@@ -171,6 +174,7 @@ const CollaborativeReviewPage: React.FC = () => {
 
   return (
     <div className="dashboard-page">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">

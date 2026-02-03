@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, CheckCircle, AlertTriangle, FileText, Send, Bell, User, Zap, Home, Loader2
+  ArrowLeft, CheckCircle, AlertTriangle, FileText, Send, Bell, User, Zap, Home, Loader2, Hash, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
@@ -31,12 +31,14 @@ interface Material {
 
 interface SyllabusDetail {
   syllabusId: number;
+  courseId?: number;
   courseCode: string;
   courseName: string;
   credits: number;
   deptName?: string;
   lecturerName: string;
   academicYear?: string;
+  courseType?: string;
   aiSummary?: string;
   sessionPlans?: SessionPlan[];
   assessments?: Assessment[];
@@ -55,44 +57,92 @@ const SubjectDetailPage: React.FC = () => {
   const [submitNote, setSubmitNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [courseRelations, setCourseRelations] = useState<api.CourseRelationResponse[]>([]);
+  
+  // API Data States - CLOs and Mappings
+  const [clos, setClos] = useState<api.CLOResponse[]>([]);
+  const [mappings, setMappings] = useState<api.CLOPLOMappingResponse[]>([]);
 
   useEffect(() => {
-    loadSyllabusDetail();
-  }, [syllabusId]);
-
-  const loadSyllabusDetail = async () => {
     if (!syllabusId) return;
     
-    try {
-      setLoading(true);
-      const [syllabusData, unreadCount] = await Promise.all([
-        api.getSyllabusDetail(parseInt(syllabusId)),
-        api.getUnreadNotificationsCount().catch(() => 0)
-      ]);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [syllabusData, unreadCount] = await Promise.all([
+          api.getSyllabusDetail(parseInt(syllabusId)),
+          api.getUnreadNotificationsCount().catch(() => 0)
+        ]);
 
-      // Transform API data to local format
-      setSyllabus({
-        syllabusId: syllabusData.id,
-        courseCode: syllabusData.courseCode,
-        courseName: syllabusData.courseName,
-        credits: syllabusData.credit,
-        deptName: syllabusData.deptName,
-        lecturerName: syllabusData.lecturerName,
-        academicYear: syllabusData.academicYear,
-        aiSummary: syllabusData.aiSumary,
-        sessionPlans: syllabusData.sessionPlans || [],
-        assessments: syllabusData.assessments || [],
-        materials: syllabusData.materials || [],
-        clos: syllabusData.target || [],
-      });
-      setNotificationCount(unreadCount);
-    } catch (error) {
-      console.error('Error loading syllabus:', error);
-      alert('Không thể tải thông tin giáo trình');
-    } finally {
-      setLoading(false);
+        // Transform API data to local format
+        setSyllabus({
+          syllabusId: syllabusData.id,
+          courseId: syllabusId ? parseInt(syllabusId) : undefined,
+          courseCode: syllabusData.courseCode,
+          courseName: syllabusData.courseName,
+          credits: syllabusData.credit,
+          deptName: syllabusData.deptName,
+          lecturerName: syllabusData.lecturerName,
+          academicYear: syllabusData.academicYear,
+          courseType: syllabusData.type,
+          aiSummary: syllabusData.aiSumary,
+          sessionPlans: syllabusData.sessionPlans || [],
+          assessments: syllabusData.assessments || [],
+          materials: syllabusData.materials || [],
+          clos: syllabusData.target || [],
+        });
+        setNotificationCount(unreadCount);
+      } catch (error) {
+        console.error('Error loading syllabus:', error);
+        alert('Không thể tải thông tin giáo trình');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [syllabusId]);
+
+  // Fetch course relations 
+  useEffect(() => {
+    if (syllabus && syllabus.courseId) {
+      const fetchRelations = async () => {
+        try {
+          const relations = await api.getCourseRelationsByCourseId(syllabus.courseId!);
+          console.log('Course relations fetched:', relations);
+          setCourseRelations(Array.isArray(relations) ? relations : []);
+        } catch (error) {
+          console.error('Lỗi lấy mối quan hệ môn học:', error);
+          setCourseRelations([]);
+        }
+      };
+      fetchRelations();
     }
-  };
+  }, [syllabus]);
+
+  // Fetch CLOs and mappings
+  useEffect(() => {
+    if (syllabus) {
+      const fetchCLOData = async () => {
+        try {
+          // Fetch CLOs by Syllabus ID
+          const closData = await api.getCLOsBySyllabusId(syllabus.syllabusId);
+          console.log('CLOs fetched:', closData);
+          setClos(Array.isArray(closData) ? closData : []);
+          
+          // Fetch CLO-PLO Mappings by Syllabus ID
+          const mappingsData = await api.getCLOPLOMappingsBySyllabusId(syllabus.syllabusId);
+          console.log('CLO-PLO Mappings fetched:', mappingsData);
+          setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+        } catch (error) {
+          console.error('Lỗi lấy dữ liệu CLO:', error);
+          setClos([]);
+          setMappings([]);
+        }
+      };
+      fetchCLOData();
+    }
+  }, [syllabus]);
 
   const handleSubmitForReview = async () => {
     if (!syllabusId) return;
@@ -249,6 +299,10 @@ const SubjectDetailPage: React.FC = () => {
               <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.credits}</p>
             </div>
             <div>
+              <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Loại môn học</p>
+              <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.courseType || 'N/A'}</p>
+            </div>
+            <div>
               <p style={{ margin: '0 0 4px 0', color: '#999', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' }}>Năm học</p>
               <p style={{ margin: 0, color: '#333', fontSize: '15px', fontWeight: 500 }}>{syllabus.academicYear || 'N/A'}</p>
             </div>
@@ -279,6 +333,110 @@ const SubjectDetailPage: React.FC = () => {
           </div>
         )}
 
+        {/* CLOs */}
+        {clos.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Hash size={20} color="#2196f3" />
+              Course Learning Outcomes (CLOs)
+            </h3>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {clos.map((clo) => (
+                <div key={clo.cloId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', borderLeft: '4px solid #2196f3' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, color: '#2196f3', fontWeight: 600, fontSize: '15px' }}>{clo.cloCode}</h4>
+                  </div>
+                  <p style={{ margin: 0, color: '#333', lineHeight: 1.6 }}>{clo.cloDescription}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CLO-PLO Mappings */}
+        {mappings.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BookOpen size={20} color="#4caf50" />
+              CLO-PLO Mappings
+            </h3>
+            <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>CLO Code</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO Code</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>PLO Description</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600 }}>Mapping Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map((mapping, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>{mapping.cloCode}</td>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#4caf50' }}>{mapping.ploCode}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{mapping.ploDescription}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <span style={{
+                            background: mapping.mappingLevel === 'HIGH' ? '#4caf5020' :
+                                        mapping.mappingLevel === 'MEDIUM' ? '#ff980020' :
+                                        '#f4433620',
+                            color: mapping.mappingLevel === 'HIGH' ? '#4caf50' :
+                                   mapping.mappingLevel === 'MEDIUM' ? '#ff9800' :
+                                   '#f44336',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}>
+                            {mapping.mappingLevel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Course Relations */}
+        {courseRelations.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BookOpen size={20} color="#ff9800" />
+              Cây môn học
+            </h3>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {courseRelations.map((relation) => (
+                <div key={relation.relationId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', borderLeft: '4px solid #ff9800' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, color: '#333', fontWeight: 600 }}>
+                      {relation.targetCourseCode} - {relation.targetCourseName}
+                    </h4>
+                    <span style={{
+                      background: relation.relationType === 'PREREQUISITE' ? '#2196f320' :
+                                  relation.relationType === 'COREQUISITE' ? '#ff980020' :
+                                  '#4caf5020',
+                      color: relation.relationType === 'PREREQUISITE' ? '#2196f3' :
+                             relation.relationType === 'COREQUISITE' ? '#ff9800' :
+                             '#4caf50',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>
+                      {relation.relationType}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Session Plans */}
         {syllabus.sessionPlans && syllabus.sessionPlans.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
@@ -287,24 +445,26 @@ const SubjectDetailPage: React.FC = () => {
               Kế hoạch Giảng dạy ({syllabus.sessionPlans.length} buổi học)
             </h3>
             <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tuần</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Chủ đề</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Phương pháp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {syllabus.sessionPlans.map((session, idx) => (
-                    <tr key={session.sessionId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? '#fafafa' : 'white' }}>
-                      <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
-                      <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
-                      <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Tuần</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Chủ đề</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>Phương pháp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {syllabus.sessionPlans.map((session, idx) => (
+                      <tr key={session.sessionId} style={{ borderBottom: '1px solid #e0e0e0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '12px', fontWeight: 600, color: '#2196f3' }}>Tuần {session.weekNo}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{session.topic}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{session.teachingMethod}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -318,14 +478,14 @@ const SubjectDetailPage: React.FC = () => {
             </h3>
             <div style={{ display: 'grid', gap: '12px' }}>
               {syllabus.assessments.map((assessment) => (
-                <div key={assessment.assessmentId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                <div key={assessment.assessmentId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', borderLeft: '4px solid #4caf50' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>{assessment.name}</h4>
-                    <span style={{ background: '#4caf5015', color: '#4caf50', padding: '4px 12px', borderRadius: '12px', fontWeight: 600, fontSize: '14px' }}>
+                    <h4 style={{ margin: 0, color: '#333', fontSize: '16px', fontWeight: 600 }}>{assessment.name}</h4>
+                    <span style={{ background: '#4caf5020', color: '#4caf50', padding: '4px 12px', borderRadius: '12px', fontWeight: 600, fontSize: '14px' }}>
                       {assessment.weightPercent}%
                     </span>
                   </div>
-                  <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '13px' }}>{assessment.criteria}</p>
+                  <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '13px', lineHeight: 1.5 }}>{assessment.criteria}</p>
                 </div>
               ))}
             </div>
@@ -339,37 +499,21 @@ const SubjectDetailPage: React.FC = () => {
               <FileText size={20} color="#ff9800" />
               Tài liệu Tham khảo ({syllabus.materials.length} tài liệu)
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
               {syllabus.materials.map((material) => (
-                <div key={material.materialId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-                  <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
-                    <FileText size={18} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <div key={material.materialId} style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', borderLeft: '4px solid #ff9800' }}>
+                  <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                    <FileText size={20} color="#ff9800" style={{ marginTop: '2px', flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px' }}>{material.title}</h4>
-                      <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
-                      <span style={{ background: '#ff980015', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '14px', fontWeight: 600 }}>{material.title}</h4>
+                      <p style={{ margin: '0 0 8px 0', color: '#666', fontSize: '12px' }}>{material.author}</p>
+                      <span style={{ background: '#ff980020', color: '#ff9800', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
                         {material.materialType}
                       </span>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* CLOs */}
-        {syllabus.clos && syllabus.clos.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#333' }}>Kết quả học tập (CLOs)</h3>
-            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                {syllabus.clos.map((clo, idx) => (
-                  <li key={idx} style={{ color: '#333', marginBottom: '8px', lineHeight: 1.5 }}>
-                    {clo}
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         )}

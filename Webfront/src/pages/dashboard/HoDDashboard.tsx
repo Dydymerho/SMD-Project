@@ -6,7 +6,7 @@ import {
   Eye, Clock, User, Loader
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getHoDDashboardStats } from '../../services/workflowService';
+import { getHoDDashboardStats, getPendingSyllabusesForHoD } from '../../services/workflowService';
 import './DashboardPage.css';
 import NotificationMenu from '../../components/NotificationMenu';
 
@@ -17,6 +17,16 @@ interface DashboardStats {
   recentNotifications: number;
 }
 
+interface PendingSyllabus {
+  id: string;
+  courseCode: string;
+  courseName: string;
+  lecturer: string;
+  submissionDate: string;
+  version: number;
+  currentStatus?: string;
+}
+
 const HoDDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -24,6 +34,9 @@ const HoDDashboard: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingSyllabuses, setPendingSyllabuses] = useState<PendingSyllabus[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [pendingError, setPendingError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     pendingApprovals: 0,
     collaborativeReviewActive: 0,
@@ -34,6 +47,7 @@ const HoDDashboard: React.FC = () => {
   useEffect(() => {
     // Fetch HoD statistics
     fetchStats();
+    fetchPendingSyllabuses();
   }, []);
 
   const fetchStats = async () => {
@@ -47,6 +61,35 @@ const HoDDashboard: React.FC = () => {
       setError('Không thể tải thống kê. Vui lòng thử lại.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingSyllabuses = async () => {
+    setPendingLoading(true);
+    setPendingError(null);
+    try {
+      const result = await getPendingSyllabusesForHoD();
+      const data = Array.isArray(result.data) ? result.data : [];
+
+      const pendingReview = data
+        .filter((item: any) => (item.currentStatus || item.status || '').toUpperCase() === 'PENDING_REVIEW')
+        .map((item: any) => ({
+          id: (item.syllabusId || item.id || '').toString(),
+          courseCode: item.courseCode || item.course?.courseCode || 'N/A',
+          courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
+          lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
+          submissionDate: item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
+          version: item.version || 1,
+          currentStatus: item.currentStatus
+        }));
+
+      setPendingSyllabuses(pendingReview);
+    } catch (err) {
+      console.error('Lỗi tải giáo trình chờ duyệt:', err);
+      setPendingError('Không thể tải danh sách giáo trình chờ duyệt.');
+      setPendingSyllabuses([]);
+    } finally {
+      setPendingLoading(false);
     }
   };
 
@@ -339,6 +382,102 @@ const HoDDashboard: React.FC = () => {
                 Tìm kiếm & Phân tích
               </button>
             </div>
+          </div>
+
+          {/* Pending Syllabuses Table */}
+          <div style={{
+            background: 'white',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            marginTop: '24px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ color: '#333', margin: 0 }}>Giáo trình chờ phê duyệt</h2>
+              <button
+                onClick={() => navigate('/hod/syllabus-review')}
+                style={{
+                  padding: '8px 14px',
+                  background: '#2196f3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600
+                }}
+              >
+                Xem tất cả
+              </button>
+            </div>
+
+            {pendingLoading && (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <Loader size={32} style={{ margin: '0 auto 12px', animation: 'spin 1s linear infinite' }} />
+                <p style={{ color: '#666', margin: 0 }}>Đang tải danh sách...</p>
+              </div>
+            )}
+
+            {pendingError && !pendingLoading && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#f44336' }}>
+                <p style={{ margin: 0 }}>{pendingError}</p>
+              </div>
+            )}
+
+            {!pendingLoading && !pendingError && pendingSyllabuses.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#999' }}>
+                <p style={{ margin: 0 }}>Không có giáo trình đang chờ phê duyệt.</p>
+              </div>
+            )}
+
+            {!pendingLoading && !pendingError && pendingSyllabuses.length > 0 && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Mã môn học</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Tên môn học</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Giảng viên</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Ngày nộp</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Phiên bản</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingSyllabuses.map((syllabus) => (
+                      <tr key={syllabus.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <td style={{ padding: '12px', color: '#007bff', fontWeight: 600 }}>{syllabus.courseCode}</td>
+                        <td style={{ padding: '12px', color: '#333' }}>{syllabus.courseName}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{syllabus.lecturer}</td>
+                        <td style={{ padding: '12px', color: '#666' }}>{syllabus.submissionDate}</td>
+                        <td style={{ padding: '12px', textAlign: 'center', color: '#666' }}>v{syllabus.version}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/hod/syllabus-review/${syllabus.id}`)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#2196f3',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Eye size={14} />
+                            Xem
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </main>
