@@ -523,11 +523,11 @@ export const getCLOPLOMappingsBySyllabusId = async (syllabusId: number): Promise
 // PDF API - Get PDF information
 export interface SyllabusPDFInfo {
   syllabusId: number;
-  hasPdf: boolean;
-  pdfName?: string;
+  fileName?: string;
+  filePath?: string;
   fileSize?: number;
   uploadedAt?: string;
-  uploadedBy?: string;
+  message?: string;
 }
 
 export const getSyllabusPDFInfo = async (syllabusId: number): Promise<SyllabusPDFInfo> => {
