@@ -1490,6 +1490,11 @@
   color: white;
 }
 
+.status-pending_review {
+  background: #a9916f;
+  color: white;
+}
+
 /* ===== NEW: Course Card Improvements ===== */
 .course-code-name {
   display: flex;

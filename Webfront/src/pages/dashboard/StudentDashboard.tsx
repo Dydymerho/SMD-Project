@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './StudentDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, Loader2, Star, X, Heart, MessageSquare, Download } from 'lucide-react';
-import { getCourses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport, getCourseRelationsByCourseId, getCLOsBySyllabusId, getCLOPLOMappingsBySyllabusId, CourseRelationResponse, CLOResponse, CLOPLOMappingResponse, downloadSyllabusPDF, getSyllabusPDFInfo, getNotifications, getFollowedCourses } from '../../services/api';
+import { getAllSyllabuses, searchSyllabuses, getDepartments, getNotificationStats, getSyllabusDetail, getSyllabusById, SyllabusDetailResponse, followCourse, unfollowCourse, createReport, getCourseRelationsByCourseId, getCLOsBySyllabusId, getCLOPLOMappingsBySyllabusId, CourseRelationResponse, CLOResponse, CLOPLOMappingResponse, downloadSyllabusPDF, getSyllabusPDFInfo, getNotifications, getFollowedCourses } from '../../services/api';
 import NotificationMenu from '../../components/NotificationMenu';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -50,7 +50,7 @@ const StudentDashboard: React.FC = () => {
   const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search'>('home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [allSyllabi, setAllSyllabi] = useState<Syllabus[]>([]);
   const [syllabi, setSyllabi] = useState<Syllabus[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -420,22 +420,38 @@ const StudentDashboard: React.FC = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        const coursesData = await getCourses();
+        const syllabusesData = await getAllSyllabuses();
 
-        const mappedCourses = coursesData.map((item: any) => ({
-          courseId: item.courseId,
-          courseName: item.courseName,
-          courseCode: item.courseCode,
-          credits: item.credits,
-          department: item.department ? {
-            departmentId: item.department.departmentId,
-            deptName: item.department.deptName
-          } : undefined
-        }));
+        const mappedSyllabi = syllabusesData.map((item: any) => {
+          // Đảm bảo dữ liệu có cấu trúc đúng
+          if (item.course && typeof item.course === 'object') {
+            return item as Syllabus;
+          }
+          // Nếu không có cấu trúc course nested, xây dựng nó từ các trường flat
+          return {
+            syllabusId: item.syllabusId,
+            course: {
+              courseId: item.courseId || 0,
+              courseName: item.courseName || 'N/A',
+              courseCode: item.courseCode || 'N/A',
+              credits: item.credits || 0,
+              department: item.department ? {
+                departmentId: item.department.departmentId,
+                deptName: item.department.deptName
+              } : undefined
+            },
+            program: item.program || { programName: item.programName || '' },
+            lecturer: item.lecturer || { fullName: item.lecturerName || 'Chưa cập nhật' },
+            academicYear: item.academicYear,
+            versionNo: item.versionNo,
+            currentStatus: item.currentStatus,
+            versionNotes: item.versionNotes
+          } as Syllabus;
+        });
 
-        setAllCourses(mappedCourses);
+        setAllSyllabi(mappedSyllabi);
       } catch (error) {
-        console.error('Lỗi lấy dữ liệu:', error);
+        console.error('Lỗi lấy dữ liệu giáo trình:', error);
       }
     };
     fetchAllData();
@@ -486,35 +502,25 @@ const StudentDashboard: React.FC = () => {
             <div className="recommendation-section">
               <div className="section-header">
                 <Star size={20} color="#f1c40f" fill="#f1c40f" />
-                <h2>Khóa học được đề xuất</h2>
+                <h2>Giáo trình được đề xuất</h2>
               </div>
               <div className="course-grid">
-                {allCourses.map((course) => (
-                  <div key={course.courseId} className="course-card">
+                {allSyllabi.map((syllabus) => (
+                  <div key={syllabus.syllabusId} className="course-card">
                     <div className="course-card-header">
-                      <span className="course-code">{course.courseCode}</span>
-                      <h3 className="course-title">{course.courseName}</h3>
+                      <span className="course-code">{syllabus.course?.courseCode}</span>
+                      <h3 className="course-title">{syllabus.course?.courseName}</h3>
                     </div>
                     <div className="course-card-body">
-                      <p><strong>Số tín chỉ:</strong> {course.credits} Tín chỉ</p>
-                      <p><strong>Viện:</strong> {course.department?.deptName || 'Đang cập nhật'}</p>
+                      <p><strong>Giảng viên:</strong> {syllabus.lecturer?.fullName}</p>
+                      <p><strong>Bộ môn:</strong> {syllabus.course?.department?.deptName || 'Đang cập nhật'}</p>
+                      <p><strong>Năm học:</strong> {syllabus.academicYear || 'N/A'}</p>
+                      <p><strong>Trạng thái:</strong> <span className={`status-badge status-${syllabus.currentStatus?.toLowerCase()}`}>{syllabus.currentStatus}</span></p>
                     </div>
                     <button 
                       className="view-detail-btn" 
                       onClick={() => {
-                        const tempSyllabus: Syllabus = {
-                          syllabusId: course.courseId,
-                          course: course,
-                          program: { programName: '' },
-                          lecturer: { fullName: 'Chưa xác định' },
-                          versionNotes: '',
-                          academicYear: new Date().getFullYear().toString() + '-' + (new Date().getFullYear() + 1).toString(),
-                          versionNo: 1,
-                          currentStatus: 'PUBLISHED'
-                        };
-                        setSelectedSyllabus(tempSyllabus);
-                        setDetailModalOpen(true);
-                        setActiveViewTool('info');
+                        handleOpenDetail(syllabus);
                       }}
                     >
                       Xem ngay
