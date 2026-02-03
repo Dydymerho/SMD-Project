@@ -1,10 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from "react-native-device-info"
+import DeviceInfo from 'react-native-device-info';
 /* ================= CONFIG ================= */
 const axiosClient = axios.create({
-
-  baseURL: "http://10.0.2.2:9090/api",
+  baseURL: 'http://10.0.2.2:9090/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -41,8 +40,6 @@ axiosClient.interceptors.response.use(
     // Unauthorized → clear auth and let user re-login
     if (status === 401) {
       await AsyncStorage.removeItem('AUTH_TOKEN');
-      // Note: Không gọi logout() từ AuthContext ở đây để tránh circular dependency
-      // RootNavigator sẽ tự động kiểm tra và redirect về login
     }
 
     return Promise.reject(error);

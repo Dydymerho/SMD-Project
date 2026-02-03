@@ -23,7 +23,9 @@ export default function SettingStackNavigator() {
             <Stack.Screen
                 name="SettingMain"
                 component={SettingScreen}
-                options={{ title: 'Cài đặt' }}
+                options={{
+                    headerShown: false // <--- QUAN TRỌNG: Dòng này sẽ ẩn header mặc định đi
+                }}
             />
             <Stack.Screen
                 name="Terms"

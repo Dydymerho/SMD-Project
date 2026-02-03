@@ -1,7 +1,10 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.CLOResponse;
 import com.smd.core.entity.CLO;
+import com.smd.core.entity.CLOPLOMapping;
 import com.smd.core.exception.ResourceNotFoundException;
+import com.smd.core.repository.CLOPLOMappingRepository;
 import com.smd.core.repository.CLORepository;
 import com.smd.core.repository.SyllabusRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CLOService {
     private final CLORepository cloRepository;
     private final SyllabusRepository syllabusRepository;
+    private final CLOPLOMappingRepository mappingRepository;
 
     @Transactional(readOnly = true)
     public List<CLO> getAllCLOs() {
@@ -25,6 +30,28 @@ public class CLOService {
     public CLO getCLOById(Long id) {
         return cloRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CLO not found with id: " + id));
+    }
+    
+    @Transactional(readOnly = true)
+    public CLOResponse getCLOWithMappings(Long id) {
+        CLO clo = getCLOById(id);
+        List<CLOPLOMapping> mappings = mappingRepository.findByClo_CloId(id);
+        
+        List<CLOResponse.PLOMappingSummary> ploMappings = mappings.stream()
+            .map(m -> CLOResponse.PLOMappingSummary.builder()
+                .ploId(m.getPlo().getPloId())
+                .ploCode(m.getPlo().getPloCode())
+                .mappingLevel(m.getMappingLevel().name())
+                .build())
+            .collect(Collectors.toList());
+        
+        return CLOResponse.builder()
+            .cloId(clo.getCloId())
+            .syllabusId(clo.getSyllabus().getSyllabusId())
+            .cloCode(clo.getCloCode())
+            .cloDescription(clo.getCloDescription())
+            .ploMappings(ploMappings)
+            .build();
     }
 
     @Transactional(readOnly = true)

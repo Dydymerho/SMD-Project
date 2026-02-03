@@ -31,6 +31,12 @@ public class CLOController {
         CLO clo = cloService.getCLOById(id);
         return ResponseEntity.ok(convertToDto(clo));
     }
+    
+    @GetMapping("/{id}/with-mappings")
+    public ResponseEntity<CLOResponse> getCLOWithMappings(@PathVariable Long id) {
+        CLOResponse response = cloService.getCLOWithMappings(id);
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/syllabus/{syllabusId}")
     public ResponseEntity<List<CLOResponse>> getCLOsBySyllabusId(@PathVariable Long syllabusId) {

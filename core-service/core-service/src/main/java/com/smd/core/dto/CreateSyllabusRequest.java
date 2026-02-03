@@ -25,6 +25,8 @@ public class CreateSyllabusRequest {
     
     private String versionNotes;
     
+    private String description;
+    
     // Optional: ID of previous version to copy content from
     private Long copyFromVersionId;
 }

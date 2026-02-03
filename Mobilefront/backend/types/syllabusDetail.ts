@@ -1,10 +1,11 @@
 export type syllabus = {
-    id: number; // Bắt buộc phải có để link với Materials/SessionPlan
+    id: number;
     syllabusId?: number;
     courseCode: string;
     courseName: string;
     lecturerName: string;
     deptName: string;
+    description?: string;
     type?: string;
     credit: number;
     academicYear: string;

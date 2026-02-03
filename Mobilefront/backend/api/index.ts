@@ -7,5 +7,6 @@ export * from './ploControlerApi';
 export * from './ProfileApi';
 export * from './SesssionPlanApi';
 export * from './ReportApi';
-export * from './CourseInteractionApi';
+export * from './CourseInteractionApi'; // <--- Thêm dòng này
+export * from './PloCloMapping';
 export { default as axiosClient } from './axiosClient';

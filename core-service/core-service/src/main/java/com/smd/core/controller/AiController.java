@@ -26,8 +26,8 @@ public class AiController {
             @Parameter(description = "File PDF hoặc Word cần tóm tắt") 
             @RequestParam("file") MultipartFile file,
             
-            @Parameter(description = "ID của Syllabus (nếu có, optional)")
-            @RequestParam(value = "syllabusId", required = true) Long syllabusId
+            @Parameter(description = "ID của Syllabus (có thể bỏ qua)")
+            @RequestParam(value = "syllabusId", required = false) Long syllabusId
     ) {
         // Gọi service xử lý
         AITask task = aiService.requestSummarize(file, syllabusId);

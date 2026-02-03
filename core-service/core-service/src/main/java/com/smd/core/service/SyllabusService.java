@@ -168,6 +168,7 @@ public class SyllabusService {
                 .program(source.getProgram())
                 .previousVersionId(sourceSyllabusId)
                 .versionNotes(versionNotes)
+                .description(source.getDescription())
                 .isLatestVersion(true)
                 .build();
         
@@ -351,6 +352,9 @@ public class SyllabusService {
         if (syllabusDetails.getCurrentStatus() != null) {
             existing.setCurrentStatus(syllabusDetails.getCurrentStatus());
         }
+        if (syllabusDetails.getDescription() != null) {
+            existing.setDescription(syllabusDetails.getDescription());
+        }
         
         // Save to PostgreSQL
         Syllabus updated = syllabusRepo.save(existing);
@@ -398,6 +402,7 @@ public class SyllabusService {
                         .id(syllabus.getSyllabusId())
                         .subjectCode(syllabus.getCourse().getCourseCode())
                         .subjectName(syllabus.getCourse().getCourseName())
+                        .description(syllabus.getDescription())
                         .fullText(buildFullText(syllabus))
                         .build();
                 elasticRepo.save(doc);
@@ -469,6 +474,11 @@ public class SyllabusService {
             text.append(s.getLecturer().getFullName()).append(" ");
         }
         
+        // Description
+        if (s.getDescription() != null) {
+            text.append(s.getDescription()).append(" ");
+        }
+        
         return text.toString().trim();
     }
     
@@ -529,17 +539,23 @@ public class SyllabusService {
      */
     @Transactional
     public SyllabusUploadResponse uploadPdf(Long syllabusId, MultipartFile file, String username) {
-        System.out.println("\n==> [UPLOAD PDF] Starting PDF upload for syllabusId: " + syllabusId);
+        System.out.println("\n==> [UPLOAD DOCUMENT] Starting document upload for syllabusId: " + syllabusId);
         
         // Validate file
         if (file == null || file.isEmpty()) {
             throw new InvalidDataException("File is empty");
         }
         
-        // Check file type
+        // Check file type - Allow PDF and Word documents
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.equals("application/pdf")) {
-            throw new InvalidDataException("Only PDF files are allowed. Current type: " + contentType);
+        List<String> allowedTypes = java.util.Arrays.asList(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+        
+        if (contentType == null || !allowedTypes.contains(contentType)) {
+            throw new InvalidDataException("Only PDF and Word files are allowed (.pdf, .doc, .docx). Current type: " + contentType);
         }
         
         // Check file size (10MB)
@@ -637,31 +653,51 @@ public class SyllabusService {
     }
 
     /**
-     * Download PDF file of a syllabus
+     * Download document file of a syllabus (PDF or Word)
      */
     public byte[] downloadPdf(Long syllabusId) {
-        System.out.println("\n==> [DOWNLOAD PDF] Starting PDF download for syllabusId: " + syllabusId);
+        System.out.println("\n==> [DOWNLOAD DOCUMENT] Starting document download for syllabusId: " + syllabusId);
         
         Syllabus syllabus = syllabusRepo.findById(syllabusId)
             .orElseThrow(() -> new ResourceNotFoundException("Syllabus", "syllabusId", syllabusId));
 
         if (syllabus.getPdfFilePath() == null) {
-            throw new ResourceNotFoundException("PDF file not found for syllabus ID: " + syllabusId);
+            throw new ResourceNotFoundException("Document file not found for syllabus ID: " + syllabusId);
         }
 
         try {
             Path filePath = Paths.get(syllabus.getPdfFilePath());
             if (!Files.exists(filePath)) {
-                throw new ResourceNotFoundException("PDF file does not exist at path: " + filePath);
+                throw new ResourceNotFoundException("Document file does not exist at path: " + filePath);
             }
             
             byte[] content = Files.readAllBytes(filePath);
-            System.out.println("==> [DOWNLOAD PDF] Completed successfully. Size: " + content.length + " bytes");
+            System.out.println("==> [DOWNLOAD DOCUMENT] Completed successfully. Size: " + content.length + " bytes");
             return content;
         } catch (IOException e) {
-            System.err.println("==> [DOWNLOAD PDF ERROR] " + e.getMessage());
+            System.err.println("==> [DOWNLOAD DOCUMENT ERROR] " + e.getMessage());
             throw new RuntimeException("Failed to download file: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Get content type based on file extension
+     */
+    public String getContentTypeForFile(String fileName) {
+        if (fileName == null) {
+            return "application/octet-stream";
+        }
+        
+        String lowerFileName = fileName.toLowerCase();
+        if (lowerFileName.endsWith(".pdf")) {
+            return "application/pdf";
+        } else if (lowerFileName.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (lowerFileName.endsWith(".doc")) {
+            return "application/msword";
+        }
+        
+        return "application/octet-stream";
     }
 
     /**
