@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from celery.result import AsyncResult
 from app.worker import celery_app, process_ocr_task, task_diff_text, task_summarize_text, task_check_clo_plo, task_diff, task_extract_syllabus_json, task_compare_json_syllabus
-from app.schemas.ai_schema import CloPloCheckRequest, SummaryRequest, DiffRequest, ExtractSyllabusRequest, CompareSyllabusJsonRequest
+from app.schemas.ai_schema import CloPloCheckRequest, SummaryRequest, DiffRequest, CompareSyllabusJsonRequest
 
 router = APIRouter()
 
@@ -21,14 +21,18 @@ async def upload_ocr(file: UploadFile = File(...)):
     task = process_ocr_task.delay(content, file.filename)
     return {"task_id": task.id, "message": "Đang OCR..."}
 
-@router.post("/summarize-text")
-async def summarize_text(req: SummaryRequest):
+@router.post("/summarize-json")
+async def summarize_syllabus_json(req: SummaryRequest):
     """
-    Nhận input JSON: { "text": "Nội dung cần tóm tắt..." }
+    Input: JSON Object (Kết quả từ API Extract)
+    Output: Tóm tắt nội dung môn học.
     """
-    if not req.text: raise HTTPException(400, "Văn bản rỗng")
-    task = task_summarize_text.delay(req.text)
-    return {"task_id": task.id, "message": "Đang tóm tắt văn bản..."}
+    if not req.syllabus: 
+        raise HTTPException(400, "Dữ liệu JSON rỗng")
+    
+    # Gọi task, truyền thẳng object JSON vào
+    task = task_summarize_text.delay(req.syllabus)
+    return {"task_id": task.id, "message": "Đang phân tích và tóm tắt JSON..."}
 
 @router.post("/syllabus/compare")
 async def compare_syllabus_text(req: DiffRequest):
@@ -66,15 +70,15 @@ async def check_clo_plo_async(
 
 
 @router.post("/extract-syllabus-json")
-async def extract_syllabus_json(req: ExtractSyllabusRequest):
+async def extract_syllabus_json(file: UploadFile = File(...)):
     """
-    Input: JSON Object (theo form syl1.json)
-    Output: Task ID -> Kết quả là JSON Form Target chuẩn.
+    Upfile để trích xuất
     """
-    if not req.syllabus_data: 
-        raise HTTPException(400, "Dữ liệu JSON rỗng")
-    task = task_extract_syllabus_json.delay(req.syllabus_data)
-    return {"task_id": task.id, "message": "Đang xử lý và chuẩn hóa JSON..."}
+    content = await file.read()
+    if not content: 
+        raise HTTPException(400, "File rỗng")
+    task = task_extract_syllabus_json.delay(content, file.filename)
+    return {"task_id": task.id, "message": "Đang OCR và trích xuất thông tin..."}
 
 
 @router.post("/syllabus/compare-json")

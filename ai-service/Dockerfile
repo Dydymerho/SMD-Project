@@ -7,12 +7,12 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /code
 
 COPY requirements.txt .
 RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
-COPY src/ .
+COPY . .
 
 RUN mkdir -p temp_uploads
 
