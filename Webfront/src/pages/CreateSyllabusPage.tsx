@@ -12,7 +12,9 @@ import AILoadingOverlay from '../components/AILoadingOverlay';
 import { 
   getCourses, 
   getPrograms, 
-  createSyllabus
+  createSyllabus,
+  uploadPdfForOCR,
+  getAITaskStatus
 } from '../services/api';
 import axiosClient from '../api/axiosClient';
 
@@ -244,16 +246,8 @@ const handleAIProcess = async () => {
   
   try {
     // Step 1: Upload PDF to AI service for extraction
-    const formData = new FormData();
-    formData.append('file', pdfFile);
-    
-    const uploadResponse = await axiosClient.post('/ai/extract-syllabus', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    const taskId = uploadResponse.data.taskId || uploadResponse.data.aiTaskId;
+    const uploadResponse = await uploadPdfForOCR(pdfFile);
+    const taskId = (uploadResponse as any).taskId || (uploadResponse as any).aiTaskId || (uploadResponse as any).task_id;
     console.log('AI Task ID:', taskId);
     info(`Đã tạo task AI: ${taskId}`);
     
@@ -268,10 +262,8 @@ const handleAIProcess = async () => {
         throw new Error('Timeout: AI xử lý quá lâu (>2 phút)');
       }
       
-      const statusResponse = await axiosClient.get(`/ai/tasks/${taskId}`);
-      console.log(`Poll attempt ${attempts}:`, statusResponse.data);
-      
-      const result = statusResponse.data;
+      const result = await getAITaskStatus(taskId);
+      console.log(`Poll attempt ${attempts}:`, result);
       
       // Check task status
       if (result.status === 'COMPLETED' || result.status === 'completed') {

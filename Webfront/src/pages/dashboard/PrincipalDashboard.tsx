@@ -89,8 +89,8 @@ const PrincipalDashboard: React.FC = () => {
       badge: stats.pendingApprovals,
     },
     {
-      title: 'Tổng quan Hệ thống',
-      description: 'Xem báo cáo, KPI và trạng thái hoạt động',
+      title: 'Tìm kiếm & Phân tích',
+      description: 'Tìm kiếm giáo trình toàn hệ thống',
       icon: <BarChart3 size={32} />,
       color: '#ff9800',
       action: () => navigate('/principal/system-oversight'),
@@ -118,7 +118,7 @@ const PrincipalDashboard: React.FC = () => {
           </a>
           <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); navigate('/principal/system-oversight'); }}>
             <span className="icon"><BarChart3 size={20} /></span>
-            Tổng quan Hệ thống
+            Tìm kiếm & Phân tích
           </a>
         </nav>
 
