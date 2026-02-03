@@ -190,6 +190,35 @@ export const getCourseById = async (id: string) => {
   return response.data;
 };
 
+export const createCourse = async (data: { courseCode: string; courseName: string; credits: number; courseType?: string | null; departmentId?: number }) => {
+  const payload = {
+    courseCode: data.courseCode,
+    courseName: data.courseName,
+    credits: data.credits,
+    courseType: data.courseType || 'BAT_BUOC',
+    department: data.departmentId ? { departmentId: data.departmentId } : null
+  };
+  const response = await axiosClient.post("/courses", payload);
+  return response.data;
+};
+
+export const updateCourse = async (courseId: number, data: { courseCode: string; courseName: string; credits: number; courseType?: string | null; departmentId?: number }) => {
+  const payload = {
+    courseCode: data.courseCode,
+    courseName: data.courseName,
+    credits: data.credits,
+    courseType: data.courseType || 'BAT_BUOC',
+    department: data.departmentId ? { departmentId: data.departmentId } : null
+  };
+  const response = await axiosClient.put(`/courses/${courseId}`, payload);
+  return response.data;
+};
+
+export const deleteCourse = async (courseId: number) => {
+  const response = await axiosClient.delete(`/courses/${courseId}`);
+  return response.data;
+};
+
 // Course Relations API
 export const getCourseRelations = async (courseId: number): Promise<CourseRelationResponse[]> => {
   const response = await axiosClient.get<CourseRelationRawResponse[]>(`/courses/${courseId}/relations`);

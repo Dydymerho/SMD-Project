@@ -25,6 +25,7 @@ import AADashboard from './pages/dashboard/AADashboard';
 import AASyllabusApprovalPage from './pages/aa/SyllabusApprovalPage';
 import AASyllabusApprovalDetailPage from './pages/aa/SyllabusApprovalDetailPage';
 import ProgramManagementPage from './pages/aa/ProgramManagementPage';
+import CourseManagementPage from './pages/aa/CourseManagementPage';
 import AASyllabusAnalysisPage from './pages/aa/SyllabusAnalysisPage';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import FinalApprovalPage from './pages/principal/FinalApprovalPage';
@@ -194,6 +195,14 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
                   <ProgramManagementPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/course-management"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <CourseManagementPage />
                 </PrivateRoute>
               }
             />

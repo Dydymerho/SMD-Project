@@ -34,6 +34,8 @@ interface Course {
   courseCode: string;
   courseName: string;
   credits?: number;
+  courseType?: string | null;
+  departmentId?: number;
 }
 
 interface CourseRelation {
@@ -48,7 +50,7 @@ const ProgramManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'programs' | 'plos' | 'prerequisites'>('programs');
+  const [activeTab, setActiveTab] = useState<'courses' | 'plos' | 'prerequisites'>('courses');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -67,6 +69,13 @@ const ProgramManagementPage: React.FC = () => {
   const [submittingPLO, setSubmittingPLO] = useState(false);
   const [createPLOError, setCreatePLOError] = useState<string | null>(null);
   const [deletingPLOId, setDeletingPLOId] = useState<number | null>(null);
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
+  const [newCourse, setNewCourse] = useState({ courseCode: '', courseName: '', credits: '', courseType: '', departmentId: '' });
+  const [submittingCourse, setSubmittingCourse] = useState(false);
+  const [departments, setDepartments] = useState<Array<{ departmentId: number; deptName: string }>>([]);
+  const [createCourseError, setCreateCourseError] = useState<string | null>(null);
+  const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -91,13 +100,16 @@ const ProgramManagementPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [programsData, plosData, allSyllabuses, unreadCount, coursesData] = await Promise.all([
+      const [programsData, plosData, allSyllabuses, unreadCount, coursesData, departmentsData] = await Promise.all([
         api.getPrograms(),
         api.getPLOs(),
         api.getAllSyllabuses(),
         api.getUnreadNotificationsCount(),
-        api.getCourses()
+        api.getCourses(),
+        api.getDepartments()
       ]);
+
+      setDepartments(departmentsData as any[]);
 
       const syllabusCounts: { [key: number]: number } = {};
       (allSyllabuses as any[]).forEach((s: any) => {
@@ -137,7 +149,8 @@ const ProgramManagementPage: React.FC = () => {
         courseId: c.courseId,
         courseCode: c.courseCode,
         courseName: c.courseName,
-        credits: c.credits
+        credits: c.credits,
+        courseType: c.courseType ?? c.type ?? null
       }));
 
       setPrograms(normalizedPrograms);
@@ -254,6 +267,115 @@ const ProgramManagementPage: React.FC = () => {
     setShowCreatePLOModal(true);
   };
 
+  const handleCreateCourse = async () => {
+    if (!newCourse.courseCode.trim() || !newCourse.courseName.trim() || !newCourse.credits || !newCourse.courseType.trim() || !newCourse.departmentId.trim()) {
+      setCreateCourseError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    setSubmittingCourse(true);
+    setCreateCourseError(null);
+
+    try {
+      const createdCourse = await api.createCourse({
+        courseCode: newCourse.courseCode,
+        courseName: newCourse.courseName,
+        credits: parseInt(newCourse.credits),
+        courseType: newCourse.courseType,
+        departmentId: parseInt(newCourse.departmentId)
+      });
+
+      setCourses([...courses, {
+        courseId: createdCourse.courseId,
+        courseCode: createdCourse.courseCode,
+        courseName: createdCourse.courseName,
+        credits: createdCourse.credits,
+        courseType: createdCourse.courseType ?? null,
+        departmentId: createdCourse.departmentId
+      }]);
+
+      setShowCreateCourseModal(false);
+      setNewCourse({ courseCode: '', courseName: '', credits: '', courseType: '', departmentId: '' });
+    } catch (err) {
+      setCreateCourseError((err as Error).message || 'Không thể tạo môn học');
+    } finally {
+      setSubmittingCourse(false);
+    }
+  };
+
+  const handleEditCourse = async () => {
+    if (!editingCourseId || !newCourse.courseCode.trim() || !newCourse.courseName.trim() || !newCourse.credits || !newCourse.courseType.trim() || !newCourse.departmentId.trim()) {
+      setCreateCourseError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    setSubmittingCourse(true);
+    setCreateCourseError(null);
+
+    try {
+      await api.updateCourse(editingCourseId, {
+        courseCode: newCourse.courseCode,
+        courseName: newCourse.courseName,
+        credits: parseInt(newCourse.credits),
+        courseType: newCourse.courseType,
+        departmentId: parseInt(newCourse.departmentId)
+      });
+
+      setCourses(courses.map(c =>
+        c.courseId === editingCourseId
+          ? {
+              ...c,
+              courseCode: newCourse.courseCode,
+              courseName: newCourse.courseName,
+              credits: parseInt(newCourse.credits),
+              courseType: newCourse.courseType,
+              departmentId: parseInt(newCourse.departmentId)
+            }
+          : c
+      ));
+
+      setShowCreateCourseModal(false);
+      setEditingCourseId(null);
+      setNewCourse({ courseCode: '', courseName: '', credits: '', courseType: '', departmentId: '' });
+    } catch (err) {
+      setCreateCourseError((err as Error).message || 'Không thể cập nhật môn học');
+    } finally {
+      setSubmittingCourse(false);
+    }
+  };
+
+  const handleDeleteCourse = async () => {
+    if (!deletingCourseId) return;
+
+    setSubmittingCourse(true);
+    setCreateCourseError(null);
+
+    try {
+      await api.deleteCourse(deletingCourseId);
+      setCourses(courses.filter(c => c.courseId !== deletingCourseId));
+      setDeletingCourseId(null);
+    } catch (err) {
+      setCreateCourseError((err as Error).message || 'Không thể xóa môn học');
+    } finally {
+      setSubmittingCourse(false);
+    }
+  };
+
+  const loadCourseForEdit = (courseId: number) => {
+    const course = courses.find(c => c.courseId === courseId);
+    if (!course) return;
+
+    setNewCourse({
+      courseCode: course.courseCode,
+      courseName: course.courseName,
+      credits: String(course.credits || ''),
+      courseType: course.courseType || '',
+      departmentId: String(course.departmentId || '')
+    });
+    setEditingCourseId(courseId);
+    setShowCreateCourseModal(true);
+  };
+
   return (
     <div className="dashboard-page">
       <aside className="sidebar">
@@ -347,11 +469,11 @@ const ProgramManagementPage: React.FC = () => {
                 paddingBottom: '8px'
               }}>
                 <button
-                  onClick={() => setActiveTab('programs')}
+                  onClick={() => setActiveTab('courses')}
                   style={{
                     padding: '10px 20px',
-                    background: activeTab === 'programs' ? '#2196f3' : 'transparent',
-                    color: activeTab === 'programs' ? 'white' : '#666',
+                    background: activeTab === 'courses' ? '#008f81' : 'transparent',
+                    color: activeTab === 'courses' ? 'white' : '#666',
                     border: 'none',
                     borderRadius: '8px 8px 0 0',
                     cursor: 'pointer',
@@ -363,7 +485,7 @@ const ProgramManagementPage: React.FC = () => {
                   }}
                 >
                   <BookOpen size={16} />
-                  Chương trình ({programs.length})
+                  Quản lý Môn học ({courses.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('plos')}
@@ -405,85 +527,402 @@ const ProgramManagementPage: React.FC = () => {
                 </button>
               </div>
 
-              {activeTab === 'programs' && (
+              {activeTab === 'courses' && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, color: '#333' }}>Danh sách Chương trình</h3>
-                    <button style={{
-                      padding: '10px 16px', background: '#4caf50', color: 'white', border: 'none',
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
-                    }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '250px' }}>
+                      <Search size={20} style={{ color: '#666' }} />
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm theo mã môn, tên môn..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                          padding: '10px 12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          flex: 1,
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowCreateCourseModal(true);
+                        setEditingCourseId(null);
+                        setNewCourse({ courseCode: '', courseName: '', credits: '', courseType: '', departmentId: '' });
+                        setCreateCourseError(null);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#008f81',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
                       <Plus size={18} />
-                      Thêm Chương trình
+                      Thêm môn học
                     </button>
                   </div>
 
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: '16px'
-                  }}>
-                    {programs.map(program => (
-                      <div key={program.programId} className="program-card" style={{
-                        background: 'white',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                          <div>
-                            <h4 style={{ margin: '0 0 4px 0', color: '#333' }}>{program.code}</h4>
-                            <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>{program.name}</p>
-                            <p style={{ margin: '4px 0 0 0', color: '#999', fontSize: '12px' }}>{program.departmentName}</p>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button style={{
-                              padding: '6px', background: '#f5f5f5', border: 'none',
-                              borderRadius: '6px', cursor: 'pointer'
-                            }}>
-                              <Edit size={16} color="#666" />
-                            </button>
-                            <button style={{
-                              padding: '6px', background: '#ffebee', border: 'none',
-                              borderRadius: '6px', cursor: 'pointer'
-                            }}>
-                              <Trash2 size={16} color="#f44336" />
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: '8px',
-                          padding: '12px',
-                          background: '#f9f9f9',
-                          borderRadius: '8px'
-                        }}>
-                          <div>
-                            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>PLOs</p>
-                            <p style={{ margin: 0, fontWeight: 600, color: '#2196f3' }}>{program.totalPLOs}</p>
-                          </div>
-                          <div>
-                            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>Môn học</p>
-                            <p style={{ margin: 0, fontWeight: 600, color: '#4caf50' }}>{program.totalCourses}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333' }}>Mã môn</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333' }}>Tên môn</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333' }}>Số tín chỉ</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333' }}>Loại môn</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333' }}>Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courses.filter(c => 
+                          c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.courseName.toLowerCase().includes(searchTerm.toLowerCase())
+                        ).length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                              Không tìm thấy môn học
+                            </td>
+                          </tr>
+                        ) : (
+                          courses.filter(c => 
+                            c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            c.courseName.toLowerCase().includes(searchTerm.toLowerCase())
+                          ).map((course, index) => (
+                            <tr 
+                              key={course.courseId}
+                              style={{
+                                borderBottom: '1px solid #eee',
+                                backgroundColor: index % 2 === 0 ? '#fafafa' : 'white'
+                              }}
+                            >
+                              <td style={{ padding: '12px', color: '#333' }}>{course.courseCode}</td>
+                              <td style={{ padding: '12px', color: '#333' }}>{course.courseName}</td>
+                              <td style={{ padding: '12px', color: '#333' }}>{course.credits || 'N/A'}</td>
+                              <td style={{ padding: '12px', color: '#333' }}>{course.courseType || 'N/A'}</td>
+                              <td style={{ padding: '12px' }}>
+                                <button
+                                  onClick={() => loadCourseForEdit(course.courseId)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#008f81',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '12px',
+                                    marginRight: '8px'
+                                  }}
+                                >
+                                  <Edit size={14} />
+                                  Sửa
+                                </button>
+                                <button
+                                  onClick={() => setDeletingCourseId(course.courseId)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#f44336',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                  Xóa
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
 
-                  {programs.length === 0 && (
+                  {showCreateCourseModal && (
                     <div style={{
-                      textAlign: 'center',
-                      padding: '60px 20px',
-                      color: '#999',
-                      background: 'white',
-                      borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1000
                     }}>
-                      <BookOpen size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                      <h3>Chưa có chương trình nào</h3>
-                      <p>Thêm chương trình đầu tiên để bắt đầu</p>
+                      <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        padding: '24px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                          <h2 style={{ margin: 0, color: '#333' }}>
+                            {editingCourseId ? 'Chỉnh sửa môn học' : 'Thêm môn học'}
+                          </h2>
+                          <button
+                            onClick={() => { setShowCreateCourseModal(false); setEditingCourseId(null); }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '24px',
+                              color: '#666'
+                            }}
+                          >
+                            <X size={24} />
+                          </button>
+                        </div>
+
+                        {createCourseError && (
+                          <div style={{
+                            padding: '12px',
+                            backgroundColor: '#ffebee',
+                            color: '#c62828',
+                            borderRadius: '4px',
+                            marginBottom: '16px',
+                            fontSize: '14px'
+                          }}>
+                            {createCourseError}
+                          </div>
+                        )}
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+                            Mã môn học
+                          </label>
+                          <input
+                            type="text"
+                            value={newCourse.courseCode}
+                            onChange={(e) => setNewCourse({ ...newCourse, courseCode: e.target.value })}
+                            placeholder="VD: CS101"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+                            Tên môn học
+                          </label>
+                          <input
+                            type="text"
+                            value={newCourse.courseName}
+                            onChange={(e) => setNewCourse({ ...newCourse, courseName: e.target.value })}
+                            placeholder="VD: Lập trình Python"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+                            Số tín chỉ
+                          </label>
+                          <input
+                            type="number"
+                            value={newCourse.credits}
+                            onChange={(e) => setNewCourse({ ...newCourse, credits: e.target.value })}
+                            placeholder="VD: 3"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+                            Phòng ban
+                          </label>
+                          <select
+                            value={newCourse.departmentId}
+                            onChange={(e) => setNewCourse({ ...newCourse, departmentId: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="">Chọn phòng ban</option>
+                            {departments.map(dept => (
+                              <option key={dept.departmentId} value={dept.departmentId}>
+                                {dept.deptName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+                            Loại môn
+                          </label>
+                          <select
+                            value={newCourse.courseType}
+                            onChange={(e) => setNewCourse({ ...newCourse, courseType: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="">Chọn loại môn</option>
+                            <option value="BAT_BUOC">BAT_BUOC</option>
+                            <option value="TU_CHON">TU_CHON</option>
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => { setShowCreateCourseModal(false); setEditingCourseId(null); }}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: '#f5f5f5',
+                              color: '#333',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            onClick={editingCourseId ? handleEditCourse : handleCreateCourse}
+                            disabled={submittingCourse}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: submittingCourse ? '#ccc' : '#008f81',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: submittingCourse ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {submittingCourse && <Loader size={16} className="spinner" />}
+                            {editingCourseId ? 'Cập nhật' : 'Thêm mới'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {deletingCourseId !== null && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1001
+                    }}>
+                      <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        padding: '24px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                        textAlign: 'center'
+                      }}>
+                        <AlertTriangle size={48} style={{ color: '#f44336', marginBottom: '16px' }} />
+                        <h2 style={{ margin: '0 0 12px 0', color: '#333' }}>Xóa môn học</h2>
+                        <p style={{ color: '#666', marginBottom: '24px' }}>
+                          Bạn có chắc chắn muốn xóa môn học này? Hành động này không thể hoàn tác.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => setDeletingCourseId(null)}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: '#f5f5f5',
+                              color: '#333',
+                              border: '1px solid #ddd',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            onClick={handleDeleteCourse}
+                            disabled={submittingCourse}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: submittingCourse ? '#ccc' : '#f44336',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: submittingCourse ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {submittingCourse && <Loader size={16} className="spinner" />}
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
