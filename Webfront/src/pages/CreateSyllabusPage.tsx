@@ -13,6 +13,10 @@ import {
   getCourses, 
   getPrograms, 
   createSyllabus,
+  createCLO,
+  createAssessment,
+  createSessionPlan,
+  createMaterial,
   uploadPdfForOCR,
   getAITaskStatus
 } from '../services/api';
@@ -61,6 +65,7 @@ const CreateSyllabusPage: React.FC = () => {
   const [availablePrograms, setAvailablePrograms] = useState<any[]>([]);
   const [academicYear, setAcademicYear] = useState('');
   const [semester, setSemester] = useState('');
+  const [description, setDescription] = useState(''); // Thêm trường mô tả
   
   // CLO/PLO
   const [clos, setClos] = useState<CLOItem[]>([
@@ -242,16 +247,21 @@ const handleAIProcess = async () => {
   setIsAIProcessing(true);
   setAiResult('');
   setShowAIResult(false);
-  info('Đang upload file PDF lên AI service...');
+  info('Đang upload file PDF lên backend...');
   
   try {
-    // Step 1: Upload PDF to AI service for extraction
+    // Step 1: Upload PDF to backend
     const uploadResponse = await uploadPdfForOCR(pdfFile);
-    const taskId = (uploadResponse as any).taskId || (uploadResponse as any).aiTaskId || (uploadResponse as any).task_id;
-    console.log('AI Task ID:', taskId);
+    const taskId = uploadResponse.taskId;
+    
+    if (!taskId) {
+      throw new Error('Không nhận được Task ID từ backend');
+    }
+    
+    console.log('Backend Task ID:', taskId);
     info(`Đã tạo task AI: ${taskId}`);
     
-    // Step 2: Poll for result with exponential backoff
+    // Step 2: Poll for result
     let attempts = 0;
     const maxAttempts = 60; // Up to 2 minutes
     
@@ -265,13 +275,16 @@ const handleAIProcess = async () => {
       const result = await getAITaskStatus(taskId);
       console.log(`Poll attempt ${attempts}:`, result);
       
-      // Check task status
-      if (result.status === 'COMPLETED' || result.status === 'completed') {
+      // Backend trả về full response từ AI service
+      // Response structure: { status, result: {...}, task_id }
+      const status = result.status?.toUpperCase();
+      
+      if (status === 'SUCCESS') {
         return result;
-      } else if (result.status === 'FAILED' || result.status === 'failed') {
+      } else if (status === 'FAILURE' || status === 'FAILED') {
         throw new Error(result.error || result.message || 'AI xử lý thất bại');
       } else {
-        // Still processing
+        // PENDING or PROCESSING
         info(`AI đang xử lý... (${attempts}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         return pollResult();
@@ -282,8 +295,21 @@ const handleAIProcess = async () => {
     console.log('AI Extraction Result:', finalResult);
     
     // Step 3: Parse result and auto-fill form
-    if (finalResult.data && typeof finalResult.data === 'object') {
-      const extractedData = finalResult.data;
+    // Backend trả về: { status: 'SUCCESS', result: {...}, task_id }
+    // result có thể chứa: { summary, extracted_data, syllabus, ... }
+    let extractedData = null;
+    
+    if (finalResult.result && typeof finalResult.result === 'object') {
+      // Thử các key có thể có
+      extractedData = finalResult.result.syllabus || 
+                      finalResult.result.extracted_data || 
+                      finalResult.result.data || 
+                      finalResult.result;
+    } else if (finalResult.data && typeof finalResult.data === 'object') {
+      extractedData = finalResult.data;
+    }
+    
+    if (extractedData && typeof extractedData === 'object') {
       
       // Auto-fill basic info
       if (extractedData.course || extractedData.courseName) {
@@ -388,6 +414,7 @@ const handleAIProcess = async () => {
         lecturer: { userId: Number(user?.id) },
         ...(programId && { program: { programId: programId } }),
         academicYear,
+        ...(description && { description }), // Thêm description nếu có
         currentStatus: 'DRAFT'
       };
 
@@ -406,19 +433,19 @@ const handleAIProcess = async () => {
       for (const clo of clos.filter(c => c.code && c.description)) {
         try {
           const cloPayload = {
-            syllabus: { syllabusId },
+            syllabusId,
             cloCode: clo.code,
             cloDescription: clo.description
           };
           console.log('Creating CLO with payload:', cloPayload);
-          const response = await axiosClient.post('/clos', cloPayload);
-          console.log('CLO creation response:', response.data);
+          const response = await createCLO(cloPayload);
+          console.log('CLO creation response:', response);
           createdCLOs.push({
             localId: clo.id,
-            cloId: response.data.cloId,
+            cloId: response.cloId,
             cloCode: clo.code
           });
-          console.log(`Created CLO: ${clo.code} with ID ${response.data.cloId}`);
+          console.log(`Created CLO: ${clo.code} with ID ${response.cloId}`);
         } catch (err) {
           console.error(`Failed to create CLO ${clo.code}:`, err);
           error(`Không thể tạo CLO ${clo.code}`);
@@ -478,14 +505,16 @@ const handleAIProcess = async () => {
       // Step 4: Create Assessments
       const assessmentPromises = assessments
         .filter(a => a.name)
-        .map(assessment =>
-          axiosClient.post('/assessments', {
-            syllabus: { syllabusId },
+        .map(assessment => {
+          const payload = {
+            syllabusId,
             name: assessment.name,
             weightPercent: Number(assessment.weight),
             criteria: assessment.criteria || ''
-          })
-        );
+          };
+          console.log('Creating assessment with payload:', JSON.stringify(payload, null, 2));
+          return createAssessment(payload);
+        });
 
       if (assessmentPromises.length > 0) {
         await Promise.all(assessmentPromises);
@@ -495,14 +524,16 @@ const handleAIProcess = async () => {
       // Step 5: Create Session Plans
       const sessionPromises = sessionPlans
         .filter(s => s.topic)
-        .map(session =>
-          axiosClient.post('/session-plans', {
-            syllabus: { syllabusId },
+        .map(session => {
+          const payload = {
+            syllabusId,
             weekNo: session.weekNo,
             topic: session.topic,
             teachingMethod: session.teachingMethod || ''
-          })
-        );
+          };
+          console.log('Creating session plan with payload:', JSON.stringify(payload, null, 2));
+          return createSessionPlan(payload);
+        });
 
       if (sessionPromises.length > 0) {
         await Promise.all(sessionPromises);
@@ -512,14 +543,16 @@ const handleAIProcess = async () => {
       // Step 6: Create Materials
       const materialPromises = materials
         .filter(m => m.title)
-        .map(material =>
-          axiosClient.post('/materials', {
-            syllabus: { syllabusId },
+        .map(material => {
+          const payload = {
+            syllabusId,
             title: material.title,
             author: material.author || '',
             materialType: material.type
-          })
-        );
+          };
+          console.log('Creating material with payload:', JSON.stringify(payload, null, 2));
+          return createMaterial(payload);
+        });
 
       if (materialPromises.length > 0) {
         await Promise.all(materialPromises);
@@ -694,6 +727,17 @@ const handleAIProcess = async () => {
                   <option value="HK3">Học kỳ hè</option>
                 </select>
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Mô tả đề cương</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Nhập mô tả chi tiết về đề cương môn học..."
+                rows={4}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+              />
             </div>
           </div>
         );

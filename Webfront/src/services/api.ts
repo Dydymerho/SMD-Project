@@ -526,6 +526,32 @@ export const getCLOsBySyllabusId = async (syllabusId: number): Promise<CLORespon
   return [];
 };
 
+// Create CLO
+export const createCLO = async (data: {
+  syllabusId: number;
+  cloCode: string;
+  cloDescription: string;
+}) => {
+  const response = await axiosClient.post('/clos', data);
+  return response.data;
+};
+
+// Update CLO
+export const updateCLO = async (cloId: number, data: {
+  syllabusId: number;
+  cloCode: string;
+  cloDescription: string;
+}) => {
+  const response = await axiosClient.put(`/clos/${cloId}`, data);
+  return response.data;
+};
+
+// Delete CLO
+export const deleteCLO = async (cloId: number) => {
+  const response = await axiosClient.delete(`/clos/${cloId}`);
+  return response.data;
+};
+
 // PLO API - Get PLOs by Program ID
 export const getPLOsByProgramId = async (programId: number): Promise<PLOResponse[]> => {
   const response = await axiosClient.get(`/plos/program/${programId}`);
@@ -548,6 +574,108 @@ export const getCLOPLOMappingsBySyllabusId = async (syllabusId: number): Promise
     return response.data.mappings;
   }
   return [];
+};
+
+// Assessment API - Create Assessment
+export const createAssessment = async (data: {
+  syllabusId: number;
+  name: string;
+  weightPercent: number;
+  criteria: string;
+}) => {
+  const response = await axiosClient.post('/assessments', data);
+  return response.data;
+};
+
+// Update Assessment
+export const updateAssessment = async (assessmentId: number, data: {
+  syllabusId: number;
+  name: string;
+  weightPercent: number;
+  criteria: string;
+}) => {
+  const response = await axiosClient.put(`/assessments/${assessmentId}`, data);
+  return response.data;
+};
+
+// Delete Assessment
+export const deleteAssessment = async (assessmentId: number) => {
+  const response = await axiosClient.delete(`/assessments/${assessmentId}`);
+  return response.data;
+};
+
+// Get Assessments by Syllabus ID
+export const getAssessmentsBySyllabusId = async (syllabusId: number) => {
+  const response = await axiosClient.get(`/assessments/syllabus/${syllabusId}`);
+  return response.data;
+};
+
+// Session Plan API - Create Session Plan
+export const createSessionPlan = async (data: {
+  syllabusId: number;
+  weekNo: number;
+  topic: string;
+  teachingMethod: string;
+}) => {
+  const response = await axiosClient.post('/session-plans', data);
+  return response.data;
+};
+
+// Update Session Plan
+export const updateSessionPlan = async (sessionId: number, data: {
+  syllabusId: number;
+  weekNo: number;
+  topic: string;
+  teachingMethod: string;
+}) => {
+  const response = await axiosClient.put(`/session-plans/${sessionId}`, data);
+  return response.data;
+};
+
+// Delete Session Plan
+export const deleteSessionPlan = async (sessionId: number) => {
+  const response = await axiosClient.delete(`/session-plans/${sessionId}`);
+  return response.data;
+};
+
+// Get Session Plans by Syllabus ID
+export const getSessionPlansBySyllabusId = async (syllabusId: number) => {
+  const response = await axiosClient.get(`/session-plans/syllabus/${syllabusId}`);
+  return response.data;
+};
+
+// Material API - Create Material
+export const createMaterial = async (data: {
+  syllabusId: number;
+  title: string;
+  author: string;
+  materialType: string;
+}) => {
+  const response = await axiosClient.post('/materials', data);
+  return response.data;
+};
+
+// Update Material
+export const updateMaterial = async (materialId: number, data: {
+  syllabusId: number;
+  title: string;
+  author: string;
+  materialType: string;
+}) => {
+  const response = await axiosClient.put(`/materials/${materialId}`, data);
+  return response.data;
+};
+
+// Delete Material
+export const deleteMaterial = async (materialId: number) => {
+  const response = await axiosClient.delete(`/materials/${materialId}`);
+  return response.data;
+};
+
+// Get Materials by Syllabus ID
+export const getMaterialsBySyllabusId = async (syllabusId: number) => {
+  const response = await axiosClient.get(`/materials/syllabus/${syllabusId}`);
+  return response.data;
 };
 
 // PDF API - Get PDF information
@@ -1036,12 +1164,13 @@ export const uploadPdfForOCR = async (file: File): Promise<{ taskId: string; sta
   });
 
   const raw = response.data || {};
-  const taskId = String(raw.taskId ?? raw.aiTaskId ?? raw.id ?? '');
+  // Backend trả về AITask entity với aiTaskId
+  const taskId = String(raw.aiTaskId ?? raw.taskId ?? raw.id ?? '');
 
   return {
     taskId,
     status: raw.status,
-    message: raw.message,
+    message: raw.message || 'Upload successful',
   };
 };
 
