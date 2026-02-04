@@ -1,8 +1,10 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.AssessmentRequest;
 import com.smd.core.dto.AssessmentResponse;
 import com.smd.core.entity.Assessment;
 import com.smd.core.service.AssessmentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,14 +44,14 @@ public class AssessmentController {
     }
 
     @PostMapping
-    public ResponseEntity<AssessmentResponse> createAssessment(@RequestBody Assessment assessment) {
-        Assessment created = assessmentService.createAssessment(assessment);
+    public ResponseEntity<AssessmentResponse> createAssessment(@Valid @RequestBody AssessmentRequest request) {
+        Assessment created = assessmentService.createAssessment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AssessmentResponse> updateAssessment(@PathVariable Long id, @RequestBody Assessment assessment) {
-        Assessment updated = assessmentService.updateAssessment(id, assessment);
+    public ResponseEntity<AssessmentResponse> updateAssessment(@PathVariable Long id, @Valid @RequestBody AssessmentRequest request) {
+        Assessment updated = assessmentService.updateAssessment(id, request);
         return ResponseEntity.ok(convertToDto(updated));
     }
 

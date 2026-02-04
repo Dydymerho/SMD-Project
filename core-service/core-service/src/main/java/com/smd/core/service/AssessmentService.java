@@ -1,6 +1,8 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.AssessmentRequest;
 import com.smd.core.entity.Assessment;
+import com.smd.core.entity.Syllabus;
 import com.smd.core.exception.ResourceNotFoundException;
 import com.smd.core.repository.AssessmentRepository;
 import com.smd.core.repository.SyllabusRepository;
@@ -33,27 +35,31 @@ public class AssessmentService {
     }
 
     @Transactional
-    public Assessment createAssessment(Assessment assessment) {
-        if (assessment.getSyllabus() != null && assessment.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(assessment.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-        }
+    public Assessment createAssessment(AssessmentRequest request) {
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
+        
+        Assessment assessment = Assessment.builder()
+                .syllabus(syllabus)
+                .name(request.getName())
+                .weightPercent(request.getWeightPercent().floatValue())
+                .criteria(request.getCriteria())
+                .build();
+        
         return assessmentRepository.save(assessment);
     }
 
     @Transactional
-    public Assessment updateAssessment(Long id, Assessment assessmentDetails) {
+    public Assessment updateAssessment(Long id, AssessmentRequest request) {
         Assessment assessment = getAssessmentById(id);
         
-        assessment.setName(assessmentDetails.getName());
-        assessment.setWeightPercent(assessmentDetails.getWeightPercent());
-        assessment.setCriteria(assessmentDetails.getCriteria());
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
         
-        if (assessmentDetails.getSyllabus() != null && assessmentDetails.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(assessmentDetails.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-            assessment.setSyllabus(assessmentDetails.getSyllabus());
-        }
+        assessment.setName(request.getName());
+        assessment.setWeightPercent(request.getWeightPercent().floatValue());
+        assessment.setCriteria(request.getCriteria());
+        assessment.setSyllabus(syllabus);
         
         return assessmentRepository.save(assessment);
     }

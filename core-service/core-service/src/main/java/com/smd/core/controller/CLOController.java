@@ -1,8 +1,10 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.CLORequest;
 import com.smd.core.dto.CLOResponse;
 import com.smd.core.entity.CLO;
 import com.smd.core.service.CLOService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,14 +50,14 @@ public class CLOController {
     }
 
     @PostMapping
-    public ResponseEntity<CLOResponse> createCLO(@RequestBody CLO clo) {
-        CLO created = cloService.createCLO(clo);
+    public ResponseEntity<CLOResponse> createCLO(@Valid @RequestBody CLORequest request) {
+        CLO created = cloService.createCLO(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CLOResponse> updateCLO(@PathVariable Long id, @RequestBody CLO clo) {
-        CLO updated = cloService.updateCLO(id, clo);
+    public ResponseEntity<CLOResponse> updateCLO(@PathVariable Long id, @Valid @RequestBody CLORequest request) {
+        CLO updated = cloService.updateCLO(id, request);
         return ResponseEntity.ok(convertToDto(updated));
     }
 

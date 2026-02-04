@@ -1,6 +1,8 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.MaterialRequest;
 import com.smd.core.entity.Material;
+import com.smd.core.entity.Syllabus;
 import com.smd.core.exception.ResourceNotFoundException;
 import com.smd.core.repository.MaterialRepository;
 import com.smd.core.repository.SyllabusRepository;
@@ -33,27 +35,31 @@ public class MaterialService {
     }
 
     @Transactional
-    public Material createMaterial(Material material) {
-        if (material.getSyllabus() != null && material.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(material.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-        }
+    public Material createMaterial(MaterialRequest request) {
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
+        
+        Material material = Material.builder()
+                .syllabus(syllabus)
+                .title(request.getTitle())
+                .author(request.getAuthor())
+            .materialType(Material.MaterialType.valueOf(request.getMaterialType()))
+                .build();
+        
         return materialRepository.save(material);
     }
 
     @Transactional
-    public Material updateMaterial(Long id, Material materialDetails) {
+    public Material updateMaterial(Long id, MaterialRequest request) {
         Material material = getMaterialById(id);
         
-        material.setTitle(materialDetails.getTitle());
-        material.setAuthor(materialDetails.getAuthor());
-        material.setMaterialType(materialDetails.getMaterialType());
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
         
-        if (materialDetails.getSyllabus() != null && materialDetails.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(materialDetails.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-            material.setSyllabus(materialDetails.getSyllabus());
-        }
+        material.setTitle(request.getTitle());
+        material.setAuthor(request.getAuthor());
+        material.setMaterialType(Material.MaterialType.valueOf(request.getMaterialType()));
+        material.setSyllabus(syllabus);
         
         return materialRepository.save(material);
     }

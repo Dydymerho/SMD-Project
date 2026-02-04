@@ -1,8 +1,10 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.CLORequest;
 import com.smd.core.dto.CLOResponse;
 import com.smd.core.entity.CLO;
 import com.smd.core.entity.CLOPLOMapping;
+import com.smd.core.entity.Syllabus;
 import com.smd.core.exception.ResourceNotFoundException;
 import com.smd.core.repository.CLOPLOMappingRepository;
 import com.smd.core.repository.CLORepository;
@@ -60,26 +62,29 @@ public class CLOService {
     }
 
     @Transactional
-    public CLO createCLO(CLO clo) {
-        if (clo.getSyllabus() != null && clo.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(clo.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-        }
+    public CLO createCLO(CLORequest request) {
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
+        
+        CLO clo = CLO.builder()
+                .syllabus(syllabus)
+                .cloCode(request.getCloCode())
+                .cloDescription(request.getCloDescription())
+                .build();
+        
         return cloRepository.save(clo);
     }
 
     @Transactional
-    public CLO updateCLO(Long id, CLO cloDetails) {
+    public CLO updateCLO(Long id, CLORequest request) {
         CLO clo = getCLOById(id);
         
-        clo.setCloCode(cloDetails.getCloCode());
-        clo.setCloDescription(cloDetails.getCloDescription());
+        Syllabus syllabus = syllabusRepository.findById(request.getSyllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found with id: " + request.getSyllabusId()));
         
-        if (cloDetails.getSyllabus() != null && cloDetails.getSyllabus().getSyllabusId() != null) {
-            syllabusRepository.findById(cloDetails.getSyllabus().getSyllabusId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
-            clo.setSyllabus(cloDetails.getSyllabus());
-        }
+        clo.setCloCode(request.getCloCode());
+        clo.setCloDescription(request.getCloDescription());
+        clo.setSyllabus(syllabus);
         
         return cloRepository.save(clo);
     }

@@ -1,8 +1,10 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.MaterialRequest;
 import com.smd.core.dto.MaterialResponse;
 import com.smd.core.entity.Material;
 import com.smd.core.service.MaterialService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,14 +44,14 @@ public class MaterialController {
     }
 
     @PostMapping
-    public ResponseEntity<MaterialResponse> createMaterial(@RequestBody Material material) {
-        Material created = materialService.createMaterial(material);
+    public ResponseEntity<MaterialResponse> createMaterial(@Valid @RequestBody MaterialRequest request) {
+        Material created = materialService.createMaterial(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MaterialResponse> updateMaterial(@PathVariable Long id, @RequestBody Material material) {
-        Material updated = materialService.updateMaterial(id, material);
+    public ResponseEntity<MaterialResponse> updateMaterial(@PathVariable Long id, @Valid @RequestBody MaterialRequest request) {
+        Material updated = materialService.updateMaterial(id, request);
         return ResponseEntity.ok(convertToDto(updated));
     }
 

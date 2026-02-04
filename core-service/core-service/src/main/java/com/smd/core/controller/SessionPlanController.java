@@ -1,8 +1,10 @@
 package com.smd.core.controller;
 
+import com.smd.core.dto.SessionPlanRequest;
 import com.smd.core.dto.SessionPlanResponse;
 import com.smd.core.entity.SessionPlan;
 import com.smd.core.service.SessionPlanService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,14 +44,14 @@ public class SessionPlanController {
     }
 
     @PostMapping
-    public ResponseEntity<SessionPlanResponse> createSessionPlan(@RequestBody SessionPlan sessionPlan) {
-        SessionPlan created = sessionPlanService.createSessionPlan(sessionPlan);
+    public ResponseEntity<SessionPlanResponse> createSessionPlan(@Valid @RequestBody SessionPlanRequest request) {
+        SessionPlan created = sessionPlanService.createSessionPlan(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SessionPlanResponse> updateSessionPlan(@PathVariable Long id, @RequestBody SessionPlan sessionPlan) {
-        SessionPlan updated = sessionPlanService.updateSessionPlan(id, sessionPlan);
+    public ResponseEntity<SessionPlanResponse> updateSessionPlan(@PathVariable Long id, @Valid @RequestBody SessionPlanRequest request) {
+        SessionPlan updated = sessionPlanService.updateSessionPlan(id, request);
         return ResponseEntity.ok(convertToDto(updated));
     }
 
