@@ -1,8 +1,10 @@
 package com.smd.core.service;
 
+import com.smd.core.dto.PLORequest;
 import com.smd.core.dto.PLOResponse;
 import com.smd.core.entity.CLOPLOMapping;
 import com.smd.core.entity.PLO;
+import com.smd.core.entity.Program;
 import com.smd.core.exception.ResourceNotFoundException;
 import com.smd.core.repository.CLOPLOMappingRepository;
 import com.smd.core.repository.PLORepository;
@@ -65,26 +67,29 @@ public class PLOService {
     }
 
     @Transactional
-    public PLO createPLO(PLO plo) {
-        if (plo.getProgram() != null && plo.getProgram().getProgramId() != null) {
-            programRepository.findById(plo.getProgram().getProgramId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Program not found"));
-        }
+    public PLO createPLO(PLORequest request) {
+        Program program = programRepository.findById(request.getProgramId())
+                .orElseThrow(() -> new ResourceNotFoundException("Program not found with id: " + request.getProgramId()));
+        
+        PLO plo = PLO.builder()
+                .program(program)
+                .ploCode(request.getPloCode())
+                .ploDescription(request.getPloDescription())
+                .build();
+        
         return ploRepository.save(plo);
     }
 
     @Transactional
-    public PLO updatePLO(Long id, PLO ploDetails) {
+    public PLO updatePLO(Long id, PLORequest request) {
         PLO plo = getPLOById(id);
         
-        plo.setPloCode(ploDetails.getPloCode());
-        plo.setPloDescription(ploDetails.getPloDescription());
+        Program program = programRepository.findById(request.getProgramId())
+                .orElseThrow(() -> new ResourceNotFoundException("Program not found with id: " + request.getProgramId()));
         
-        if (ploDetails.getProgram() != null && ploDetails.getProgram().getProgramId() != null) {
-            programRepository.findById(ploDetails.getProgram().getProgramId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Program not found"));
-            plo.setProgram(ploDetails.getProgram());
-        }
+        plo.setPloCode(request.getPloCode());
+        plo.setPloDescription(request.getPloDescription());
+        plo.setProgram(program);
         
         return ploRepository.save(plo);
     }

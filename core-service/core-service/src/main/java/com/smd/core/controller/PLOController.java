@@ -3,10 +3,14 @@ package com.smd.core.controller;
 import com.smd.core.dto.PLOResponse;
 import com.smd.core.entity.PLO;
 import com.smd.core.service.PLOService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.smd.core.dto.PLORequest;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,15 +51,15 @@ public class PLOController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping
-    public ResponseEntity<PLOResponse> createPLO(@RequestBody PLO plo) {
-        PLO created = ploService.createPLO(plo);
+     @PostMapping
+    public ResponseEntity<PLOResponse> createPLO(@Valid @RequestBody PLORequest request) {
+        PLO created = ploService.createPLO(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PLOResponse> updatePLO(@PathVariable Long id, @RequestBody PLO plo) {
-        PLO updated = ploService.updatePLO(id, plo);
+    public ResponseEntity<PLOResponse> updatePLO(@PathVariable Long id, @Valid @RequestBody PLORequest request) {
+        PLO updated = ploService.updatePLO(id, request);
         return ResponseEntity.ok(convertToDto(updated));
     }
 
