@@ -21,10 +21,13 @@ import SyllabusReviewDetailPage from './pages/hod/SyllabusReviewDetailPage';
 import CollaborativeReviewPage from './pages/hod/CollaborativeReviewPage';
 import CollaborativeReviewDetailPage from './pages/hod/CollaborativeReviewDetailPage';
 import SyllabusAnalysisPage from './pages/hod/SyllabusAnalysisPage';
+import LecturerCollaborativeReviewPage from './pages/lecturer/LecturerCollaborativeReviewPage';
+import LecturerCollaborativeReviewDetailPage from './pages/lecturer/LecturerCollaborativeReviewDetailPage';
 import AADashboard from './pages/dashboard/AADashboard';
 import AASyllabusApprovalPage from './pages/aa/SyllabusApprovalPage';
 import AASyllabusApprovalDetailPage from './pages/aa/SyllabusApprovalDetailPage';
 import ProgramManagementPage from './pages/aa/ProgramManagementPage';
+import CourseManagementPage from './pages/aa/CourseManagementPage';
 import AASyllabusAnalysisPage from './pages/aa/SyllabusAnalysisPage';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import FinalApprovalPage from './pages/principal/FinalApprovalPage';
@@ -73,6 +76,14 @@ function App() {
 
             {/* Lecturer Routes */}
             <Route
+              path="/lecturer/collaborative-reviews"
+              element={
+                <PrivateRoute allowedRoles={['LECTURER']}>
+                  <LecturerCollaborativeReviewPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/syllabus/create"
               element={
                 <PrivateRoute allowedRoles={['LECTURER']}>
@@ -109,7 +120,7 @@ function App() {
               path="/collaborative-review/:id"
               element={
                 <PrivateRoute allowedRoles={['LECTURER']}>
-                  <CollaborativeReviewDetailPage />
+                  <LecturerCollaborativeReviewDetailPage />
                 </PrivateRoute>
               }
             />
@@ -194,6 +205,14 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
                   <ProgramManagementPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/aa/course-management"
+              element={
+                <PrivateRoute allowedRoles={['ACADEMIC_AFFAIRS', 'ADMIN']}>
+                  <CourseManagementPage />
                 </PrivateRoute>
               }
             />

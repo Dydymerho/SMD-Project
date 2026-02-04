@@ -404,10 +404,14 @@ export const getReviewCommentCount = async (syllabusId: number) => {
 export const createCollaborativeReview = async (syllabusId: number, description: string, deadline?: string, participants?: string[]) => {
   try {
     // Collaborative review được implement bằng cách tạo comments
-    const response = await axiosClient.post(`/syllabuses/${syllabusId}/comments`, {
+    const payload = {
       content: description,
-      type: 'COLLABORATIVE_REVIEW'
-    });
+      type: 'COLLABORATIVE_REVIEW',
+      contextType: 'SYLLABUS_GENERAL',
+      ...(deadline && { deadline }),
+      ...(participants && participants.length > 0 && { participants })
+    };
+    const response = await axiosClient.post(`/syllabuses/${syllabusId}/comments`, payload);
     return response.data;
   } catch (error) {
     console.error('Error creating collaborative review:', error);

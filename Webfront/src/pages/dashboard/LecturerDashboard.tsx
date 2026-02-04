@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Home, Search, FileText, BookOpen, Bell, User, Clock, CheckCircle, 
   Edit, Eye, Plus, FolderOpen, GitCompare, MessageSquare, AlertCircle, 
-  Filter, Download, Upload, Star, Trash2, Send, X, MessageCircle
+  Filter, Download, Upload, Star, Trash2, Send, X, MessageCircle, Loader, Users
 } from 'lucide-react';
 import './DashboardPage.css';
 import Toast, { useToast } from '../../components/Toast';
@@ -21,6 +21,7 @@ import {
   deleteSyllabus,
 } from '../../services/api';
 import { getCollaborativeReviewsForLecturer, getReviewCommentCount } from '../../services/workflowService';
+import axiosClient from '../../api/axiosClient';
 
 interface Syllabus {
   syllabusId: number;
@@ -75,7 +76,7 @@ const LecturerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toasts, removeToast, success, error: showError, info } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'my-syllabi' | 'collaborative' | 'search' | 'management'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'my-syllabi' | 'collaborative' | 'discussion-sessions' | 'search' | 'management'>('overview');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -86,6 +87,12 @@ const LecturerDashboard: React.FC = () => {
   const [collaborativeSyllabi, setCollaborativeSyllabi] = useState<Syllabus[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  
+    // Discussion sessions state
+    const [discussionReviews, setDiscussionReviews] = useState<any[]>([]);
+    const [discussionLoading, setDiscussionLoading] = useState(false);
+    const [discussionError, setDiscussionError] = useState<string | null>(null);
+    const [discussionFilter, setDiscussionFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('active');
   
   // Modals
   const [showReportModal, setShowReportModal] = useState(false);
@@ -110,10 +117,12 @@ const LecturerDashboard: React.FC = () => {
   });
 
   // Fetch data on component mount
-
   useEffect(() => {
     fetchSyllabuses();
-  }, []);
+    if (activeTab === 'discussion-sessions') {
+      loadDiscussionReviews();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'search' && searchQuery.trim().length > 0) {
@@ -143,7 +152,75 @@ const LecturerDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Load discussion reviews
+  const loadDiscussionReviews = async () => {
+    setDiscussionLoading(true);
+    setDiscussionError(null);
+    try {
+      const result = await getAllSyllabuses();
+      const list = Array.isArray(result) ? result : (Array.isArray(result.data) ? result.data : []);
 
+      // Map all syllabuses and filter those with comments (active collaborative reviews)
+      const mapped = await Promise.all(list.map(async (item: any) => {
+        const syllabusId = item.syllabusId || item.id;
+        const feedbackCount = syllabusId ? await getReviewCommentCount(syllabusId) : 0;
+
+        // Skip syllabuses with no comments (no collaborative review)
+        if (feedbackCount === 0) return null;
+
+        // Count my comments
+        let myCommentCount = 0;
+        let allComments: any[] = [];
+        try {
+          if (syllabusId) {
+            const commentsResponse = await axiosClient.get(
+              `/syllabuses/${syllabusId}/comments/all`
+            );
+            allComments = Array.isArray(commentsResponse.data) ? commentsResponse.data : [];
+            myCommentCount = allComments.filter(
+              c => c.author?.username === user?.username
+            ).length;
+          }
+        } catch (err) {
+          console.log('Could not fetch comments:', err);
+        }
+
+        // Count unique participants
+        const uniqueParticipants = new Set(allComments.map(c => c.author?.username).filter(Boolean));
+
+        // Determine status
+        let status: 'active' | 'pending' | 'completed' = 'active';
+        if (item.currentStatus?.toLowerCase().includes('approved')) {
+          status = 'completed';
+        } else if (feedbackCount === 0) {
+          status = 'pending';
+        }
+
+        return {
+          id: (syllabusId || '').toString(),
+          courseCode: item.courseCode || item.course?.courseCode || 'N/A',
+          courseName: item.courseName || item.course?.courseName || 'Giáo trình không tên',
+          dueDate: item.updatedAt || item.createdAt || new Date().toISOString(),
+          status,
+          participantCount: uniqueParticipants.size,
+          feedbackCount,
+          lecturer: item.lecturerName || item.lecturer?.fullName || item.createdBy?.fullName || 'Chưa rõ',
+          lecturerEmail: item.lecturer?.email || item.createdBy?.email || '',
+          myCommentCount,
+          isFinalized: status === 'completed'
+        };
+      }));
+
+      // Filter out null values (syllabuses without comments)
+      const filteredReviews = mapped.filter(Boolean);
+      setDiscussionReviews(filteredReviews);
+    } catch (err) {
+      console.error('Error loading discussion reviews:', err);
+      setDiscussionError('Không thể tải danh sách thảo luận');
+    } finally {
+      setDiscussionLoading(false);
+    }
+  };
 
   const fetchSyllabuses = async () => {
     try {
@@ -430,11 +507,11 @@ const LecturerDashboard: React.FC = () => {
           </a>
           <a 
             href="#" 
-            className={`nav-item ${activeTab === 'collaborative' ? 'active' : ''}`} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('collaborative'); }}
+            className={`nav-item ${activeTab === 'discussion-sessions' ? 'active' : ''}`} 
+            onClick={(e) => { e.preventDefault(); setActiveTab('discussion-sessions'); }}
           >
             <span className="icon"><MessageSquare size={20} /></span>
-            Cộng tác Review
+            Phiên Thảo luận
           </a>
           <a 
             href="#" 
@@ -470,6 +547,7 @@ const LecturerDashboard: React.FC = () => {
               {activeTab === 'overview' && 'Tổng quan'}
               {activeTab === 'my-syllabi' && 'Giáo trình của tôi'}
               {activeTab === 'collaborative' && 'Cộng tác & Review'}
+                            {activeTab === 'discussion-sessions' && 'Phiên Thảo luận'}
               {activeTab === 'search' && 'Tra cứu & Theo dõi'}
               {activeTab === 'management' && 'Quản lý nâng cao'}
             </h1>
@@ -477,6 +555,7 @@ const LecturerDashboard: React.FC = () => {
               {activeTab === 'overview' && 'Dashboard tổng quan hoạt động và thống kê'}
               {activeTab === 'my-syllabi' && 'Tạo mới, cập nhật và quản lý giáo trình'}
               {activeTab === 'collaborative' && 'Review và đóng góp ý kiến cho giáo trình đồng nghiệp'}
+                            {activeTab === 'discussion-sessions' && 'Tham gia thảo luận và góp ý về giáo trình'}
               {activeTab === 'search' && 'Tìm kiếm và theo dõi giáo trình để nhận thông báo'}
               {activeTab === 'management' && 'So sánh phiên bản, CLO-PLO mapping, module tree'}
             </p>
@@ -817,6 +896,240 @@ const LecturerDashboard: React.FC = () => {
                 <AlertCircle size={20} />
                 <p>Giai đoạn cộng tác cho phép bạn review, góp ý và báo lỗi. Bạn có thể chỉnh sửa hoặc xóa góp ý của mình.</p>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3.5: DISCUSSION SESSIONS */}
+        {activeTab === 'discussion-sessions' && (
+          <div className="content-section" style={{ padding: '40px' }}>
+            {/* Loading State */}
+            {discussionLoading && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                <Loader size={48} style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+                <p style={{ color: '#666', fontSize: '16px', fontWeight: 500 }}>Đang tải danh sách thảo luận...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {discussionError && !discussionLoading && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffebee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(244, 67, 54, 0.1)', marginBottom: '24px' }}>
+                <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#f44336', opacity: 0.8 }} />
+                <h3 style={{ color: '#f44336', marginBottom: '8px' }}>Lỗi tải dữ liệu</h3>
+                <p style={{ color: '#d32f2f', marginBottom: '16px' }}>{discussionError}</p>
+                <button
+                  onClick={loadDiscussionReviews}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Thử lại
+                </button>
+              </div>
+            )}
+
+            {!discussionLoading && !discussionError && (
+              <>
+                {/* Header with Filter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div className="filter-tabs">
+                    {(['all', 'active', 'pending', 'completed'] as const).map(status => (
+                      <button
+                        key={status}
+                        onClick={() => setDiscussionFilter(status)}
+                        style={{
+                          padding: '10px 16px',
+                          background: discussionFilter === status ? '#007bff' : '#f5f5f5',
+                          color: discussionFilter === status ? 'white' : '#666',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          transition: 'all 0.3s',
+                          marginRight: '8px'
+                        }}
+                      >
+                        {status === 'all' && `Tất cả (${discussionReviews.length})`}
+                        {status === 'active' && `Đang diễn ra (${discussionReviews.filter((r: any) => r.status === 'active').length})`}
+                        {status === 'pending' && `Chưa bắt đầu (${discussionReviews.filter((r: any) => r.status === 'pending').length})`}
+                        {status === 'completed' && `Hoàn thành (${discussionReviews.filter((r: any) => r.status === 'completed').length})`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reviews Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                  gap: '20px'
+                }}>
+                  {discussionReviews
+                    .filter((r: any) => discussionFilter === 'all' || r.status === discussionFilter)
+                    .map((review: any) => (
+                    <div
+                      key={review.id}
+                      style={{
+                        background: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                        padding: '24px',
+                        border: review.status === 'active' ? '2px solid #2196f3' : 'none',
+                        transition: 'all 0.3s'
+                      }}
+                      onMouseOver={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.15)';
+                      }}
+                      onMouseOut={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                      }}
+                    >
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>
+                          {review.courseCode} - {review.courseName}
+                        </h3>
+                        <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '13px' }}>
+                          👨‍🏫 Giảng viên chính: <strong>{review.lecturer}</strong>
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{
+                          background: '#f5f5f5',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          textAlign: 'center'
+                        }}>
+                          <Users size={16} style={{ display: 'inline', color: '#2196f3' }} />
+                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#666' }}>
+                            {review.participantCount} Tham gia
+                          </p>
+                        </div>
+                        <div style={{
+                          background: '#f5f5f5',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          textAlign: 'center'
+                        }}>
+                          <MessageSquare size={16} style={{ display: 'inline', color: '#ff9800' }} />
+                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#666' }}>
+                            {review.feedbackCount} Phản hồi
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* My Comments Count */}
+                      <div style={{
+                        background: '#e8f5e9',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        borderLeft: '3px solid #4caf50'
+                      }}>
+                        <p style={{ margin: '0', fontSize: '13px', color: '#2e7d32', fontWeight: 600 }}>
+                          ✏️ Góp ý của bạn: {review.myCommentCount || 0} ý kiến
+                        </p>
+                      </div>
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#999' }}>
+                          Hạn cuối:
+                        </p>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#333', fontWeight: 500 }}>
+                          {new Date(review.dueDate).toLocaleDateString('vi-VN')}
+                        </p>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        alignItems: 'center',
+                        marginBottom: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #e0e0e0'
+                      }}>
+                        {review.isFinalized && (
+                          <>
+                            <CheckCircle size={14} color="#2e7d32" />
+                            <span style={{ fontSize: '12px', color: '#2e7d32', fontWeight: 600 }}>
+                              ✅ Đã hoàn tất
+                            </span>
+                          </>
+                        )}
+                        {!review.isFinalized && review.status === 'active' && (
+                          <>
+                            <Clock size={14} color="#2196f3" />
+                            <span style={{ fontSize: '12px', color: '#2196f3', fontWeight: 500 }}>
+                              Đang diễn ra
+                            </span>
+                          </>
+                        )}
+                        {!review.isFinalized && review.status === 'pending' && (
+                          <>
+                            <Clock size={14} color="#ff9800" />
+                            <span style={{ fontSize: '12px', color: '#ff9800', fontWeight: 500 }}>
+                              Chưa bắt đầu
+                            </span>
+                          </>
+                        )}
+                        {!review.isFinalized && review.status === 'completed' && (
+                          <>
+                            <CheckCircle size={14} color="#4caf50" />
+                            <span style={{ fontSize: '12px', color: '#4caf50', fontWeight: 500 }}>
+                              Hoàn thành
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => navigate(`/collaborative-review/${review.id}`)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: '#2196f3',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: '13px',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseOver={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background = '#1976d2';
+                        }}
+                        onMouseOut={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background = '#2196f3';
+                        }}
+                      >
+                        <Eye size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                        Xem Chi tiết
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {discussionReviews.filter((r: any) => discussionFilter === 'all' || r.status === discussionFilter).length === 0 && (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    color: '#999',
+                    background: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <h3>Không có thảo luận nào</h3>
+                    <p>Bạn chưa được mời tham gia thảo luận hợp tác nào</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
