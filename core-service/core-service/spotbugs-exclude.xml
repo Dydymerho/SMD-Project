@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude EI_EXPOSE_REP2: Exposing internal representation by storing an externally mutable object -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Exclude EI_EXPOSE_REP: Returning a reference to a mutable object -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+</FindBugsFilter>
